@@ -1,5 +1,6 @@
+import math
 from dataclasses import dataclass
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 import tensorflow as tf
 
@@ -42,12 +43,17 @@ class ResNetConfig(ModelConfig):
     block_args: Any = None  # TODO: What is this?
     zero_init_last_bn: bool = True
     # Parameters for inference
+    test_input_size: Optional[Tuple[int, int, int]] = None
     crop_pct: float = 0.875
     interpolation: str = "bilinear"
     mean: float = IMAGENET_DEFAULT_MEAN
     std: float = IMAGENET_DEFAULT_STD
     first_conv: str = "conv1"
     classifier: str = "fc"
+
+    def __post_init__(self):
+        if self.test_input_size is None:
+            self.test_input_size = self.input_size
 
 
 class BasicBlock(tf.keras.layers.Layer):
@@ -147,6 +153,120 @@ class BasicBlock(tf.keras.layers.Layer):
             shortcut = self.downsample(shortcut, training)
         x += shortcut
         x = self.act2(x)
+
+        return x
+
+
+class Bottleneck(tf.keras.layers.Layer):
+    expansion = 4
+
+    def __init__(self, inplanes, planes, stride=1, downsample=None, cardinality=1, base_width=64,
+                 reduce_first=1, dilation=1, first_dilation=None, act_layer="relu", norm_layer="batch_norm",
+                 attn_layer=None, aa_layer=None, drop_block=None, drop_path=None,
+                 zero_init_last_bn=True, **kwargs):
+        super().__init__(**kwargs)
+
+        self.planes = planes
+        self.stride = stride
+        self.downsample = downsample
+        self.cardinality = cardinality
+        self.base_width = base_width
+        self.reduce_first = reduce_first
+        self.dilation = dilation
+        self.first_dilation = first_dilation
+        self.act_layer = act_layer_factory(act_layer)
+        self.norm_layer = norm_layer_factory(norm_layer)
+        self.attn_layer = attn_layer
+        self.aa_layer = aa_layer
+        self.drop_block = drop_block
+        self.drop_path = drop_path
+        self.zero_init_last_bn = zero_init_last_bn
+
+    def build(self, inpu_shape: tf.TensorShape):
+        width = int(math.floor(self.planes * (self.base_width / 64)) * self.cardinality)
+        first_planes = width // self.reduce_first
+        outplanes = self.planes * self.expansion
+        first_dilation = self.first_dilation or self.dilation
+        use_aa = self.aa_layer is not None and (self.stride == 2 or first_dilation != self.dilation)
+        if use_aa:
+            raise NotImplementedError("use_aa=True not implemented yet.")
+
+        self.conv1 = tf.keras.layers.Conv2D(
+            filters=first_planes,
+            kernel_size=1,
+            use_bias=False,
+            name="conv1",
+        )
+        self.bn1 = self.norm_layer(name="bn1")
+        self.act1 = self.act_layer()
+
+        self.pad2 = tf.keras.layers.ZeroPadding2D(padding=first_dilation)
+        self.conv2 = tf.keras.layers.Conv2D(
+            filters=width,
+            kernel_size=3,
+            strides=1 if use_aa else self.stride,
+            dilation_rate=first_dilation,
+            groups=self.cardinality,
+            use_bias=False,
+            name="conv2",
+        )
+        self.bn2 = self.norm_layer(name="bn2")
+        self.act2 = self.act_layer()
+
+        self.aa = aa_layer(channels=width, stride=self.stride) if use_aa else None
+
+        self.conv3 = tf.keras.layers.Conv2D(
+            filters=outplanes,
+            kernel_size=1,
+            use_bias=False,
+            name="conv3",
+        )
+        self.bn3 = self.norm_layer(
+            gamma_initializer="zeros" if self.zero_init_last_bn else "ones",
+            moving_variance_initializer="zeros" if self.zero_init_last_bn else "ones",
+            name="bn3"
+        )
+        self.se = create_attn(self.attn_layer, outplanes)
+        self.act3 = self.act_layer()
+
+    def call(self, x, training=False):
+        shortcut = x
+
+        x = self.conv1(x)
+        x = self.bn1(x, training)
+        if self.drop_block is not None:
+            raise NotImplementedError("drop_block!=None not implemented yet...")
+            # x = self.drop_block(x)
+        x = self.act1(x)
+
+        x = self.pad2(x)
+        x = self.conv2(x)
+        x = self.bn2(x, training)
+        if self.drop_block is not None:
+            raise NotImplementedError("drop_block!=None not implemented yet...")
+            # x = self.drop_block(x)
+        x = self.act2(x)
+        if self.aa is not None:
+            raise NotImplementedError("aa!=None not implemented yet...")
+            # x = self.aa(x)
+
+        x = self.conv3(x)
+        x = self.bn3(x, training)
+        if self.drop_block is not None:
+            raise NotImplementedError("drop_block!=None not implemented yet...")
+            # x = self.drop_block(x)
+
+        if self.se is not None:
+            raise NotImplementedError("se!=None not implemented yet...")
+            # x  = self.se(x)
+
+        if self.drop_path is not None:
+            x = self.drop_path(x)
+
+        if self.downsample is not None:
+            shortcut = self.downsample(shortcut, training)
+        x += shortcut
+        x = self.act3(x)
 
         return x
 
@@ -545,7 +665,60 @@ def resnet18d():
         stem_type="deep",
         avg_down=True,
         interpolation="bicubic",
-        first_conv="conv1/0",  # TODO: Not sure that is the case in TF
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet26():
+    """Constructs a ResNet-26 model.
+    """
+    cfg = ResNetConfig(
+        name="resnet26",
+        url="",
+        block=Bottleneck,
+        nb_blocks=[2, 2, 2, 2],
+        interpolation="bicubic",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet26d():
+    """Constructs a ResNet-26-D model.
+    """
+    cfg = ResNetConfig(
+        name="resnet26d",
+        url="",
+        block=Bottleneck,
+        nb_blocks=[2, 2, 2, 2],
+        stem_width=32,
+        stem_type="deep",
+        avg_down=True,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet26t():
+    """Constructs a ResNet-26-T model.
+    """
+    cfg = ResNetConfig(
+        name="resnet26t",
+        url="",
+        input_size=(256, 256, 3),
+        block=Bottleneck,
+        nb_blocks=[2, 2, 2, 2],
+        pool_size=(8, 8),
+        stem_width=32,
+        stem_type="deep_tiered",
+        avg_down=True,
+        crop_pct=0.94,
+        interpolation="bicubic",
+        first_conv="conv1/0",
     )
     return ResNet, cfg
 
@@ -572,6 +745,135 @@ def resnet34d():
         stem_type="deep",
         avg_down=True,
         interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet50():
+    """Constructs a ResNet-50 model.
+    """
+    cfg = ResNetConfig(
+        name="resnet50",
+        url="",
+        block=Bottleneck,
+        nb_blocks=[3, 4, 6, 3],
+        interpolation="bicubic",
+        crop_pct=0.95,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet50d():
+    """Constructs a ResNet-50-D model.
+    """
+    cfg = ResNetConfig(
+        name="resnet50d",
+        url="",
+        block=Bottleneck,
+        nb_blocks=[3, 4, 6, 3],
+        stem_width=32,
+        stem_type="deep",
+        avg_down=True,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet101():
+    """Constructs a ResNet-101 model.
+    """
+    cfg = ResNetConfig(
+        name="resnet101",
+        url="",
+        block=Bottleneck,
+        nb_blocks=[3, 4, 23, 3],
+        interpolation="bicubic",
+        crop_pct=0.95,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet101d():
+    """Constructs a ResNet-101-D model.
+    """
+    cfg = ResNetConfig(
+        name="resnet101d",
+        url="",
+        input_size=(256, 256, 3),
+        block=Bottleneck,
+        nb_blocks=[3, 4, 23, 3],
+        pool_size=(8, 8),
+        stem_width=32,
+        stem_type="deep",
+        avg_down=True,
+        test_input_size=(320, 320, 3),
+        interpolation="bicubic",
+        crop_pct=1.0,
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet152():
+    """Constructs a ResNet-152 model.
+    """
+    cfg = ResNetConfig(
+        name="resnet152",
+        url="",
+        block=Bottleneck,
+        nb_blocks=[3, 8, 36, 3],
+        interpolation="bicubic",
+        crop_pct=0.95,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet152d():
+    """Constructs a ResNet-152-D model.
+    """
+    cfg = ResNetConfig(
+        name="resnet152d",
+        url="",
+        input_size=(256, 256, 3),
+        block=Bottleneck,
+        nb_blocks=[3, 8, 36, 3],
+        pool_size=(8, 8),
+        stem_width=32,
+        stem_type="deep",
+        avg_down=True,
+        test_input_size=(320, 320, 3),
+        interpolation="bicubic",
+        crop_pct=1.0,
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet200d():
+    """Constructs a ResNet-200-D model.
+    """
+    cfg = ResNetConfig(
+        name="resnet200d",
+        url="",
+        input_size=(256, 256, 3),
+        block=Bottleneck,
+        nb_blocks=[3, 24, 36, 3],
+        pool_size=(8, 8),
+        stem_width=32,
+        stem_type="deep",
+        avg_down=True,
+        test_input_size=(320, 320, 3),
+        interpolation="bicubic",
+        crop_pct=1.0,
         first_conv="conv1/0",
     )
     return ResNet, cfg
