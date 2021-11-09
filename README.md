@@ -1,6 +1,7 @@
 # TensorFlow-Image-Models
 
-This is a port of PyTorch-Image-Models to Tensorflow.
+This is a port of 
+[PyTorch Image Models](https://github.com/rwightman/pytorch-image-models) to Tensorflow.
 
 Work in progress...
 
