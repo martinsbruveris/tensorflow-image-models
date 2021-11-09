@@ -32,6 +32,12 @@ _model_has_pretrained = set()  # Model names that have pretrained weight url pre
 
 
 def register_model(fn):
+    # Get model class and model config
+    cls, cfg = fn()
+    model_name = cfg.name
+    if fn.__name__ != model_name:
+        raise ValueError(f"Model name({model_name}) != function name ({fn.__name__}).")
+
     # Lookup module, where model is defined
     mod = sys.modules[fn.__module__]
     module_name_split = fn.__module__.split(".")
@@ -39,13 +45,9 @@ def register_model(fn):
 
     # Add model function to __all__ in that module
     if hasattr(mod, "__all__"):
-        mod.__all__.append(fn.__name__)
+        mod.__all__.append(model_name)
     else:
-        mod.__all__ = [fn.__name__]
-
-    # Get model class and model config
-    cls, cfg = fn()
-    model_name = cfg.name
+        mod.__all__ = [model_name]
 
     # Add entries to registry dict/sets
     _model_class[model_name] = cls
