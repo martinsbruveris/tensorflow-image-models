@@ -495,6 +495,7 @@ class ResNet(tf.keras.Model):
         self.nb_blocks = cfg.nb_blocks
         self.num_classes = cfg.num_classes
         self.in_chans = cfg.in_chans
+        self.input_size = cfg.input_size
         self.cardinality = cfg.cardinality
         self.base_width = cfg.base_width
         self.stem_width = cfg.stem_width
@@ -522,7 +523,7 @@ class ResNet(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, 32, 32, self.in_chans))
+        return tf.zeros((1, *self.input_size))
 
     def build(self, input_shape: tf.TensorShape):
         if "deep" in self.stem_type:
