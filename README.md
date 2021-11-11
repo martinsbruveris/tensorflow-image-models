@@ -78,7 +78,6 @@ Codebase
 - [ ] (optional) Refactor utils/timm.py file
 - [ ] (optional) Remove num_batches_tracked variables warning from conversion
 
-
 Evaluation
 
 - [ ] (must) Evaluate model on ImageNet
@@ -110,3 +109,7 @@ Release
 - [ ] (must) Add licence file + licence headers to python files
 - [ ] (must) Publish package on PyPi
 - [ ] (optional) Host converted models on Google Drive + download functionality
+
+Future
+
+- [ ] (optional) Check compatibility with [tf-explain](https://github.com/sicara/tf-explain)
