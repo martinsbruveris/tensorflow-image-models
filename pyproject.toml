@@ -13,11 +13,25 @@ pyyaml = { version = "*", optional = true }
 timm = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
+black = { version = "*", allow-prereleases = true }
+flake8 = "*"
+isort = "*"
 pytest = "*"
 
 [tool.poetry.extras]
 timm = ["pyyaml", "timm"]
 
+[tool.black]
+line-length = 88
+include = "\\.pyi?$"
+exclude = """
+/(
+    \\.git
+  | \\.tox
+  | \\.venv
+  | tmp
+)/
+"""
 
 [build-system]
 requires = ["poetry>=1.0"]
