@@ -14,7 +14,7 @@ class ClassifierHead(tf.keras.layers.Layer):
         self,
         num_classes: int,
         pool_type: str = "avg",
-        drop_rate: float = 0.,
+        drop_rate: float = 0.0,
         use_conv: bool = False,
         name: str = "/",  # Use empty name by default to ease conversion from PyTorch.
         **kwargs,
@@ -36,7 +36,7 @@ class ClassifierHead(tf.keras.layers.Layer):
         else:
             raise NotImplementedError(f"pool_type={pool_type} not implemented.")
 
-        if drop_rate > 0.:
+        if drop_rate > 0.0:
             self.drop = tf.keras.layers.Dropout(drop_rate=drop_rate)
         else:
             self.drop = None

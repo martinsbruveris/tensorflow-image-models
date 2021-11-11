@@ -59,7 +59,7 @@ def register_model(fn):
 
 
 def _natural_key(string_):
-    return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string_.lower())]
+    return [int(s) if s.isdigit() else s for s in re.split(r"(\d+)", string_.lower())]
 
 
 def list_models(
@@ -109,26 +109,22 @@ def list_models(
 
 
 def is_model(model_name):
-    """ Check if a model name exists
-    """
+    """Check if a model name exists"""
     return model_name in _model_class
 
 
 def model_class(model_name):
-    """Fetch a model entrypoint for specified model name
-    """
+    """Fetch a model entrypoint for specified model name"""
     return _model_class[model_name]
 
 
 def model_config(model_name):
-    """Fetch a model config for specified model name
-    """
+    """Fetch a model config for specified model name"""
     return _model_config[model_name]
 
 
 def list_modules():
-    """Return list of module names that contain models / model entrypoints
-    """
+    """Return list of module names that contain models / model entrypoints"""
     modules = _module_to_models.keys()
     return list(sorted(modules))
 
