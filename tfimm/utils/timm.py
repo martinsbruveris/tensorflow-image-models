@@ -35,7 +35,9 @@ class TransposeType(Enum):
     CONV2D = "conv2d"
 
 
-def convert_tf_weight_name_to_pt_weight_name(tf_name, start_prefix_to_remove="", tf_weight_shape=None):
+def convert_tf_weight_name_to_pt_weight_name(
+    tf_name, start_prefix_to_remove="", tf_weight_shape=None
+):
     """
     Convert a TF 2.0 model variable name in a pytorch model weight name.
 
@@ -58,13 +60,19 @@ def convert_tf_weight_name_to_pt_weight_name(tf_name, start_prefix_to_remove="",
         "_._", "/"
     )  # '_._' is replaced by a level separation (can be used to convert TF2.0 lists in PyTorch nn.ModulesList)
     tf_name = re.sub(r"//+", "/", tf_name)  # Remove empty levels at the end
-    tf_name = tf_name.split("/")  # Convert from TF2.0 '/' separators to PyTorch '.' separators
+    tf_name = tf_name.split(
+        "/"
+    )  # Convert from TF2.0 '/' separators to PyTorch '.' separators
     # Some weights have a single name without "/" such as final_logits_bias in BART
     if len(tf_name) > 1:
         tf_name = tf_name[1:]  # Remove level zero
 
     # When should we transpose the weights
-    if tf_name[-1] == "kernel" and tf_weight_shape is not None and tf_weight_shape.rank == 4:
+    if (
+        tf_name[-1] == "kernel"
+        and tf_weight_shape is not None
+        and tf_weight_shape.rank == 4
+    ):
         # A simple heuristic to detect conv layer using weight array shape
         transpose = TransposeType.CONV2D
     elif bool(
@@ -104,7 +112,10 @@ def convert_tf_weight_name_to_pt_weight_name(tf_name, start_prefix_to_remove="",
 # PyTorch => TF 2.0 #
 #####################
 
-def load_pytorch_weights_in_tf2_model(tf_model, pt_state_dict, tf_inputs=None, allow_missing_keys=False):
+
+def load_pytorch_weights_in_tf2_model(
+    tf_model, pt_state_dict, tf_inputs=None, allow_missing_keys=False
+):
     """Load pytorch state_dict in a TF 2.0 model."""
     try:
         import tensorflow as tf  # noqa: F401
@@ -153,7 +164,9 @@ def load_pytorch_weights_in_tf2_model(tf_model, pt_state_dict, tf_inputs=None, a
     for symbolic_weight in symbolic_weights:
         sw_name = symbolic_weight.name
         name, transpose = convert_tf_weight_name_to_pt_weight_name(
-            sw_name, start_prefix_to_remove=start_prefix_to_remove, tf_weight_shape=symbolic_weight.shape
+            sw_name,
+            start_prefix_to_remove=start_prefix_to_remove,
+            tf_weight_shape=symbolic_weight.shape,
         )
 
         # Find associated numpy array in pytorch model state dict
@@ -230,7 +243,9 @@ def load_pytorch_weights_in_tf2_model(tf_model, pt_state_dict, tf_inputs=None, a
             f"to be exactly identical (e.g. initializing a TFBertForSequenceClassification model from a BertForSequenceClassification model)."
         )
     else:
-        logger.warning(f"All PyTorch model weights were used when initializing {tf_model.__class__.__name__}.\n")
+        logger.warning(
+            f"All PyTorch model weights were used when initializing {tf_model.__class__.__name__}.\n"
+        )
     if len(missing_keys) > 0:
         logger.warning(
             f"Some weights or buffers of the TF 2.0 model {tf_model.__class__.__name__} were not initialized from the PyTorch model "

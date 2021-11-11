@@ -35,9 +35,9 @@ class ResNetConfig(ModelConfig):
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
     aa_layer: Any = None  # TODO: Not implemented
-    drop_rate: float = 0.
-    drop_path_rate: float = 0.
-    drop_block_rate: float = 0.
+    drop_rate: float = 0.0
+    drop_path_rate: float = 0.0
+    drop_block_rate: float = 0.0
     global_pool: str = "avg"
     block_args: Any = None  # TODO: What is this?
     zero_init_last_bn: bool = True
@@ -76,7 +76,7 @@ class BasicBlock(tf.keras.layers.Layer):
         drop_block=None,
         drop_path=None,
         zero_init_last_bn=True,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(**kwargs)
         assert cardinality == 1, "BasicBlock only supports cardinality of 1"
@@ -100,9 +100,8 @@ class BasicBlock(tf.keras.layers.Layer):
         first_planes = self.planes // self.reduce_first
         out_planes = self.planes * self.expansion
         first_dilation = self.first_dilation or self.dilation
-        use_aa = (
-            self.aa_layer is not None
-            and (self.stride == 2 or first_dilation != self.dilation)
+        use_aa = self.aa_layer is not None and (
+            self.stride == 2 or first_dilation != self.dilation
         )
         if use_aa:
             raise NotImplementedError("use_aa=True not implemented yet.")
@@ -117,7 +116,7 @@ class BasicBlock(tf.keras.layers.Layer):
             kernel_size=3,
             strides=1 if use_aa else self.stride,
             use_bias=False,
-            name="conv1"
+            name="conv1",
         )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
@@ -136,7 +135,7 @@ class BasicBlock(tf.keras.layers.Layer):
         self.bn2 = self.norm_layer(
             gamma_initializer="zeros" if self.zero_init_last_bn else "ones",
             moving_variance_initializer="zeros" if self.zero_init_last_bn else "ones",
-            name="bn2"
+            name="bn2",
         )
         self.se = create_attn(self.attn_layer, out_planes)
         self.act2 = self.act_layer()
@@ -180,12 +179,26 @@ class BasicBlock(tf.keras.layers.Layer):
 class Bottleneck(tf.keras.layers.Layer):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, cardinality=1,
-                 base_width=64,
-                 reduce_first=1, dilation=1, first_dilation=None, act_layer="relu",
-                 norm_layer="batch_norm",
-                 attn_layer=None, aa_layer=None, drop_block=None, drop_path=None,
-                 zero_init_last_bn=True, **kwargs):
+    def __init__(
+        self,
+        inplanes,
+        planes,
+        stride=1,
+        downsample=None,
+        cardinality=1,
+        base_width=64,
+        reduce_first=1,
+        dilation=1,
+        first_dilation=None,
+        act_layer="relu",
+        norm_layer="batch_norm",
+        attn_layer=None,
+        aa_layer=None,
+        drop_block=None,
+        drop_path=None,
+        zero_init_last_bn=True,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
 
         self.planes = planes
@@ -209,9 +222,8 @@ class Bottleneck(tf.keras.layers.Layer):
         first_planes = width // self.reduce_first
         outplanes = self.planes * self.expansion
         first_dilation = self.first_dilation or self.dilation
-        use_aa = (
-            self.aa_layer is not None
-            and (self.stride == 2 or first_dilation != self.dilation)
+        use_aa = self.aa_layer is not None and (
+            self.stride == 2 or first_dilation != self.dilation
         )
         if use_aa:
             raise NotImplementedError("use_aa=True not implemented yet.")
@@ -249,7 +261,7 @@ class Bottleneck(tf.keras.layers.Layer):
         self.bn3 = self.norm_layer(
             gamma_initializer="zeros" if self.zero_init_last_bn else "ones",
             moving_variance_initializer="zeros" if self.zero_init_last_bn else "ones",
-            name="bn3"
+            name="bn3",
         )
         self.se = create_attn(self.attn_layer, outplanes)
         self.act3 = self.act_layer()
@@ -336,7 +348,7 @@ def downsample_avg(
         kernel_size=1,
         strides=1,
         use_bias=False,
-        name=name + "/downsample/1"
+        name=name + "/downsample/1",
     )
     bn = norm_layer(name=name + "/downsample/2")
     layers.extend([conv, bn])
@@ -372,16 +384,25 @@ def downsample_conv(
     return tf.keras.Sequential([pad, conv, bn])
 
 
-def drop_blocks(drop_block_rate=0.):
+def drop_blocks(drop_block_rate=0.0):
     if drop_block_rate:
         raise NotImplementedError("drop_block_rate>0 not implemented.")
     return [None, None, None, None]
 
 
 def make_blocks(
-        block_fn, channels, block_repeats, inplanes, reduce_first=1, output_stride=32,
-        down_kernel_size=1, avg_down=False, drop_block_rate=0., drop_path_rate=0.,
-        norm_layer="batch_norm", **kwargs
+    block_fn,
+    channels,
+    block_repeats,
+    inplanes,
+    reduce_first=1,
+    output_stride=32,
+    down_kernel_size=1,
+    avg_down=False,
+    drop_block_rate=0.0,
+    drop_path_rate=0.0,
+    norm_layer="batch_norm",
+    **kwargs,
 ):
     stages = []
     feature_info = []
@@ -390,10 +411,10 @@ def make_blocks(
     net_stride = 4
     dilation = prev_dilation = 1
     for stage_idx, (planes, num_blocks, db) in enumerate(
-            zip(channels, block_repeats, drop_blocks(drop_block_rate))
+        zip(channels, block_repeats, drop_blocks(drop_block_rate))
     ):
         # never liked this name, but weight compat requires it
-        stage_name = f'layer{stage_idx + 1}'
+        stage_name = f"layer{stage_idx + 1}"
         stride = 1 if stage_idx == 0 else 2
         if net_stride >= output_stride:
             dilation *= stride
@@ -411,7 +432,7 @@ def make_blocks(
                 dilation=dilation,
                 first_dilation=prev_dilation,
                 norm_layer=norm_layer,
-                name=f"resnet/{stage_name}/0"
+                name=f"resnet/{stage_name}/0",
             )
             if avg_down:
                 downsample = downsample_avg(**down_kwargs)
@@ -427,11 +448,19 @@ def make_blocks(
             stride = stride if block_idx == 0 else 1
             # stochastic depth linear decay rule
             block_dpr = drop_path_rate * net_block_idx / (net_num_blocks - 1)
-            if block_dpr > 0.:
+            if block_dpr > 0.0:
                 raise NotImplementedError("block_dpr>0. not implemented yet.")
-            blocks.append(block_fn(
-                inplanes, planes, stride, downsample, first_dilation=prev_dilation,
-                drop_path=None, **block_kwargs, name=f"resnet/{stage_name}/{block_idx}")
+            blocks.append(
+                block_fn(
+                    inplanes,
+                    planes,
+                    stride,
+                    downsample,
+                    first_dilation=prev_dilation,
+                    drop_path=None,
+                    **block_kwargs,
+                    name=f"resnet/{stage_name}/{block_idx}",
+                )
             )
             prev_dilation = dilation
             inplanes = planes * block_fn.expansion
@@ -644,7 +673,7 @@ class ResNet(tf.keras.Model):
             aa_layer=self.aa_layer,
             drop_block_rate=self.drop_block_rate,
             drop_path_rate=self.drop_path_rate,
-            **self.block_args
+            **self.block_args,
         )
 
         self.layer1 = stage_modules[0]
@@ -682,8 +711,7 @@ class ResNet(tf.keras.Model):
 
 @register_model
 def resnet18():
-    """Constructs a ResNet-18 model.
-    """
+    """Constructs a ResNet-18 model."""
     cfg = ResNetConfig(
         name="resnet18", url="", block=BasicBlock, nb_blocks=[2, 2, 2, 2]
     )
@@ -692,8 +720,7 @@ def resnet18():
 
 @register_model
 def resnet18d():
-    """Constructs a ResNet-18-D model.
-    """
+    """Constructs a ResNet-18-D model."""
     cfg = ResNetConfig(
         name="resnet18d",
         url="",
@@ -710,8 +737,7 @@ def resnet18d():
 
 @register_model
 def resnet26():
-    """Constructs a ResNet-26 model.
-    """
+    """Constructs a ResNet-26 model."""
     cfg = ResNetConfig(
         name="resnet26",
         url="",
@@ -724,8 +750,7 @@ def resnet26():
 
 @register_model
 def resnet26d():
-    """Constructs a ResNet-26-D model.
-    """
+    """Constructs a ResNet-26-D model."""
     cfg = ResNetConfig(
         name="resnet26d",
         url="",
@@ -742,8 +767,7 @@ def resnet26d():
 
 @register_model
 def resnet26t():
-    """Constructs a ResNet-26-T model.
-    """
+    """Constructs a ResNet-26-T model."""
     cfg = ResNetConfig(
         name="resnet26t",
         url="",
@@ -763,8 +787,7 @@ def resnet26t():
 
 @register_model
 def resnet34():
-    """Constructs a ResNet-34 model.
-    """
+    """Constructs a ResNet-34 model."""
     cfg = ResNetConfig(
         name="resnet34", url="", block=BasicBlock, nb_blocks=[3, 4, 6, 3]
     )
@@ -790,8 +813,7 @@ def resnet34d():
 
 @register_model
 def resnet50():
-    """Constructs a ResNet-50 model.
-    """
+    """Constructs a ResNet-50 model."""
     cfg = ResNetConfig(
         name="resnet50",
         url="",
@@ -805,8 +827,7 @@ def resnet50():
 
 @register_model
 def resnet50d():
-    """Constructs a ResNet-50-D model.
-    """
+    """Constructs a ResNet-50-D model."""
     cfg = ResNetConfig(
         name="resnet50d",
         url="",
@@ -823,8 +844,7 @@ def resnet50d():
 
 @register_model
 def resnet101():
-    """Constructs a ResNet-101 model.
-    """
+    """Constructs a ResNet-101 model."""
     cfg = ResNetConfig(
         name="resnet101",
         url="",
@@ -838,8 +858,7 @@ def resnet101():
 
 @register_model
 def resnet101d():
-    """Constructs a ResNet-101-D model.
-    """
+    """Constructs a ResNet-101-D model."""
     cfg = ResNetConfig(
         name="resnet101d",
         url="",
@@ -860,8 +879,7 @@ def resnet101d():
 
 @register_model
 def resnet152():
-    """Constructs a ResNet-152 model.
-    """
+    """Constructs a ResNet-152 model."""
     cfg = ResNetConfig(
         name="resnet152",
         url="",
@@ -875,8 +893,7 @@ def resnet152():
 
 @register_model
 def resnet152d():
-    """Constructs a ResNet-152-D model.
-    """
+    """Constructs a ResNet-152-D model."""
     cfg = ResNetConfig(
         name="resnet152d",
         url="",
@@ -897,8 +914,7 @@ def resnet152d():
 
 @register_model
 def resnet200d():
-    """Constructs a ResNet-200-D model.
-    """
+    """Constructs a ResNet-200-D model."""
     cfg = ResNetConfig(
         name="resnet200d",
         url="",

@@ -36,7 +36,7 @@ def create_model(
         cls = model_class(model_name)
         cfg = model_config(model_name)
     else:
-        raise RuntimeError('Unknown model (%s)' % model_name)
+        raise RuntimeError("Unknown model (%s)" % model_name)
 
     # Update config with kwargs
     # TODO: We need to be very careful here...
