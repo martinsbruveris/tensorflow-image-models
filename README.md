@@ -32,48 +32,81 @@ can be downloaded automatically via `tensorflow-datasets`.
 
 ## To do before 0.1.0
 
-- [x] Create git repo and upload to GitHub
-- [ ] Convert all other resnet models from timm
-- [ ] Convert vision transformer models from timm
-- [ ] Ability to alter number of classes for finetuning
-- [x] pyproj.toml + python environment
-- [ ] Unit tests
-- [ ] Refactor resnet.py code
-- [ ] Refactor utils/timm.py file
-- [ ] Remove num_batches_tracked variables warning from conversion
-- [x] Black formatting
-- [x] Fix Flake8 warnings
-- [x] Fix isort warnings
-- [x] Makefile with style checks
-- [ ] Complete README file
-- [ ] Run unit tests on GitHub CI
-- [ ] Add licence file + licence headers to python files
-- [ ] Publish package on PyPi
+Development setup
 
-### ResNet model tracker
+- [x] (must) Create git repo and upload to GitHub
+- [x] (must) pyproj.toml + python environment
+- [x] (must) Black formatting
+- [x] (must) Fix Flake8 warnings
+- [x] (must) Fix isort warnings
+- [x] (must) Makefile with style checks
 
-| Name | Total | Converted | Documented |
-|---|:---:|:---:|---|
-|ecaresnet | 6 + 2 pruned | 
-|ig_resnext | 4 |
-|resnet | 14 | ✅ |
-|resnet_blur | 1 |
-|resnetrs | 7 |
-|resnext | 3 |
-|seresne{x}t | 5 |
-|ssl_resne{x}t | 6 |
-|swsl_resne{x}t | 6 |
-|tv_resne{x}t | 5 |
-|wide_resnet | 2 |
+Testing
+ 
+- [ ] (refine) Add unit tests
+- [ ] (optional) Run unit tests on GitHub CI
+
+ResNet models
+
+| Name           | Total | Converted | Documented |
+|----------------|:-----:|:---------:|------------|
+| ecaresnet      |   6   |           |            |
+| ig_resnext     |   4   |           |            |
+| resnet         |  14   |     ✅    |            |
+| resnet_blur    |   1   |           |            |
+| resnetrs       |   7   |           |            |
+| resnext        |   3   |           |            |
+| seresne{x}t    |   5   |           |            |
+| ssl_resne{x}t  |   6   |           |            |
+| swsl_resne{x}t |   6   |           |            |
+| tv_resne{x}t   |   5   |           |            |
+| wide_resnet    |   2   |           |            |
+
+Vision Transformer models
+
+| Name           | Total | Converted | Documented |
+|----------------|:-----:|:---------:|------------|
+| vit            |  14   |           |            |
+| vit_in21k      |   8   |           |            |
+| vit_sam        |   2   |           |            |
+| deit           |   8   |           |            |
+| vit_miil       |   2   |           |            |
+
+Codebase
+
+- [ ] (optional) Refactor resnet.py code
+- [ ] (optional) Refactor utils/timm.py file
+- [ ] (optional) Remove num_batches_tracked variables warning from conversion
 
 
+Evaluation
 
-## Optional
-
-- [ ] CPU profiling (#params, FLOPS, single-image inference time, memory consumption)
-- [ ] GPU profiling (max batch size, batch inference time)
+- [ ] (must) Evaluate model on ImageNet
+- [ ] (must) Run evaluation on GPU, e.g., Google Colab
+- [ ] (optional) Evaluate model on ImageNet-ReaL
+- [ ] (optional) Evaluate model on ImageNet-v2
+- [ ] (optional) Evaluate model on ImageNet-A
+- [ ] (optional) Evaluate model on ImageNet-R
+- [ ] (optional) Evaluate model on ImageNet-C
+- [ ] (must) Profiling single image inference time on CPU
+- [ ] (must) Profiling max batch size and batch inference time on GPU
       See tf.errors.ResourceExhaustedError for OOM errors
-- [ ] Run validation on imagenet to measure accuracy of converted models
-- [ ] Ability to alter number of input channels (check first_conv parameter)
-- [ ] Host converted models on Google Drive + download functionality
-- [ ] Apply weight decay (either during build process or afterwards)
+- [ ] (optional) Profiling #params, FLOPS
+- [ ] (optional) Profiling memory consumption on CPU
+
+Finetuning
+
+- [ ] (must) Load weights from h5 file to model with `nb_classes`
+- [ ] (must) Set weight decay in loaded model
+- [ ] (must) Fine-tune pretrained model on CIFAR-100
+- [ ] (must) Evaluate model on CIFAR-100
+- [ ] (optional) Load weights from h5 file to model with `in_chans != 3`
+- [ ] (optional) Fine-tune model on MNIST (and variants)
+- [ ] (optional) Evaluate model on MNIST (and variants)
+
+Release
+
+- [ ] (must) Complete README file
+- [ ] (must) Add licence file + licence headers to python files
+- [ ] (must) Publish package on PyPi
+- [ ] (optional) Host converted models on Google Drive + download functionality
