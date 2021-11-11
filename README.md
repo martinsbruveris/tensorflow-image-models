@@ -16,10 +16,10 @@ Work in progress...
 - [ ] Refactor resnet.py code
 - [ ] Refactor utils/timm.py file
 - [ ] Remove num_batches_tracked variables warning from conversion
-- [ ] Black formatting
+- [x] Black formatting
 - [x] Fix Flake8 warnings
 - [x] Fix isort warnings
-- [ ] Pre-commit hooks for black, flake8 and isort
+- [x] Makefile with style checks
 - [ ] Complete README file
 - [ ] Run unit tests on Github CI
 - [ ] Add licence file + licence headers to python files
