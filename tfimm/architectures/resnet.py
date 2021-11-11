@@ -7,7 +7,6 @@ import tensorflow as tf
 from tfimm.layers import ClassifierHead, act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, register_model
 
-
 # model_registry will add each entrypoint fn to this
 __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
 
