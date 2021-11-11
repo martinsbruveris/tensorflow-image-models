@@ -10,7 +10,9 @@ numpy = "*"
 tensorflow = ">2.5"
 
 pyyaml = { version = "*", optional = true }
+tensorflow-datasets = { version="*", optional = true }
 timm = { version = "*", optional = true }
+tqdm = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }
@@ -18,8 +20,12 @@ flake8 = "*"
 isort = "*"
 pytest = "*"
 
+
 [tool.poetry.extras]
+# Dependencies to load pretrained models from timm; will install PyTorch
 timm = ["pyyaml", "timm"]
+# Dependencies to train and evaluate models
+train = ["tensorflow-datasets", "tqdm"]
 
 [tool.black]
 line-length = 88
