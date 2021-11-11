@@ -9,7 +9,9 @@ Work in progress...
 
 - [x] Create git repo and upload to github
 - [ ] Convert all other resnet models from timm
-- [ ] pyproj.toml + python environment
+- [ ] Convert vision transformer models from timm
+- [ ] Ability to alter number of classes for finetuning
+- [x] pyproj.toml + python environment
 - [ ] Unit tests
 - [ ] Refactor resnet.py code
 - [ ] Refactor utils/timm.py file
@@ -41,7 +43,9 @@ Work in progress...
 
 ## Optional
 
-- [ ] Model profiling (FLOPS + memory + inference speed)
+- [ ] CPU profiling (#params, FLOPS, single-image inference time, memory consumption)
+- [ ] GPU profiling (max batch size, batch inference time)
+      See tf.errors.ResourceExhaustedError for OOM errors
 - [ ] Run validation on imagenet to measure accuracy of converted models
 - [ ] Ability to alter number of input channels (check first_conv parameter)
 - [ ] Host converted models on google drive + download functionality

@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "tfimm"
+version = "0.0.1"
+description = "Image models with pretrained weights in TensorFlow"
+authors = ["Martins Bruveris"]
+
+[tool.poetry.dependencies]
+python = "~3.8"
+numpy = "*"
+tensorflow = ">2.5"
+
+pyyaml = { version = "*", optional = true }
+timm = { version = "*", optional = true }
+
+[tool.poetry.dev-dependencies]
+pytest = "*"
+
+[tool.poetry.extras]
+timm = ["pyyaml", "timm"]
+
+
+[build-system]
+requires = ["poetry>=1.0"]
+build-backend = "poetry.masonry.api"
