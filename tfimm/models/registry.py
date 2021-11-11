@@ -80,7 +80,8 @@ def list_models(
 
     Example:
         model_list("gluon_resnet*") -- returns all models starting with 'gluon_resnet'
-        model_list("*resnext*", "resnet") -- returns all models with 'resnext' in 'resnet' module
+        model_list("*resnext*", "resnet") -- returns all models with 'resnext' in
+            'resnet' module
     """
     if module:
         all_models = list(_module_to_models[module])

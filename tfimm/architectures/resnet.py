@@ -59,10 +59,26 @@ class ResNetConfig(ModelConfig):
 class BasicBlock(tf.keras.layers.Layer):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, cardinality=1, base_width=64,
-                 reduce_first=1, dilation=1, first_dilation=None, act_layer="relu", norm_layer="batch_norm",
-                 attn_layer=None, aa_layer=None, drop_block=None, drop_path=None,
-                 zero_init_last_bn=True, **kwargs):
+    def __init__(
+        self,
+        inplanes,
+        planes,
+        stride=1,
+        downsample=None,
+        cardinality=1,
+        base_width=64,
+        reduce_first=1,
+        dilation=1,
+        first_dilation=None,
+        act_layer="relu",
+        norm_layer="batch_norm",
+        attn_layer=None,
+        aa_layer=None,
+        drop_block=None,
+        drop_path=None,
+        zero_init_last_bn=True,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         assert cardinality == 1, "BasicBlock only supports cardinality of 1"
         assert base_width == 64, "BasicBlock does not support changing base width"
@@ -85,7 +101,10 @@ class BasicBlock(tf.keras.layers.Layer):
         first_planes = self.planes // self.reduce_first
         out_planes = self.planes * self.expansion
         first_dilation = self.first_dilation or self.dilation
-        use_aa = self.aa_layer is not None and (self.stride == 2 or first_dilation != self.dilation)
+        use_aa = (
+            self.aa_layer is not None
+            and (self.stride == 2 or first_dilation != self.dilation)
+        )
         if use_aa:
             raise NotImplementedError("use_aa=True not implemented yet.")
         if self.dilation != 1:
@@ -103,7 +122,9 @@ class BasicBlock(tf.keras.layers.Layer):
         )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
-        self.aa = aa_layer(channels=first_planes, stride=self.stride) if use_aa else None
+        self.aa = (
+            aa_layer(channels=first_planes, stride=self.stride) if use_aa else None
+        )
 
         self.conv2 = tf.keras.layers.Conv2D(
             filters=out_planes,
@@ -160,8 +181,10 @@ class BasicBlock(tf.keras.layers.Layer):
 class Bottleneck(tf.keras.layers.Layer):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None, cardinality=1, base_width=64,
-                 reduce_first=1, dilation=1, first_dilation=None, act_layer="relu", norm_layer="batch_norm",
+    def __init__(self, inplanes, planes, stride=1, downsample=None, cardinality=1,
+                 base_width=64,
+                 reduce_first=1, dilation=1, first_dilation=None, act_layer="relu",
+                 norm_layer="batch_norm",
                  attn_layer=None, aa_layer=None, drop_block=None, drop_path=None,
                  zero_init_last_bn=True, **kwargs):
         super().__init__(**kwargs)
@@ -187,7 +210,10 @@ class Bottleneck(tf.keras.layers.Layer):
         first_planes = width // self.reduce_first
         outplanes = self.planes * self.expansion
         first_dilation = self.first_dilation or self.dilation
-        use_aa = self.aa_layer is not None and (self.stride == 2 or first_dilation != self.dilation)
+        use_aa = (
+            self.aa_layer is not None
+            and (self.stride == 2 or first_dilation != self.dilation)
+        )
         if use_aa:
             raise NotImplementedError("use_aa=True not implemented yet.")
 
@@ -364,8 +390,11 @@ def make_blocks(
     net_block_idx = 0
     net_stride = 4
     dilation = prev_dilation = 1
-    for stage_idx, (planes, num_blocks, db) in enumerate(zip(channels, block_repeats, drop_blocks(drop_block_rate))):
-        stage_name = f'layer{stage_idx + 1}'  # never liked this name, but weight compat requires it
+    for stage_idx, (planes, num_blocks, db) in enumerate(
+            zip(channels, block_repeats, drop_blocks(drop_block_rate))
+    ):
+        # never liked this name, but weight compat requires it
+        stage_name = f'layer{stage_idx + 1}'
         stride = 1 if stage_idx == 0 else 2
         if net_stride >= output_stride:
             dilation *= stride
@@ -376,8 +405,13 @@ def make_blocks(
         downsample = None
         if stride != 1 or inplanes != planes * block_fn.expansion:
             down_kwargs = dict(
-                in_channels=inplanes, out_channels=planes * block_fn.expansion, kernel_size=down_kernel_size,
-                stride=stride, dilation=dilation, first_dilation=prev_dilation, norm_layer=norm_layer,
+                in_channels=inplanes,
+                out_channels=planes * block_fn.expansion,
+                kernel_size=down_kernel_size,
+                stride=stride,
+                dilation=dilation,
+                first_dilation=prev_dilation,
+                norm_layer=norm_layer,
                 name=f"resnet/{stage_name}/0"
             )
             if avg_down:
@@ -385,17 +419,21 @@ def make_blocks(
             else:
                 downsample = downsample_conv(**down_kwargs)
 
-        block_kwargs = dict(reduce_first=reduce_first, dilation=dilation, drop_block=db, **kwargs)
+        block_kwargs = dict(
+            reduce_first=reduce_first, dilation=dilation, drop_block=db, **kwargs
+        )
         blocks = []
         for block_idx in range(num_blocks):
             downsample = downsample if block_idx == 0 else None
             stride = stride if block_idx == 0 else 1
-            block_dpr = drop_path_rate * net_block_idx / (net_num_blocks - 1)  # stochastic depth linear decay rule
+            # stochastic depth linear decay rule
+            block_dpr = drop_path_rate * net_block_idx / (net_num_blocks - 1)
             if block_dpr > 0.:
                 raise NotImplementedError("block_dpr>0. not implemented yet.")
             blocks.append(block_fn(
                 inplanes, planes, stride, downsample, first_dilation=prev_dilation,
-                drop_path=None, **block_kwargs, name=f"resnet/{stage_name}/{block_idx}"))
+                drop_path=None, **block_kwargs, name=f"resnet/{stage_name}/{block_idx}")
+            )
             prev_dilation = dilation
             inplanes = planes * block_fn.expansion
             net_block_idx += 1
