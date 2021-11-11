@@ -13,7 +13,6 @@ from collections import defaultdict
 from copy import deepcopy
 from typing import List, Union
 
-
 __all__ = [
     "list_models",
     "is_model",

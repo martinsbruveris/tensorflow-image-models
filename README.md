@@ -17,7 +17,9 @@ Work in progress...
 - [ ] Refactor utils/timm.py file
 - [ ] Remove num_batches_tracked variables warning from conversion
 - [ ] Black formatting
-- [ ] Pre-commit hooks for black, flake8, etc. (see transformers repo)
+- [x] Fix Flake8 warnings
+- [x] Fix isort warnings
+- [ ] Pre-commit hooks for black, flake8 and isort
 - [ ] Complete README file
 - [ ] Run unit tests on Github CI
 - [ ] Add licence file + licence headers to python files
