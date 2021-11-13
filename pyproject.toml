@@ -9,6 +9,7 @@ python = "~3.8"
 numpy = "*"
 tensorflow = ">2.5"
 
+click = { version = "*", optional = true }
 pyyaml = { version = "*", optional = true }
 tensorflow-datasets = { version="*", optional = true }
 timm = { version = "*", optional = true }
@@ -26,7 +27,7 @@ pytest-xdist = "*"
 # Dependencies to load pretrained models from timm; will install PyTorch
 timm = ["pyyaml", "timm"]
 # Dependencies to train and evaluate models
-train = ["tensorflow-datasets", "tqdm"]
+train = ["click", "tensorflow-datasets", "tqdm"]
 
 [tool.pytest.ini_options]
 timeout = 10  # We need tests to be fast, because of GitHub free tier limits
