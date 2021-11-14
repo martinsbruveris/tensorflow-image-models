@@ -554,6 +554,17 @@ py = "*"
 pytest = ">=3.10"
 
 [[package]]
+name = "pytest-timeout"
+version = "2.0.1"
+description = "pytest plugin to abort hanging tests"
+category = "dev"
+optional = false
+python-versions = ">=3.6"
+
+[package.dependencies]
+pytest = ">=5.0.0"
+
+[[package]]
 name = "pytest-xdist"
 version = "2.4.0"
 description = "pytest xdist plugin for distributed testing and loop-on-failing modes"
@@ -925,7 +936,7 @@ train = ["tensorflow-datasets", "tqdm"]
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.8"
-content-hash = "3eed584753b20163e550d32f610aee5e84c881edd30a12de1b816f2372f70b84"
+content-hash = "fbdc659c264791a016a7e9d0235db4847587416978c44964088837140c34e29e"
 
 [metadata.files]
 absl-py = [
@@ -1289,6 +1300,10 @@ pytest = [
 pytest-forked = [
     {file = "pytest-forked-1.3.0.tar.gz", hash = "sha256:6aa9ac7e00ad1a539c41bec6d21011332de671e938c7637378ec9710204e37ca"},
     {file = "pytest_forked-1.3.0-py2.py3-none-any.whl", hash = "sha256:dc4147784048e70ef5d437951728825a131b81714b398d5d52f17c7c144d8815"},
+]
+pytest-timeout = [
+    {file = "pytest-timeout-2.0.1.tar.gz", hash = "sha256:a5ec4eceddb8ea726911848593d668594107e797621e97f93a1d1dbc6fbb9080"},
+    {file = "pytest_timeout-2.0.1-py3-none-any.whl", hash = "sha256:329bdea323d3e5bea4737070dd85a0d1021dbecb2da5342dc25284fdb929dff0"},
 ]
 pytest-xdist = [
     {file = "pytest-xdist-2.4.0.tar.gz", hash = "sha256:89b330316f7fc475f999c81b577c2b926c9569f3d397ae432c0c2e2496d61ff9"},
