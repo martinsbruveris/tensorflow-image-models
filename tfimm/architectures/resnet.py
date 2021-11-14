@@ -5,7 +5,7 @@ from typing import Any, List, Optional, Tuple
 import tensorflow as tf
 
 from tfimm.layers import ClassifierHead, act_layer_factory, norm_layer_factory
-from tfimm.models import ModelConfig, register_model
+from tfimm.models import ModelConfig, keras_serializable, register_model
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
@@ -471,6 +471,7 @@ def make_blocks(
     return stages, feature_info
 
 
+@keras_serializable
 class ResNet(tf.keras.Model):
     """ResNet / ResNeXt / SE-ResNeXt / SE-Net
 
@@ -554,8 +555,10 @@ class ResNet(tf.keras.Model):
         Global pooling type. One of 'avg', 'max', 'avgmax', 'catavgmax'
     """
 
-    def __init__(self, cfg: ResNetConfig):
-        super().__init__(name="resnet")
+    cfg_class = ResNetConfig
+
+    def __init__(self, cfg: ResNetConfig, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
         self.block = cfg.block
         self.nb_blocks = cfg.nb_blocks
@@ -687,6 +690,7 @@ class ResNet(tf.keras.Model):
             pool_type=self.global_pool,
             drop_rate=self.drop_rate,
             use_conv=False,
+            name="remove",
         )
 
     def forward_features(self, x, training=False):
