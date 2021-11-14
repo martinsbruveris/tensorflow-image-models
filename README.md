@@ -1,9 +1,29 @@
 # TensorFlow-Image-Models
 
+- [Installation](#installation)
+- [Datasets ane evaluation](#datasets-and-evaluation)
+- [Resources](#resources)
+- [To do before 0.1.0](#to-do-before-010)
+
 This is a port of 
 [PyTorch Image Models](https://github.com/rwightman/pytorch-image-models) to Tensorflow.
 
 Work in progress...
+
+## Installation
+
+This project is developed using python 3.8. Install the dependencies using
+```shell
+poetry install
+```
+To load pretrained weights from `timm`, use
+```shell
+poetry install -E timm
+```
+To use evaluation and training scripts (not available yet), use
+```shell
+poetry install -E train
+```
 
 ## Datasets and evaluation
 
@@ -29,6 +49,12 @@ Other ImageNet variants, such as
 - ImageNet-R (`imagenet_r`) and
 - ImageNet-v2 (`imagenet_v2`, defaults to matched-frequency)
 can be downloaded automatically via `tensorflow-datasets`.
+
+## Resources
+
+- [vit-pytorch](https://github.com/lucidrains/vit-pytorch) repository with 
+  implementations of several transformer architectures. No pretrained weights, just
+  architectures.
 
 ## To do before 0.1.0
 
@@ -112,4 +138,6 @@ Release
 
 Future
 
+- [ ] (optional) Add pretrained [DINO models](https://github.com/facebookresearch/dino)
+- [ ] (optional) Add [T2T-ViT models](https://github.com/yitu-opensource/T2T-ViT)
 - [ ] (optional) Check compatibility with [tf-explain](https://github.com/sicara/tf-explain)
