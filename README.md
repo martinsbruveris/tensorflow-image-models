@@ -69,7 +69,8 @@ Development setup
 
 Testing
  
-- [ ] (refine) Add unit tests
+- [x] (must) Add first tests
+- [ ] (must) Test creation of each model
 - [ ] (optional) Run unit tests on GitHub CI
 
 ResNet models

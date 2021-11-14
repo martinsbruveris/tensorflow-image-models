@@ -12,5 +12,5 @@ style:
 	poetry run isort $(check_dirs)
 
 # Run tests for the library
-# test:
-# 	python -m pytest -n auto --dist=loadfile -s -v ./tests/
+test:
+	poetry run pytest -n auto --dist=loadfile -s -v ./tests/
