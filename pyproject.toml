@@ -19,6 +19,7 @@ black = { version = "*", allow-prereleases = true }
 flake8 = "*"
 isort = "*"
 pytest = "*"
+pytest-xdist = "*"
 
 
 [tool.poetry.extras]
