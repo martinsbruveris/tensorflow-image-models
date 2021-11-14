@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-env:
-  OMP_NUM_THREADS: 2
-  MKL_NUM_THREADS: 2
-
 jobs:
   test:
     name: Run tests on ${{ matrix.os }} with Python ${{ matrix.python }}
@@ -40,9 +36,9 @@ jobs:
       id: cache
       with:
         path: ~/.virtualenvs
-        key: poetry-${{ hashFiles('**/poetry.lock') }}
+        key: poetry-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('**/poetry.lock') }}
         restore-keys: |
-          poetry-${{ hashFiles('**/poetry.lock') }}
+          poetry-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('**/poetry.lock') }}
 
     - name: Set Poetry config
       run: |

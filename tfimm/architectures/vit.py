@@ -4,7 +4,7 @@ from typing import Optional, Tuple, Union
 import tensorflow as tf
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
-from tfimm.models import ModelConfig, register_model
+from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import to_2tuple
 
 # model_registry will add each entrypoint fn to this
@@ -106,14 +106,14 @@ class PatchEmbeddings(tf.keras.layers.Layer):
 
         # Change the 2D spatial dimensions to a single temporal dimension.
         # shape = (batch_size, num_patches, out_channels=embed_dim)
-        batch_size, height, width = tf.shape(x)[:3]
+        batch_size, height, width = tf.unstack(tf.shape(x)[:3])
         num_patches = (width // self.patch_size[1]) * (height // self.patch_size[0])
         emb = tf.reshape(tensor=emb, shape=(batch_size, num_patches, -1))
 
         return emb
 
 
-class Attention(tf.keras.layers.Layer):
+class MultiHeadAttention(tf.keras.layers.Layer):
     def __init__(self, cfg: ViTConfig, **kwargs):
         super().__init__(**kwargs)
         head_dim = cfg.embed_dim // cfg.nb_heads
@@ -130,7 +130,7 @@ class Attention(tf.keras.layers.Layer):
     def call(self, x, training=False):
         # B (batch size), N (sequence length), D (embedding dimension),
         # H (number of heads)
-        batch_size, seq_length = tf.shape(x)[:2]
+        batch_size, seq_length = tf.unstack(tf.shape(x)[:2])
         qkv = self.qkv(x)  # (B, N, 3*D)
         qkv = tf.reshape(qkv, (batch_size, seq_length, 3, self.cfg.nb_heads, -1))
         qkv = tf.transpose(qkv, (2, 0, 3, 1, 4))  # (3, B, H, N, D/H)
@@ -179,7 +179,7 @@ class Block(tf.keras.layers.Layer):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
         self.norm1 = self.norm_layer(name="norm1")
-        self.attn = Attention(cfg, name="attn")
+        self.attn = MultiHeadAttention(cfg, name="attn")
         self.norm2 = self.norm_layer(name="norm2")
         self.mlp = MLP(cfg, name="mlp")
 
@@ -189,9 +189,12 @@ class Block(tf.keras.layers.Layer):
         return x
 
 
+@keras_serializable
 class ViT(tf.keras.Model):
-    def __init__(self, cfg: ViTConfig, name="vit", **kwargs):
-        super().__init__(name=name, **kwargs)
+    cfg_class = ViTConfig
+
+    def __init__(self, cfg: ViTConfig, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.nb_features = cfg.embed_dim  # For consistency with other models
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.cfg = cfg
@@ -251,6 +254,7 @@ class ViT(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
+    @tf.function
     def interpolate_pos_embed(self, height: int, width: int):
         """
         This method allows to interpolate the pre-trained position encodings, to be
@@ -266,7 +270,7 @@ class ViT(tf.keras.Model):
         """
         cfg = self.cfg
 
-        if height == cfg.input_size[0] and width == cfg.input_size[1]:
+        if (height == cfg.input_size[0]) and (width == cfg.input_size[1]):
             return self.pos_embed  # No interpolation needed
 
         src_pos_embed = (
@@ -292,7 +296,7 @@ class ViT(tf.keras.Model):
         return tgt_pos_embed
 
     def forward_features(self, x, training=False):
-        batch_size, height, width = tf.shape(x)[:3]
+        batch_size, height, width = tf.unstack(tf.shape(x)[:3])
 
         x = self.patch_embed(x)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)

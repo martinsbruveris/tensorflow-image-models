@@ -46,6 +46,7 @@ def create_model(
 
     # Create model
     model = cls(cfg)
+    model(model.dummy_inputs)  # Call model to build layers
 
     if pretrained is True:
         raise NotImplementedError(
