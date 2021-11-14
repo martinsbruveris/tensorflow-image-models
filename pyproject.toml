@@ -19,13 +19,17 @@ black = { version = "*", allow-prereleases = true }
 flake8 = "*"
 isort = "*"
 pytest = "*"
-
+pytest-timeout = "*"
+pytest-xdist = "*"
 
 [tool.poetry.extras]
 # Dependencies to load pretrained models from timm; will install PyTorch
 timm = ["pyyaml", "timm"]
 # Dependencies to train and evaluate models
 train = ["tensorflow-datasets", "tqdm"]
+
+[tool.pytest.ini_options]
+timeout = 10  # We need tests to be fast, because of GitHub free tier limits
 
 [tool.black]
 line-length = 88
