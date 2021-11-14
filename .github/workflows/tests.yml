@@ -1,0 +1,57 @@
+name: Python tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  OMP_NUM_THREADS: 2
+  MKL_NUM_THREADS: 2
+
+jobs:
+  test:
+    name: Run tests on ${{ matrix.os }} with Python ${{ matrix.python }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest]
+        python: ['3.8']
+        poetry: ['1.1.6']
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Set up Python ${{ matrix.python }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Install poetry
+      uses: abatilo/actions-poetry@v2.0.0
+      with:
+        poetry-version: ${{ matrix.poetry }}
+
+    - name: Cache poetry environment
+      uses: actions/cache@v2.1.6
+      id: cache
+      with:
+        path: ~/.virtualenvs
+        key: poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          poetry-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Set Poetry config
+      run: |
+        poetry config settings.virtualenvs.in-project false
+        poetry config settings.virtualenvs.path ~/.virtualenvs
+
+    - name: Install Dependencies
+      run: poetry install
+      if: steps.cache.outputs.cache-hit != 'true'
+
+    - name: Run tests
+      run: make test
