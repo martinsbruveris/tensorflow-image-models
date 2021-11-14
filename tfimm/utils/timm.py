@@ -43,8 +43,12 @@ def convert_tf_weight_name_to_pt_weight_name(
 
     Conventions for TF2.0 scopes -> PyTorch attribute names conversions:
 
-        - '$1___$2' is replaced by $2 (can be used to duplicate or remove layers in TF2.0 vs PyTorch)
-        - '_._' is replaced by a new level separation (can be used to convert TF2.0 lists in PyTorch nn.ModulesList)
+        - '$1___$2' is replaced by $2 (can be used to duplicate or remove layers in
+            TF2.0 vs PyTorch)
+        - '_._' is replaced by a new level separation (can be used to convert TF2.0
+            lists in PyTorch nn.ModulesList)
+        - '/remove/' is replaced by '/' (can be used to remove additional intermediate
+            levels in TF2.0)
 
     return tuple with:
 
@@ -59,6 +63,7 @@ def convert_tf_weight_name_to_pt_weight_name(
     tf_name = tf_name.replace(
         "_._", "/"
     )  # '_._' is replaced by a level separation (can be used to convert TF2.0 lists in PyTorch nn.ModulesList)
+    tf_name = tf_name.replace("/remove/", "/")
     tf_name = re.sub(r"//+", "/", tf_name)  # Remove empty levels at the end
     tf_name = tf_name.split(
         "/"
