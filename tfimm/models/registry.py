@@ -65,27 +65,29 @@ def _natural_key(string_):
 def list_models(
     name_filter: Union[str, List[str]] = "",
     module: str = "",
-    pretrained: bool = False,
+    pretrained: Union[bool, str] = False,
     exclude_filters: Union[str, List[str]] = "",
 ):
     """Returns list of available model names, sorted alphabetically.
 
     Args:
         name_filter: Wildcard filter string that works with fnmatch
-        module: Limit model selection to a specific sub-module (ie 'resnet')
-        pretrained: Include only models with pretrained weights if True
+        module: Limit model selection to a specific sub-module (ie "resnet")
+        pretrained: If True only include models with pretrained weights. If "timm",
+            only include models with pretrained weights in timm library
         exclude_filters (str or list[str]) - Wildcard filters to exclude models after
             including them with filter
 
     Example:
-        model_list("gluon_resnet*") -- returns all models starting with 'gluon_resnet'
-        model_list("*resnext*", "resnet") -- returns all models with 'resnext' in
-            'resnet' module
+        model_list("gluon_resnet*") -- returns all models starting with "gluon_resnet"
+        model_list("*resnext*", "resnet") -- returns all models with "resnext" in
+            "resnet" module
     """
     if module:
         all_models = list(_module_to_models[module])
     else:
         all_models = _model_class.keys()
+
     if name_filter:
         if not isinstance(name_filter, (tuple, list)):
             name_filter = [name_filter]
@@ -96,6 +98,7 @@ def list_models(
                 models = models.union(include_models)
     else:
         models = set(all_models)
+
     if exclude_filters:
         if not isinstance(exclude_filters, (tuple, list)):
             exclude_filters = [exclude_filters]
@@ -103,8 +106,12 @@ def list_models(
             exclude_models = fnmatch.filter(models, xf)  # exclude these models
             if len(exclude_models):
                 models = models.difference(exclude_models)
-    if pretrained:
+
+    if pretrained is True:
         models = _model_has_pretrained.intersection(models)
+    elif pretrained == "timm":
+        models = models.intersection(_timm_pretrained_models())
+
     return list(sorted(models, key=_natural_key))
 
 
@@ -141,3 +148,11 @@ def is_model_in_modules(model_name, module_names):
 
 def is_model_pretrained(model_name):
     return model_name in _model_has_pretrained
+
+
+def _timm_pretrained_models():
+    """Returns list of models with pretrained weights in timm library."""
+    import timm
+
+    models = timm.list_models(pretrained=True)
+    return set(models)
