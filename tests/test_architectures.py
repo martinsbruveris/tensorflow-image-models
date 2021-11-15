@@ -8,8 +8,9 @@ import tensorflow as tf
 from tfimm import create_model
 
 
-# We test one (small) model from each architecture. Even then tests take time
-@pytest.mark.parametrize("model_name", ["resnet18"]) # , "vit_tiny_patch16_224"])
+# We test one (small) model from each architecture. Even then tests take time, so we
+# increase the timeout.
+@pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
 @pytest.mark.timeout(60)
 def test_save_load_model_h5(model_name):
     model = create_model(model_name)
