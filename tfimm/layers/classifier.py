@@ -12,7 +12,7 @@ class ClassifierHead(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        num_classes: int,
+        nb_classes: int,
         pool_type: str = "avg",
         drop_rate: float = 0.0,
         use_conv: bool = False,
@@ -22,7 +22,7 @@ class ClassifierHead(tf.keras.layers.Layer):
         super().__init__(name=name, **kwargs)
 
         pool_type = pool_type or ""  # Convert other falsy values to empty string
-        if not pool_type and not use_conv and num_classes > 0:
+        if not pool_type and not use_conv and nb_classes > 0:
             raise ValueError(
                 "Pooling can only be disabled if conv classifier is used "
                 "or classifier is disabled."
@@ -41,18 +41,18 @@ class ClassifierHead(tf.keras.layers.Layer):
         else:
             self.drop = None
 
-        if num_classes == 0:
+        if nb_classes == 0:
             self.fc = None
         elif use_conv:
             self.fc = tf.keras.layers.Conv2D(
-                filters=num_classes,
+                filters=nb_classes,
                 kernel_size=1,
                 use_bias=True,
                 name="fc",
             )
         else:
             self.fc = tf.keras.layers.Dense(
-                units=num_classes,
+                units=nb_classes,
                 use_bias=True,
                 name="fc",
             )
