@@ -762,6 +762,7 @@ def vit_huge_patch14_224_in21k():
     )
     return ViT, cfg
 
+
 # TODO: Add DeiT models
 # TODO: Move IMAGENET_MEAN, etc. to common file.
 # TODO: Adapt DeiT output to be one tensor

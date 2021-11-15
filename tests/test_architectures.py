@@ -11,7 +11,6 @@ import torch
 from tfimm import create_model, list_models
 from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 
-
 # Exclude models that cause specific test failures
 if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
     # GitHub Linux runner is slower and hits memory limits sooner than MacOS

@@ -1,4 +1,4 @@
-check_dirs := tfimm
+check_dirs := tfimm tests
 
 # This target runs checks on all files
 quality:
