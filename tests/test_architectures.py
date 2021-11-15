@@ -1,3 +1,4 @@
+import os
 import tempfile
 from pathlib import Path
 
@@ -9,6 +10,14 @@ import torch
 
 from tfimm import create_model, list_models
 from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
+
+
+# Exclude models that cause specific test failures
+if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
+    # GitHub Linux runner is slower and hits memory limits sooner than MacOS
+    EXCLUDE_FILTERS = ["vit_large_*", "vit_huge_*"]
+else:
+    EXCLUDE_FILTERS = []
 
 
 # We test one (small) model from each architecture. Even then tests take time, so we
@@ -32,7 +41,9 @@ def test_save_load_model(model_name):
     assert np.allclose(res, res_2)
 
 
-@pytest.mark.parametrize("model_name", list_models(pretrained="timm"))
+@pytest.mark.parametrize(
+    "model_name", list_models(pretrained="timm", exclude_filters=EXCLUDE_FILTERS)
+)
 @pytest.mark.timeout(60)
 def test_load_timm_model(model_name):
     """Test if we can load models from timm."""

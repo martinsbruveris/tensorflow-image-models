@@ -13,4 +13,4 @@ style:
 
 # Run tests for the library
 test:
-	poetry run pytest -n auto --dist=loadfile -s -v ./tests/
+	poetry run pytest -s -v ./tests/
