@@ -71,7 +71,7 @@ Testing
  
 - [x] (must) Add first tests
 - [ ] (must) Test creation of each model
-- [ ] (optional) Run unit tests on GitHub CI
+- [x] (optional) Run unit tests on GitHub CI
 
 ResNet models
 
@@ -93,9 +93,9 @@ Vision Transformer models
 
 | Name           | Total | Converted | Documented |
 |----------------|:-----:|:---------:|------------|
-| vit            |  14   |           |            |
-| vit_in21k      |   8   |           |            |
-| vit_sam        |   2   |           |            |
+| vit            |  14   |    ✅     |            |
+| vit_in21k      |   8   |    ✅     |            |
+| vit_sam        |   2   |    ✅     |            |
 | deit           |   8   |           |            |
 | vit_miil       |   2   |           |            |
 
@@ -122,11 +122,11 @@ Evaluation
 
 Finetuning
 
-- [ ] (must) Load weights from h5 file to model with `nb_classes`
+- [x] (must) Load weights from file to model with `nb_classes`
 - [ ] (must) Set weight decay in loaded model
 - [ ] (must) Fine-tune pretrained model on CIFAR-100
 - [ ] (must) Evaluate model on CIFAR-100
-- [ ] (optional) Load weights from h5 file to model with `in_chans != 3`
+- [ ] (optional) Load weights from file to model with `in_chans != 3`
 - [ ] (optional) Fine-tune model on MNIST (and variants)
 - [ ] (optional) Evaluate model on MNIST (and variants)
 
