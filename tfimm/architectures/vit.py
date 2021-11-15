@@ -32,7 +32,6 @@ class ViTConfig(ModelConfig):
     attn_drop_rate: float = 0.0
     norm_layer: str = "layer_norm"
     act_layer: str = "gelu"
-    weight_init: str = ""  # TODO
     # Parameters for inference
     crop_pct: float = 0.875
     interpolation: str = "bicubic"
@@ -60,7 +59,6 @@ class ViTConfig(ModelConfig):
         attn_drop_rate: attention dropout rate
         norm_layer: normalization layer
         act_layer: activation function
-        weight_init: weight init scheme
     """
 
     def __post_init__(self):
@@ -232,7 +230,7 @@ class ViT(tf.keras.Model):
         # Some models have a representation layer on top of cls token
         if cfg.representation_size and not cfg.distilled:
             self.nb_features = cfg.representation_size
-            self.pre_logits = tf.keras.layers.Layer(
+            self.pre_logits = tf.keras.layers.Dense(
                 units=cfg.representation_size, activation="tanh", name="pre_logits/fc"
             )
         else:
@@ -566,5 +564,200 @@ def vit_large_patch16_384():
         depth=24,
         nb_heads=16,
         crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch32_sam_224():
+    """
+    ViT-Base (ViT-B/32) w/ SAM pretrained weights.
+    Paper: https://arxiv.org/abs/2106.01548
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch32_sam_224",
+        url="",
+        patch_size=32,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch16_sam_224():
+    """
+    ViT-Base (ViT-B/16) w/ SAM pretrained weights.
+    Paper: https://arxiv.org/abs/2106.01548
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch16_sam_224",
+        url="",
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_tiny_patch16_224_in21k():
+    """
+    ViT-Tiny (Vit-Ti/16). ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_tiny_patch16_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=16,
+        embed_dim=192,
+        depth=12,
+        nb_heads=3,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_small_patch32_224_in21k():
+    """
+    ViT-Small (ViT-S/16) ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_small_patch32_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=32,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_small_patch16_224_in21k():
+    """
+    ViT-Small (ViT-S/16) ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_small_patch16_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=16,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch32_224_in21k():
+    """
+    ViT-Base model (ViT-B/32) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch32_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=32,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch16_224_in21k():
+    """
+    ViT-Base model (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch16_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_large_patch32_224_in21k():
+    """
+    ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a representation layer but the 21k classifier head is zero'd
+    out in original weights.
+    """
+    cfg = ViTConfig(
+        name="vit_large_patch32_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=32,
+        embed_dim=1024,
+        depth=24,
+        nb_heads=16,
+        representation_size=1024,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_large_patch16_224_in21k():
+    """
+    ViT-Large model (ViT-L/16) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_large_patch16_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=16,
+        embed_dim=1024,
+        depth=24,
+        nb_heads=16,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_huge_patch14_224_in21k():
+    """
+    ViT-Huge model (ViT-H/14) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a representation layer but the 21k classifier head is zero'd
+    out in original weights.
+    """
+    cfg = ViTConfig(
+        name="vit_huge_patch14_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=14,
+        embed_dim=1280,
+        depth=32,
+        nb_heads=16,
+        representation_size=1280,
     )
     return ViT, cfg
