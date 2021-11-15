@@ -19,9 +19,9 @@ IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 class ResNetConfig(ModelConfig):
     block: Any
     nb_blocks: List
-    num_classes: int = 1000
+    nb_classes: int = 1000
     in_chans: int = 3
-    input_size: Tuple[int, int, int] = (224, 224, 3)
+    input_size: Tuple[int, int] = (224, 224)
     pool_size: Tuple[int, int] = (7, 7)
     cardinality: int = 1
     base_width: int = 64
@@ -42,7 +42,7 @@ class ResNetConfig(ModelConfig):
     block_args: Any = None  # TODO: What is this?
     zero_init_last_bn: bool = True
     # Parameters for inference
-    test_input_size: Optional[Tuple[int, int, int]] = None
+    test_input_size: Optional[Tuple[int, int]] = None
     crop_pct: float = 0.875
     interpolation: str = "bilinear"
     mean: float = IMAGENET_DEFAULT_MEAN
@@ -432,7 +432,7 @@ def make_blocks(
                 dilation=dilation,
                 first_dilation=prev_dilation,
                 norm_layer=norm_layer,
-                name=f"resnet/{stage_name}/0",
+                name=f"res_net/{stage_name}/0",
             )
             if avg_down:
                 downsample = downsample_avg(**down_kwargs)
@@ -459,7 +459,8 @@ def make_blocks(
                     first_dilation=prev_dilation,
                     drop_path=None,
                     **block_kwargs,
-                    name=f"resnet/{stage_name}/{block_idx}",
+                    # TODO: sort out name scope
+                    name=f"res_net/{stage_name}/{block_idx}",
                 )
             )
             prev_dilation = dilation
@@ -517,7 +518,7 @@ class ResNet(tf.keras.Model):
         Class for the residual block. Options are BasicBlockGl, BottleneckGl.
     nb_blocks : list of int
         Numbers of blocks in each stage
-    num_classes : int, default 1000
+    nb_classes : int, default 1000
         Number of classification classes.
     in_chans : int, default 3
         Number of input (color) channels.
@@ -559,10 +560,11 @@ class ResNet(tf.keras.Model):
 
     def __init__(self, cfg: ResNetConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.cfg = cfg
 
         self.block = cfg.block
         self.nb_blocks = cfg.nb_blocks
-        self.num_classes = cfg.num_classes
+        self.nb_classes = cfg.nb_classes
         self.in_chans = cfg.in_chans
         self.input_size = cfg.input_size
         self.cardinality = cfg.cardinality
@@ -592,7 +594,7 @@ class ResNet(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.input_size))
+        return tf.zeros((1, *self.input_size, self.in_chans))
 
     def build(self, input_shape: tf.TensorShape):
         if "deep" in self.stem_type:
@@ -606,7 +608,7 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 strides=2,
                 use_bias=False,
-                name="resnet/conv1/0",
+                name="conv1/0",
             )
             bn1_0 = self.norm_layer(name="resnet/conv1/1")
             act1_0 = self.act_layer()
@@ -615,7 +617,7 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
-                name="resnet/conv1/3",
+                name="conv1/3",
             )
             bn1_1 = self.norm_layer(name="resnet/conv1/4")
             act1_1 = self.act_layer()
@@ -624,7 +626,7 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
-                name="resnet/conv1/6",
+                name="conv1/6",
             )
             self.conv1 = tf.keras.Sequential(
                 [conv1_0, bn1_0, act1_0, conv1_1, bn1_1, act1_1, conv1_2]
@@ -686,7 +688,7 @@ class ResNet(tf.keras.Model):
 
         # Head (pooling and classifier))
         self.head = ClassifierHead(
-            num_classes=self.num_classes,
+            nb_classes=self.nb_classes,
             pool_type=self.global_pool,
             drop_rate=self.drop_rate,
             use_conv=False,
@@ -775,7 +777,7 @@ def resnet26t():
     cfg = ResNetConfig(
         name="resnet26t",
         url="",
-        input_size=(256, 256, 3),
+        input_size=(256, 256),
         block=Bottleneck,
         nb_blocks=[2, 2, 2, 2],
         pool_size=(8, 8),
@@ -866,14 +868,14 @@ def resnet101d():
     cfg = ResNetConfig(
         name="resnet101d",
         url="",
-        input_size=(256, 256, 3),
+        input_size=(256, 256),
         block=Bottleneck,
         nb_blocks=[3, 4, 23, 3],
         pool_size=(8, 8),
         stem_width=32,
         stem_type="deep",
         avg_down=True,
-        test_input_size=(320, 320, 3),
+        test_input_size=(320, 320),
         interpolation="bicubic",
         crop_pct=1.0,
         first_conv="conv1/0",
@@ -901,14 +903,14 @@ def resnet152d():
     cfg = ResNetConfig(
         name="resnet152d",
         url="",
-        input_size=(256, 256, 3),
+        input_size=(256, 256),
         block=Bottleneck,
         nb_blocks=[3, 8, 36, 3],
         pool_size=(8, 8),
         stem_width=32,
         stem_type="deep",
         avg_down=True,
-        test_input_size=(320, 320, 3),
+        test_input_size=(320, 320),
         interpolation="bicubic",
         crop_pct=1.0,
         first_conv="conv1/0",
@@ -922,14 +924,14 @@ def resnet200d():
     cfg = ResNetConfig(
         name="resnet200d",
         url="",
-        input_size=(256, 256, 3),
+        input_size=(256, 256),
         block=Bottleneck,
         nb_blocks=[3, 24, 36, 3],
         pool_size=(8, 8),
         stem_width=32,
         stem_type="deep",
         avg_down=True,
-        test_input_size=(320, 320, 3),
+        test_input_size=(320, 320),
         interpolation="bicubic",
         crop_pct=1.0,
         first_conv="conv1/0",
