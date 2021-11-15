@@ -608,7 +608,7 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 strides=2,
                 use_bias=False,
-                name="conv1/0",
+                name=f"{self.name}/conv1/0",
             )
             bn1_0 = self.norm_layer(name="resnet/conv1/1")
             act1_0 = self.act_layer()
@@ -617,7 +617,7 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
-                name="conv1/3",
+                name=f"{self.name}/conv1/3",
             )
             bn1_1 = self.norm_layer(name="resnet/conv1/4")
             act1_1 = self.act_layer()
@@ -626,7 +626,7 @@ class ResNet(tf.keras.Model):
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
-                name="conv1/6",
+                name=f"{self.name}/conv1/6",
             )
             self.conv1 = tf.keras.Sequential(
                 [conv1_0, bn1_0, act1_0, conv1_1, bn1_1, act1_1, conv1_2]
