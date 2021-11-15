@@ -12,11 +12,12 @@ from tfimm import create_model
 # increase the timeout.
 @pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
 @pytest.mark.timeout(60)
-def test_save_load_model_h5(model_name):
+def test_save_load_model(model_name):
     model = create_model(model_name)
 
     # Save model and load it again
     with tempfile.TemporaryDirectory() as tmpdir:
+        # We can't use h5 format for subclassed models, only saved model format.
         model_path = Path(tmpdir) / "model"
         model.save(model_path)
         loaded_model = tf.keras.models.load_model(model_path)
