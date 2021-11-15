@@ -81,6 +81,9 @@ def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     """Transfers weights from src_model to dst_model, with special treatment of first
     convolution and classification layers."""
     keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
+    dst_classifier = dst_model.cfg.classifier
+    if isinstance(dst_classifier, str):  # Some models have multiple classifier heads
+        dst_classifier = [dst_classifier]
 
     src_weights = {_strip_prefix(w.name): w for w in src_model.weights}
     weight_value_tuples = []
@@ -89,7 +92,7 @@ def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):
         var_name = _get_layer_name(dst_weight.name)
         w_name = _strip_prefix(dst_weight.name)
 
-        if var_name == dst_model.cfg.classifier:
+        if var_name in dst_classifier:
             if keep_classifier:
                 # We only keep the classifier if the number of classes is the same
                 # Otherwise the classifier is not copied over, i.e., we keep the
