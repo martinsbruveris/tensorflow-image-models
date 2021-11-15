@@ -341,3 +341,230 @@ def vit_tiny_patch16_224():
         nb_heads=3,
     )
     return ViT, cfg
+
+
+@register_model
+def vit_tiny_patch16_384():
+    """ViT-Tiny (Vit-Ti/16) @ 384x384."""
+    cfg = ViTConfig(
+        name="vit_tiny_patch16_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=16,
+        embed_dim=192,
+        depth=12,
+        nb_heads=3,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_small_patch32_224():
+    """ViT-Small (ViT-S/32)"""
+    cfg = ViTConfig(
+        name="vit_small_patch32_224",
+        url="",
+        patch_size=32,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_small_patch32_384():
+    """ViT-Small (ViT-S/32) at 384x384."""
+    cfg = ViTConfig(
+        name="vit_small_patch32_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=32,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_small_patch16_224():
+    """ViT-Small (ViT-S/16)"""
+    cfg = ViTConfig(
+        name="vit_small_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_small_patch16_384():
+    """ViT-Small (ViT-S/16)"""
+    cfg = ViTConfig(
+        name="vit_small_patch16_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=16,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch32_224():
+    """
+    ViT-Base (ViT-B/32) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch32_224",
+        url="",
+        patch_size=32,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch32_384():
+    """
+    ViT-Base model (ViT-B/32) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 384x384, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch32_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=32,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch16_224():
+    """
+    ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch16_384():
+    """
+    ViT-Base model (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 384x384, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch16_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_large_patch32_224():
+    """
+    ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
+    No pretrained weights.
+    """
+    cfg = ViTConfig(
+        name="vit_large_patch32_224",
+        url="",
+        patch_size=32,
+        embed_dim=1024,
+        depth=24,
+        nb_heads=16,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_large_patch32_384():
+    """
+    ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 384x384, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_large_patch32_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=32,
+        embed_dim=1024,
+        depth=24,
+        nb_heads=16,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_large_patch16_224():
+    """
+    ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_large_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=1024,
+        depth=24,
+        nb_heads=16,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_large_patch16_384():
+    """
+    ViT-Large model (ViT-L/16) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 384x384, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_large_patch16_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=16,
+        embed_dim=1024,
+        depth=24,
+        nb_heads=16,
+        crop_pct=1.0,
+    )
+    return ViT, cfg
