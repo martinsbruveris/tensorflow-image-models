@@ -43,6 +43,9 @@ exclude = """
 )/
 """
 
+[tool.isort]
+profile = "black"
+
 [build-system]
 requires = ["poetry>=1.0"]
 build-backend = "poetry.masonry.api"
