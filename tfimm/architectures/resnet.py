@@ -6,13 +6,10 @@ import tensorflow as tf
 
 from tfimm.layers import ClassifierHead, act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
+from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
-
-
-IMAGENET_DEFAULT_MEAN = (0.485, 0.456, 0.406)
-IMAGENET_DEFAULT_STD = (0.229, 0.224, 0.225)
 
 
 @dataclass
