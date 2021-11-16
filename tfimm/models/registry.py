@@ -156,3 +156,40 @@ def _timm_pretrained_models():
 
     models = timm.list_models(pretrained=True)
     return set(models)
+
+
+def _to_timm_module_name(module):
+    """
+    Some modules are called differently in tfimm and timm. This function converts the
+    tfimm name to the timm name.
+    """
+    if module == "vit":
+        module = "vision_transformer"
+    return module
+
+
+def _compare_available_models_with_timm(
+    name_filter: Union[str, List[str]] = "",
+    module: str = "",
+    exclude_filters: Union[str, List[str]] = "",
+):
+    """Helper function to list which models have not yet been converted from timm."""
+    import timm
+
+    tf_models = list_models(
+        name_filter=name_filter,
+        module=module,
+        pretrained="timm",
+        exclude_filters=exclude_filters
+    )
+    pt_models = timm.list_models(
+        filter=name_filter,
+        module=_to_timm_module_name(module),
+        pretrained=True,
+        exclude_filters=exclude_filters
+    )
+
+    pt_only = sorted(list(set(pt_models) - set(tf_models)))
+    print(f"timm models available in tfimm: {len(tf_models)}/{len(pt_models)}.")
+    print(f"timm models not available: {len(pt_only)}.")
+    print(f"The following models are not available: {', '.join(pt_only)}")
