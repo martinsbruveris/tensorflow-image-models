@@ -5,7 +5,10 @@ description = "Image models with pretrained weights in TensorFlow"
 authors = ["Martins Bruveris"]
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = ">=3.7,<3.10"
+# There is a problem with markdown=3.3.5 and poetry. Should be temporary
+# See: https://github.com/python-poetry/poetry/issues/4777
+markdown = "3.3.4"
 numpy = "*"
 tensorflow = "^2.5"
 
@@ -29,7 +32,7 @@ timm = ["pyyaml", "timm"]
 train = ["tensorflow-datasets", "tqdm"]
 
 [tool.pytest.ini_options]
-timeout = 10  # We need tests to be fast, because of GitHub free tier limits
+timeout = 60  # We need tests to be not too slow, because of GitHub limits
 
 [tool.black]
 line-length = 88
