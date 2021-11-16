@@ -5,9 +5,13 @@ import tensorflow as tf
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import (IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD,
-                         IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD,
-                         to_2tuple)
+from tfimm.utils import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
+    IMAGENET_INCEPTION_MEAN,
+    IMAGENET_INCEPTION_STD,
+    to_2tuple,
+)
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["ViT", "ViTConfig"]
@@ -924,6 +928,3 @@ def deit_base_distilled_patch16_384():
         classifier=("head", "head_dist"),
     )
     return ViT, cfg
-
-
-# TODO: Add DeiT as test case for test_transfer_weights
