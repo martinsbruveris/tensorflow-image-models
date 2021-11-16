@@ -96,7 +96,7 @@ Vision Transformer models
 | vit            |  14   |    ✅     |            |
 | vit_in21k      |   8   |    ✅     |            |
 | vit_sam        |   2   |    ✅     |            |
-| deit           |   8   |           |            |
+| deit           |   8   |    ✅     |            |
 | vit_miil       |   2   |           |            |
 
 Codebase

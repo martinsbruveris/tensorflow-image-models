@@ -4,6 +4,7 @@ import pytest
 from tfimm.models.factory import create_model, transfer_weigths
 
 
+# TODO: Add DeiT as test case for test_transfer_weights
 @pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
 @pytest.mark.parametrize("nb_classes", [10, 0])
 def test_transfer_weights(model_name, nb_classes):
