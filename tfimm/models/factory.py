@@ -85,7 +85,7 @@ def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     if isinstance(dst_classifier, str):  # Some models have multiple classifier heads
         dst_classifier = [dst_classifier]
 
-    src_weights = {_strip_prefix(w.name): w for w in src_model.weights}
+    src_weights = {_strip_prefix(w.name): w.numpy() for w in src_model.weights}
     weight_value_tuples = []
     for dst_weight in dst_model.weights:
         # We store human-friendly names in the model config.
