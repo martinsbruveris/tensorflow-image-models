@@ -50,12 +50,6 @@ Other ImageNet variants, such as
 - ImageNet-v2 (`imagenet_v2`, defaults to matched-frequency)
 can be downloaded automatically via `tensorflow-datasets`.
 
-## Resources
-
-- [vit-pytorch](https://github.com/lucidrains/vit-pytorch) repository with 
-  implementations of several transformer architectures. No pretrained weights, just
-  architectures.
-
 ## To do before 0.1.0
 
 Development setup

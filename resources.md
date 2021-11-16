@@ -1,5 +1,12 @@
 # Resources
 
+## Vision transformers
+
+- Focal self-attention for local-global interactions in vision transformers (focal
+  transformer). 
+  [\[paper\]](https://arxiv.org/pdf/2107.00641.pdf) 
+  [\[github\]](https://github.com/microsoft/Focal-Transformer)
+
 ## Explainability
 
 - Exploring explainability for vision transformers. 
@@ -12,4 +19,12 @@
   transformers. 
   [\[paper\]](https://arxiv.org/pdf/2103.15679.pdf) 
   [\[github\]](https://github.com/hila-chefer/Transformer-MM-Explainability) 
+
+## Code
+
+- [vit-pytorch](https://github.com/lucidrains/vit-pytorch) repository with 
+  implementations of several transformer architectures. No pretrained weights, just
+  architectures.
+- [External-attention-PyTorch](https://github.com/xmu-xiaoma666/External-Attention-pytorch) 
+  repository of many attention architectures. No pretrained weights.
   
