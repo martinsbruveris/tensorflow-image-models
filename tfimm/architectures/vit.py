@@ -5,13 +5,9 @@ import tensorflow as tf
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import (
-    IMAGENET_DEFAULT_MEAN,
-    IMAGENET_DEFAULT_STD,
-    IMAGENET_INCEPTION_MEAN,
-    IMAGENET_INCEPTION_STD,
-    to_2tuple
-)
+from tfimm.utils import (IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD,
+                         IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD,
+                         to_2tuple)
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["ViT", "ViTConfig"]
@@ -29,7 +25,7 @@ class ViTConfig(ModelConfig):
     mlp_ratio: float = 4.0
     qkv_bias: bool = True
     representation_size: Optional[int] = None
-    distilled: int = False
+    distilled: bool = False
     drop_rate: float = 0.0
     attn_drop_rate: float = 0.0
     norm_layer: str = "layer_norm"
@@ -230,7 +226,11 @@ class ViT(tf.keras.Model):
         self.norm = self.norm_layer(name="norm")
 
         # Some models have a representation layer on top of cls token
-        if cfg.representation_size and not cfg.distilled:
+        if cfg.representation_size:
+            if cfg.distilled:
+                raise ValueError(
+                    "Cannot combine distillation token and a representation layer."
+                )
             self.nb_features = cfg.representation_size
             self.pre_logits = tf.keras.layers.Dense(
                 units=cfg.representation_size, activation="tanh", name="pre_logits/fc"
@@ -273,9 +273,7 @@ class ViT(tf.keras.Model):
         if (height == cfg.input_size[0]) and (width == cfg.input_size[1]):
             return self.pos_embed  # No interpolation needed
 
-        src_pos_embed = (
-            self.pos_embed[:, 1:-1] if cfg.distilled else self.pos_embed[:, 1:]
-        )
+        src_pos_embed = self.pos_embed[:, cfg.nb_tokens :]
         src_pos_embed = tf.reshape(
             src_pos_embed, shape=(1, *cfg.grid_size, cfg.embed_dim)
         )
@@ -286,12 +284,8 @@ class ViT(tf.keras.Model):
             method="bicubic",
         )
         tgt_pos_embed = tf.reshape(tgt_pos_embed, shape=(1, -1, cfg.embed_dim))
-        tgt_pos_embed = (
-            tf.concat(
-                (self.pos_embed[:, :1], tgt_pos_embed, self.pos_embed[:, -1:]), axis=1
-            )
-            if cfg.distilled
-            else tf.concat((self.pos_embed[:, :1], tgt_pos_embed), axis=1)
+        tgt_pos_embed = tf.concat(
+            (self.pos_embed[:, : cfg.nb_tokens], tgt_pos_embed), axis=1
         )
         return tgt_pos_embed
 
@@ -300,10 +294,11 @@ class ViT(tf.keras.Model):
 
         x = self.patch_embed(x)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
-        x = tf.concat((cls_token, x), axis=1)
-        if self.cfg.distilled:
-            dist_token = tf.repeat(self.dist_token, repeat=batch_size, axis=0)
-            x = tf.concat((x, dist_token), axis=1)
+        if not self.cfg.distilled:
+            x = tf.concat((cls_token, x), axis=1)
+        else:
+            dist_token = tf.repeat(self.dist_token, repeats=batch_size, axis=0)
+            x = tf.concat((cls_token, dist_token, x), axis=1)
         x = x + self.interpolate_pos_embed(height, width)
         x = self.pos_drop(x)
 
@@ -312,20 +307,22 @@ class ViT(tf.keras.Model):
         x = self.norm(x)
 
         if self.cfg.distilled:
-            return x[:, 0], x[:, 1]
-        elif self.pre_logits is not None:
+            # Here we diverge from timm and return both outputs as one tensor. That way
+            # all models always have one output by default
+            return x[:, :2]
+        elif self.cfg.representation_size:
             return self.pre_logits(x[:, 0])
         else:
             return x[:, 0]
 
     def call(self, x, training=False):
         x = self.forward_features(x, training)
-        if self.cfg.distilled is False:
+        if not self.cfg.distilled:
             x = self.head(x)
         else:
-            x = self.head(x[0])
-            x_dist = self.head_dist(x[1])
-            x = tf.concat((x, x_dist), axis=1)
+            y = self.head(x[:, 0])
+            y_dist = self.head_dist(x[:, 1])
+            x = tf.stack((y, y_dist), axis=1)
         return x
 
 
@@ -765,7 +762,168 @@ def vit_huge_patch14_224_in21k():
     return ViT, cfg
 
 
-# TODO: Add DeiT models
-# TODO: Adapt DeiT output to be one tensor
-# TODO: Adapt unit tests to deal with divergence between timm and tfimm
+@register_model
+def deit_tiny_patch16_224():
+    """
+    DeiT-tiny model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_tiny_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=192,
+        depth=12,
+        nb_heads=3,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_small_patch16_224():
+    """
+    DeiT-small model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_small_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_base_patch16_224():
+    """
+    DeiT base model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_base_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_base_patch16_384():
+    """
+    DeiT base model @ 384x384 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_base_patch16_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        crop_pct=1.0,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_tiny_distilled_patch16_224():
+    """
+    DeiT-tiny distilled model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_tiny_distilled_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=192,
+        depth=12,
+        nb_heads=3,
+        distilled=True,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+        classifier=("head", "head_dist"),
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_small_distilled_patch16_224():
+    """
+    DeiT-small distilled model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_small_distilled_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=384,
+        depth=12,
+        nb_heads=6,
+        distilled=True,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+        classifier=("head", "head_dist"),
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_base_distilled_patch16_224():
+    """
+    DeiT-base distilled model @ 224x224 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_base_distilled_patch16_224",
+        url="",
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        distilled=True,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+        classifier=("head", "head_dist"),
+    )
+    return ViT, cfg
+
+
+@register_model
+def deit_base_distilled_patch16_384():
+    """
+    DeiT-base distilled model @ 384x384 from paper (https://arxiv.org/abs/2012.12877).
+    ImageNet-1k weights from https://github.com/facebookresearch/deit.
+    """
+    cfg = ViTConfig(
+        name="deit_base_distilled_patch16_384",
+        url="",
+        input_size=(384, 384),
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        distilled=True,
+        crop_pct=1.0,
+        mean=IMAGENET_DEFAULT_MEAN,
+        std=IMAGENET_DEFAULT_STD,
+        classifier=("head", "head_dist"),
+    )
+    return ViT, cfg
+
+
 # TODO: Add DeiT as test case for test_transfer_weights
