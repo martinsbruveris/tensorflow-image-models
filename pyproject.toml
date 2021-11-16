@@ -5,9 +5,9 @@ description = "Image models with pretrained weights in TensorFlow"
 authors = ["Martins Bruveris"]
 
 [tool.poetry.dependencies]
-python = "~3.8"
+python = "^3.7"
 numpy = "*"
-tensorflow = ">2.5"
+tensorflow = "^2.5"
 
 pyyaml = { version = "*", optional = true }
 tensorflow-datasets = { version="*", optional = true }
