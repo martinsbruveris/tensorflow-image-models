@@ -64,7 +64,7 @@ Development setup
 Testing
  
 - [x] (must) Add first tests
-- [ ] (must) Test creation of each model
+- [x] (must) Test creation of each model
 - [x] (optional) Run unit tests on GitHub CI
 
 ResNet models
@@ -91,7 +91,7 @@ Vision Transformer models
 | vit_in21k      |   8   |    ✅     |            |
 | vit_sam        |   2   |    ✅     |            |
 | deit           |   8   |    ✅     |            |
-| vit_miil       |   2   |           |            |
+| vit_miil       |   2   |    ✅     |            |
 
 Codebase
 
