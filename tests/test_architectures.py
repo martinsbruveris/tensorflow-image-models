@@ -41,10 +41,14 @@ def test_save_load_model(model_name):
 
 
 @pytest.mark.parametrize(
-    "model_name", list_models(pretrained="timm", exclude_filters=EXCLUDE_FILTERS)
+    "model_name",
+    list_models(
+        pretrained="timm",
+        exclude_filters=EXCLUDE_FILTERS,
+    ),
 )
 @pytest.mark.timeout(60)
-def test_load_timm_model(model_name):
+def test_load_timm_model(model_name: str):
     """Test if we can load models from timm."""
     # We don't need to load the pretrained weights from timm, we only need a PyTorch
     # model, that we then convert to tensorflow. This allows us to run these tests
@@ -63,5 +67,10 @@ def test_load_timm_model(model_name):
 
     pt_img = torch.Tensor(img.transpose([0, 3, 1, 2]))
     pt_res = pt_model.forward(pt_img).detach().numpy()
+
+    if model_name.startswith("deit_") and "distilled" in model_name:
+        # During inference timm distilled models return average of both heads, while
+        # we return both heads
+        tf_res = tf.reduce_mean(tf_res, axis=1)
 
     assert (np.max(np.abs(tf_res - pt_res))) < 1e-3
