@@ -37,8 +37,8 @@ class ViTConfig(ModelConfig):
     # Parameters for inference
     crop_pct: float = 0.875
     interpolation: str = "bicubic"
-    mean: float = IMAGENET_INCEPTION_MEAN
-    std: float = IMAGENET_INCEPTION_STD
+    mean: Tuple[float, float, float] = IMAGENET_INCEPTION_MEAN
+    std: Tuple[float, float, float] = IMAGENET_INCEPTION_STD
     first_conv: str = "patch_embed/proj"
     # DeiT models have two classifier heads, one for distillation
     classifier: Union[str, Tuple[str, str]] = "head"
@@ -497,6 +497,24 @@ def vit_base_patch16_384():
 
 
 @register_model
+def vit_base_patch8_224():
+    """
+    ViT-Base (ViT-B/8) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-1k weights fine-tuned from in21k @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch8_224",
+        url="",
+        patch_size=8,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
 def vit_large_patch32_224():
     """
     ViT-Large model (ViT-L/32) from original paper (https://arxiv.org/abs/2010.11929).
@@ -695,6 +713,25 @@ def vit_base_patch16_224_in21k():
         url="",
         nb_classes=21843,
         patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch8_224_in21k():
+    """ViT-Base model (ViT-B/8) from original paper (https://arxiv.org/abs/2010.11929).
+    ImageNet-21k weights @ 224x224, source
+    https://github.com/google-research/vision_transformer.
+    Note: This model has a valid 21k classifier head and no representation layer.
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch8_224_in21k",
+        url="",
+        nb_classes=21843,
+        patch_size=8,
         embed_dim=768,
         depth=12,
         nb_heads=12,
@@ -926,5 +963,53 @@ def deit_base_distilled_patch16_384():
         mean=IMAGENET_DEFAULT_MEAN,
         std=IMAGENET_DEFAULT_STD,
         classifier=("head", "head_dist"),
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch16_224_miil_in21k():
+    """ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    Weights taken from: https://github.com/Alibaba-MIIL/ImageNet21K
+    See paper: https://arxiv.org/pdf/2104.10972v4.pdf
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch16_224_miil_in21k",
+        url="",
+        nb_classes=11221,
+        input_size=(224, 224),
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        qkv_bias=False,
+        crop_pct=0.875,
+        interpolation="bilinear",
+        mean=(0.0, 0.0, 0.0),
+        std=(0.0, 0.0, 0.0),
+    )
+    return ViT, cfg
+
+
+@register_model
+def vit_base_patch16_224_miil():
+    """
+    ViT-Base (ViT-B/16) from original paper (https://arxiv.org/abs/2010.11929).
+    Weights taken from: https://github.com/Alibaba-MIIL/ImageNet21K
+    See paper: https://arxiv.org/pdf/2104.10972v4.pdf
+    """
+    cfg = ViTConfig(
+        name="vit_base_patch16_224_miil",
+        url="",
+        input_size=(224, 224),
+        patch_size=16,
+        embed_dim=768,
+        depth=12,
+        nb_heads=12,
+        qkv_bias=False,
+        crop_pct=0.875,
+        interpolation="bilinear",
+        mean=(0.0, 0.0, 0.0),
+        std=(0.0, 0.0, 0.0),
     )
     return ViT, cfg

@@ -180,13 +180,13 @@ def _compare_available_models_with_timm(
         name_filter=name_filter,
         module=module,
         pretrained="timm",
-        exclude_filters=exclude_filters
+        exclude_filters=exclude_filters,
     )
     pt_models = timm.list_models(
         filter=name_filter,
         module=_to_timm_module_name(module),
         pretrained=True,
-        exclude_filters=exclude_filters
+        exclude_filters=exclude_filters,
     )
 
     pt_only = sorted(list(set(pt_models) - set(tf_models)))
