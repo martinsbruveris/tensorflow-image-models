@@ -8,7 +8,7 @@ from tfimm.models.registry import is_model, model_class, model_config
 from tfimm.utils import load_timm_weights
 
 
-# TODO: Implement in_chans, to work with both timm as well as models in h5 format.
+# TODO: Implement in_chans, to work with both timm as well as saved models
 def create_model(
     model_name: str,
     pretrained: Union[bool, str] = False,

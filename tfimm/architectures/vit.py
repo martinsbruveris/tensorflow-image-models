@@ -154,12 +154,12 @@ class MLP(tf.keras.layers.Layer):
 
     def __init__(self, cfg: ViTConfig, **kwargs):
         super().__init__(**kwargs)
-        self.act_layer = act_layer_factory(cfg.act_layer)
+        act_layer = act_layer_factory(cfg.act_layer)
 
         self.fc1 = tf.keras.layers.Dense(
             units=int(cfg.embed_dim * cfg.mlp_ratio), name="fc1"
         )
-        self.act = self.act_layer()
+        self.act = act_layer()
         self.drop1 = tf.keras.layers.Dropout(rate=cfg.drop_rate)
         self.fc2 = tf.keras.layers.Dense(units=cfg.embed_dim, name="fc2")
         self.drop2 = tf.keras.layers.Dropout(rate=cfg.drop_rate)
@@ -248,11 +248,14 @@ class ViT(tf.keras.Model):
             if cfg.nb_classes > 0
             else tf.keras.layers.Activation("linear")  # Identity layer
         )
-        self.head_dist = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head_dist")
-            if cfg.distilled and cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
-        )
+        if cfg.distilled:
+            self.head_dist = (
+                tf.keras.layers.Dense(units=cfg.nb_classes, name="head_dist")
+                if cfg.nb_classes > 0
+                else tf.keras.layers.Activation("linear")  # Identity layer
+            )
+        else:
+            self.head_dist = None
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
