@@ -12,11 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import dataclasses
 import functools
 
 import tensorflow as tf
-
-from tfimm.models.config import ModelConfig
 
 
 def keras_serializable(cls):
@@ -51,14 +50,14 @@ def keras_serializable(cls):
     def wrapped_init(self, *args, **kwargs):
         cfg = (
             args[0]
-            if args and isinstance(args[0], ModelConfig)
+            if args and isinstance(args[0], cfg_class)
             else kwargs.pop("cfg", None)
         )
 
         if isinstance(cfg, dict):
-            cfg = cfg_class.from_dict(cfg)
+            cfg = cfg_class(**cfg)
             initializer(self, cfg, *args, **kwargs)
-        elif isinstance(cfg, ModelConfig):
+        elif isinstance(cfg, cfg_class):
             if len(args) > 0:
                 initializer(self, *args, **kwargs)
             else:
@@ -66,24 +65,23 @@ def keras_serializable(cls):
         else:
             raise ValueError("Must pass either `cfg` (ModelConfig) or `cfg` (dict)")
 
+        # This is probably just a safety net
         self._cfg = cfg
         self._kwargs = kwargs
 
     cls.__init__ = wrapped_init
 
-    if not hasattr(cls, "get_config"):
-        raise TypeError(
-            "Only use @keras_serializable on tf.keras.layers.Layer subclasses"
-        )
-    if hasattr(cls.get_config, "_is_default"):
+    def get_config(self):
+        return dataclasses.asdict(self.cfg)
 
-        def get_config(self):
-            _cfg = super(cls, self).get_config()
-            _cfg["cfg"] = self._cfg.to_dict()
-            _cfg.update(self._kwargs)
-            return _cfg
+    cls.get_config = get_config
 
-        cls.get_config = get_config
+    @classmethod
+    def from_config(_cls, _cfg):
+        _cfg = cfg_class(**_cfg)
+        return _cls(_cfg)
+
+    cls.from_config = from_config
 
     cls._keras_serializable = True
     if hasattr(tf.keras.utils, "register_keras_serializable"):

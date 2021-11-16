@@ -1,5 +1,8 @@
+import tempfile
+
 import numpy as np
 import pytest
+import tensorflow as tf
 
 from tfimm.models.factory import create_model, transfer_weigths
 
@@ -20,4 +23,38 @@ def test_transfer_weights(model_name, nb_classes):
     y_2 = model_2.forward_features(img).numpy()
 
     # We expect features to be the same for both models
+    assert (np.max(np.abs(y_1 - y_2))) < 1e-6
+
+
+@pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
+def test_save_load_model(model_name):
+    """Tests ability to use keras save() and load() functions."""
+    model = create_model(model_name)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        model.save(tmpdir)
+        loaded_model = tf.keras.models.load_model(tmpdir)
+
+    assert type(model) is type(loaded_model)
+
+    img = np.random.rand(1, *model.cfg.input_size, model.cfg.in_chans)
+    y_1 = model(img).numpy()
+    y_2 = loaded_model(img).numpy()
+
+    assert (np.max(np.abs(y_1 - y_2))) < 1e-6
+
+
+@pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
+def test_model_path(model_name):
+    """Tests ability to use `model_path` parameter in `create_model`."""
+    model = create_model(model_name)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        model.save(tmpdir)
+        loaded_model = create_model(model_name, model_path=tmpdir)
+
+    assert type(model) is type(loaded_model)
+
+    img = np.random.rand(1, *model.cfg.input_size, model.cfg.in_chans)
+    y_1 = model(img).numpy()
+    y_2 = loaded_model(img).numpy()
+
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
