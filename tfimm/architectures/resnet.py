@@ -14,7 +14,7 @@ __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
 
 @dataclass
 class ResNetConfig(ModelConfig):
-    block: Any
+    block: str
     nb_blocks: List
     nb_classes: int = 1000
     in_chans: int = 3
@@ -559,7 +559,7 @@ class ResNet(tf.keras.Model):
         super().__init__(*args, **kwargs)
         self.cfg = cfg
 
-        self.block = cfg.block
+        self.block = eval(cfg.block)
         self.nb_blocks = cfg.nb_blocks
         self.nb_classes = cfg.nb_classes
         self.in_chans = cfg.in_chans
@@ -716,7 +716,7 @@ class ResNet(tf.keras.Model):
 def resnet18():
     """Constructs a ResNet-18 model."""
     cfg = ResNetConfig(
-        name="resnet18", url="", block=BasicBlock, nb_blocks=[2, 2, 2, 2]
+        name="resnet18", url="", block="BasicBlock", nb_blocks=[2, 2, 2, 2]
     )
     return ResNet, cfg
 
@@ -727,7 +727,7 @@ def resnet18d():
     cfg = ResNetConfig(
         name="resnet18d",
         url="",
-        block=BasicBlock,
+        block="BasicBlock",
         nb_blocks=[2, 2, 2, 2],
         stem_width=32,
         stem_type="deep",
@@ -744,7 +744,7 @@ def resnet26():
     cfg = ResNetConfig(
         name="resnet26",
         url="",
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[2, 2, 2, 2],
         interpolation="bicubic",
     )
@@ -757,7 +757,7 @@ def resnet26d():
     cfg = ResNetConfig(
         name="resnet26d",
         url="",
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[2, 2, 2, 2],
         stem_width=32,
         stem_type="deep",
@@ -775,7 +775,7 @@ def resnet26t():
         name="resnet26t",
         url="",
         input_size=(256, 256),
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[2, 2, 2, 2],
         pool_size=(8, 8),
         stem_width=32,
@@ -792,7 +792,7 @@ def resnet26t():
 def resnet34():
     """Constructs a ResNet-34 model."""
     cfg = ResNetConfig(
-        name="resnet34", url="", block=BasicBlock, nb_blocks=[3, 4, 6, 3]
+        name="resnet34", url="", block="BasicBlock", nb_blocks=[3, 4, 6, 3]
     )
     return ResNet, cfg
 
@@ -803,7 +803,7 @@ def resnet34d():
     cfg = ResNetConfig(
         name="resnet34d",
         url="",
-        block=BasicBlock,
+        block="BasicBlock",
         nb_blocks=[3, 4, 6, 3],
         stem_width=32,
         stem_type="deep",
@@ -820,7 +820,7 @@ def resnet50():
     cfg = ResNetConfig(
         name="resnet50",
         url="",
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 4, 6, 3],
         interpolation="bicubic",
         crop_pct=0.95,
@@ -834,7 +834,7 @@ def resnet50d():
     cfg = ResNetConfig(
         name="resnet50d",
         url="",
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 4, 6, 3],
         stem_width=32,
         stem_type="deep",
@@ -851,7 +851,7 @@ def resnet101():
     cfg = ResNetConfig(
         name="resnet101",
         url="",
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 4, 23, 3],
         interpolation="bicubic",
         crop_pct=0.95,
@@ -866,7 +866,7 @@ def resnet101d():
         name="resnet101d",
         url="",
         input_size=(256, 256),
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 4, 23, 3],
         pool_size=(8, 8),
         stem_width=32,
@@ -886,7 +886,7 @@ def resnet152():
     cfg = ResNetConfig(
         name="resnet152",
         url="",
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 8, 36, 3],
         interpolation="bicubic",
         crop_pct=0.95,
@@ -901,7 +901,7 @@ def resnet152d():
         name="resnet152d",
         url="",
         input_size=(256, 256),
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 8, 36, 3],
         pool_size=(8, 8),
         stem_width=32,
@@ -922,7 +922,7 @@ def resnet200d():
         name="resnet200d",
         url="",
         input_size=(256, 256),
-        block=Bottleneck,
+        block="Bottleneck",
         nb_blocks=[3, 24, 36, 3],
         pool_size=(8, 8),
         stem_width=32,
