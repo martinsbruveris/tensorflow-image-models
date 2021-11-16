@@ -5,14 +5,16 @@ import tensorflow as tf
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import to_2tuple
+from tfimm.utils import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
+    IMAGENET_INCEPTION_MEAN,
+    IMAGENET_INCEPTION_STD,
+    to_2tuple
+)
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["ViT", "ViTConfig"]
-
-
-IMAGENET_INCEPTION_MEAN = (0.5, 0.5, 0.5)
-IMAGENET_INCEPTION_STD = (0.5, 0.5, 0.5)
 
 
 @dataclass
@@ -764,7 +766,6 @@ def vit_huge_patch14_224_in21k():
 
 
 # TODO: Add DeiT models
-# TODO: Move IMAGENET_MEAN, etc. to common file.
 # TODO: Adapt DeiT output to be one tensor
 # TODO: Adapt unit tests to deal with divergence between timm and tfimm
 # TODO: Add DeiT as test case for test_transfer_weights
