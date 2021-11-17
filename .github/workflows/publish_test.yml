@@ -1,9 +1,7 @@
 name: Publish package
 
-on:
-  release:
-    types:
-      - created
+# We trigger this action manually
+on: workflow_dispatch
 
 jobs:
   publish:
@@ -50,8 +48,9 @@ jobs:
 
     - name: Publish package
       env:
-        PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
-        poetry config pypi-token.pypi $PYPI_TOKEN
+        poetry config repositories.test-pypi https://test.pypi.org/legacy/
+        poetry config pypi-token.test-pypi $TEST_PYPI_TOKEN
         poetry build
-        poetry publish
+        poetry publish -r test-pypi
