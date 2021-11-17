@@ -1,3 +1,11 @@
+"""
+TensorFlow implementation of ResNets
+
+Based on timm/models/resnet.py by Ross Wightman.
+
+Copyright 2021 Martins Bruveris
+"""
+
 import math
 from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple

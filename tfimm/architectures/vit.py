@@ -1,3 +1,11 @@
+"""
+TensorFlow implementation of the Visual Transformer
+
+Based on timm/models/visual_transformer.py by Ross Wightman.
+Based on transformers/models/vit by HuggingFace
+
+Copyright 2021 Martins Bruveris
+"""
 from dataclasses import dataclass
 from typing import Optional, Tuple, Union
 

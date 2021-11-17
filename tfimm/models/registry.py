@@ -1,4 +1,5 @@
-""" Model Registry
+"""
+Model Registry
 
 Based on timm/models/registry.py  by Ross Wightman
 

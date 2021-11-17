@@ -1,4 +1,5 @@
-""" Pooling and classifier head.
+"""
+Pooling and classifier head.
 
 Ported to TF from timm/models/layers/classifier.py by Ross Wightman.
 
