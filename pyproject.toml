@@ -1,8 +1,31 @@
 [tool.poetry]
 name = "tfimm"
-version = "0.0.1"
-description = "Image models with pretrained weights in TensorFlow"
-authors = ["Martins Bruveris"]
+version = "0.1.0"
+description = "TensorFlow port of PyTorch Image Models (timm) - image models with pretrained weights"
+authors = ["Martins Bruveris <martins.bruveris@gmail.com>"]
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://github.com/martinsbruveris/tensorflow-image-models"
+repository = "https://github.com/martinsbruveris/tensorflow-image-models"
+keywords = ["tensorfow", "pretrained models", "visual transformer"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+include = [
+    "LICENSE",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
