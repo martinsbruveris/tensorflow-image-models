@@ -1,138 +1,119 @@
 # TensorFlow-Image-Models
 
-- [Installation](#installation)
-- [Datasets ane evaluation](#datasets-and-evaluation)
-- [Resources](#resources)
-- [To do before 0.1.0](#to-do-before-010)
+- [Introduction](#introduction)
+- [Usage](#usage)
+- [Models](#models)
+- [License](#license)
 
-This is a port of 
-[PyTorch Image Models](https://github.com/rwightman/pytorch-image-models) to Tensorflow.
+## Introduction
 
-Work in progress...
+TensorfFlow-Image-Models (`tfimm`) is a collection of image models with pretrained
+weights, obtained by porting architectures from 
+[timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
+that the number of available architectures will grow over time. For now it contains
+vision transformers (ViT and DeiT) and ResNets.
 
-## Installation
+This work would now have been possible wihout Ross Wightman's `timm` library and the
+work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
+I tried to make sure all source material is acknowledged. Please let me know if I have
+missed something.
 
-This project is developed using python 3.8. Install the dependencies using
+## Usage
+
+### Installation 
+
+The package can be installed via `pip`,
+
 ```shell
-poetry install
+pip install tfimm
 ```
-To load pretrained weights from `timm`, use
+
+To load pretrained weights, `timm` needs to be installed. This is an optional 
+dependency and can be installed via
+
 ```shell
-poetry install -E timm
-```
-To use evaluation and training scripts (not available yet), use
-```shell
-poetry install -E train
+pip install tfimm[timm]
 ```
 
-## Datasets and evaluation
+### Creating models
 
-### ImageNet validation split
+To load pretrained models use
 
-To be able to use the ImageNet validation split, we need to manually download and
-copy `ILSVRC2012_img_val.tar` to `~/tensorflow_datasets/downloads/manual/` and then run
 ```python
-import tensorflow_datasets as tfds
+import tfimm
 
-tfds.builder("imagenet2012_real").download_and_prepare()
+model = tfimm.create_model("vit_tiny_patch16_224", pretrained="timm")
 ```
-Then we have access to both original and reassessed (ReaL) labels under the keys
-`original_label` and `real_label`. We use `imagenet2012_real`, because to process the 
-`imagenet2012` dataset via `tensorflow-datasets` requires us to download validation
-_and_ train splits, even though we don't intend to use train (for now).
 
-Having downloaded `ILSVRC2012_img_val.tar`, we can also access `imagenet2012_corrupted`
-via `tensorflow-datasets`.
+We can list available models with pretrained weights via
 
-Other ImageNet variants, such as
-- ImageNet-A (`imagenet_a`)
-- ImageNet-R (`imagenet_r`) and
-- ImageNet-v2 (`imagenet_v2`, defaults to matched-frequency)
-can be downloaded automatically via `tensorflow-datasets`.
+```python
+import tfimm
 
-## To do before 0.1.0
+print(tfimm.list_models(pretrained="timm"))
+```
 
-Development setup
+Most models are pretrained on ImageNet or ImageNet-21k. If we want to use them for other
+tasks we need to change the number of classes in the classifier or remove the 
+classifier altogether. We can do this by setting the `nb_classes` parameter in 
+`create_model`. If `nb_classes=0`, the model will have no classification layer. If
+`nb_classes` is set to a value different from the default model config, the 
+classification layer will be randomly initialized, while all other weights will be
+copied from the pretrained model.
 
-- [x] (must) Create git repo and upload to GitHub
-- [x] (must) pyproj.toml + python environment
-- [x] (must) Black formatting
-- [x] (must) Fix Flake8 warnings
-- [x] (must) Fix isort warnings
-- [x] (must) Makefile with style checks
+### Saving and loading models
 
-Testing
- 
-- [x] (must) Add first tests
-- [x] (must) Test creation of each model
-- [x] (optional) Run unit tests on GitHub CI
+All models are subclassed from `tf.keras.Model` (they are _not_ functional models).
+They can still be saved and loaded using the `SavedModel` format.
 
-ResNet models
+```
+>>> import tesnorflow as tf
+>>> import tfimm
+>>> model = tfimm.create_model("vit_tiny_patch16_224")
+>>> type(model)
+<class 'tfimm.architectures.vit.ViT'>
+>>> model.save("/tmp/my_model")
+>>> loaded_model = tf.keras.models.load_model("/tmp/my_model")
+>>> type(loaded_model)
+<class 'tfimm.architectures.vit.ViT'>
+```
 
-| Name           | Total | Converted | Documented |
-|----------------|:-----:|:---------:|------------|
-| ecaresnet      |   6   |           |            |
-| ig_resnext     |   4   |           |            |
-| resnet         |  14   |     ✅    |            |
-| resnet_blur    |   1   |           |            |
-| resnetrs       |   7   |           |            |
-| resnext        |   3   |           |            |
-| seresne{x}t    |   5   |           |            |
-| ssl_resne{x}t  |   6   |           |            |
-| swsl_resne{x}t |   6   |           |            |
-| tv_resne{x}t   |   5   |           |            |
-| wide_resnet    |   2   |           |            |
+For this to work, the `tfimm` library needs to be imported before the model is loaded,
+since during the import process, `tfimm` is registering custom models with Keras.
+Otherwise, we obtain the following output
 
-Vision Transformer models
+```
+>>> import tensorflow as tf
+>>> loaded_model = tf.keras.models.load_model("/tmp/my_model")
+>>> type(loaded_model)
+<class 'keras.saving.saved_model.load.Custom>ViT'>
+```
 
-| Name           | Total | Converted | Documented |
-|----------------|:-----:|:---------:|------------|
-| vit            |  14   |    ✅     |            |
-| vit_in21k      |   8   |    ✅     |            |
-| vit_sam        |   2   |    ✅     |            |
-| deit           |   8   |    ✅     |            |
-| vit_miil       |   2   |    ✅     |            |
+## Models
 
-Codebase
+The following architectures are currently available:
 
-- [ ] (optional) Refactor resnet.py code
-- [ ] (optional) Refactor utils/timm.py file
-- [ ] (optional) Remove num_batches_tracked variables warning from conversion
+- DeiT (vision transformer) 
+  [\[github\]](https://github.com/facebookresearch/deit)
+  - Training data-efficient image transformers & distillation through attention. 
+    [\[arXiv:2012.12877\]](https://arxiv.org/abs/2012.12877) 
+- ViT (vision transformer) 
+  [\[github\]](https://github.com/google-research/vision_transformer)
+  - An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale.
+    [\[arXiv:2010.11929\]](https://arxiv.org/abs/2010.11929)
+  - How to train your ViT? Data, Augmentation, and Regularization in Vision 
+    Transformers. [\[arXiv:2106.10270\]](https://arxiv.org/abs/2106.10270)
+  - Includes models trained with the SAM optimizer: Sharpness-Aware Minimization for 
+    Efficiently Improving Generalization. 
+    [\[arXiv:2010.01412\]](https://arxiv.org/abs/2010.01412)
+  - Includes models from: ImageNet-21K Pretraining for the Masses
+    [\[arXiv:2104.10972\]](https://arxiv.org/abs/2104.10972) 
+    [\[github\]](https://github.com/Alibaba-MIIL/ImageNet21K)
+- ResNet (work in progress, most available weights are from `timm`)
+  - Deep Residual Learning for Image Recognition. 
+    [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)
 
-Evaluation
+## License
 
-- [ ] (must) Evaluate model on ImageNet
-- [ ] (must) Run evaluation on GPU, e.g., Google Colab
-- [ ] (optional) Evaluate model on ImageNet-ReaL
-- [ ] (optional) Evaluate model on ImageNet-v2
-- [ ] (optional) Evaluate model on ImageNet-A
-- [ ] (optional) Evaluate model on ImageNet-R
-- [ ] (optional) Evaluate model on ImageNet-C
-- [ ] (must) Profiling single image inference time on CPU
-- [ ] (must) Profiling max batch size and batch inference time on GPU
-      See tf.errors.ResourceExhaustedError for OOM errors
-- [ ] (optional) Profiling #params, FLOPS
-- [ ] (optional) Profiling memory consumption on CPU
-
-Finetuning
-
-- [x] (must) Load weights from file to model with `nb_classes`
-- [ ] (must) Set weight decay in loaded model
-- [ ] (must) Fine-tune pretrained model on CIFAR-100
-- [ ] (must) Evaluate model on CIFAR-100
-- [ ] (optional) Load weights from file to model with `in_chans != 3`
-- [ ] (optional) Fine-tune model on MNIST (and variants)
-- [ ] (optional) Evaluate model on MNIST (and variants)
-
-Release
-
-- [ ] (must) Complete README file
-- [ ] (must) Add licence file + licence headers to python files
-- [ ] (must) Publish package on PyPi
-- [ ] (optional) Host converted models on Google Drive + download functionality
-
-Future
-
-- [ ] (optional) Add pretrained [DINO models](https://github.com/facebookresearch/dino)
-- [ ] (optional) Add [T2T-ViT models](https://github.com/yitu-opensource/T2T-ViT)
-- [ ] (optional) Check compatibility with [tf-explain](https://github.com/sicara/tf-explain)
+This repository is released under the Apache 2.0 license as found in the 
+[LICENSE](LICENSE) file.
