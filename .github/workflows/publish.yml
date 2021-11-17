@@ -30,6 +30,15 @@ jobs:
       with:
         poetry-version: ${{ matrix.poetry }}
 
+    - name: Cache poetry environment
+      uses: actions/cache@v2.1.6
+      id: cache
+      with:
+        path: ~/.virtualenvs
+        key: poetry-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          poetry-${{ matrix.os }}-${{ matrix.python }}-${{ hashFiles('**/poetry.lock') }}
+
     - name: Set Poetry config
       run: |
         poetry config virtualenvs.in-project false
@@ -37,10 +46,12 @@ jobs:
 
     - name: Install Dependencies
       run: poetry install -E timm
+      if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Publish package
       env:
         PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        TEST_PYPI_TOKEN: ${{ secrets.TEST_PYPI_TOKEN }}
       run: |
         poetry config repositories.test-pypi https://test.pypi.org/legacy/
         poetry config pypi-token.test-pypi $TEST_PYPI_TOKEN
