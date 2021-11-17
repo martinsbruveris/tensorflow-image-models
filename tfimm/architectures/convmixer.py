@@ -36,7 +36,7 @@ class ConvMixerConfig(ModelConfig):
     interpolation: str = "bicubic"
     mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN
     std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD
-    first_conv: str = "patch_embed/proj"
+    first_conv: str = "stem/0"
     classifier: str = "head"
 
 
