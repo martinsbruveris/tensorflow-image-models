@@ -27,11 +27,10 @@ logger = logging.getLogger(__name__)
 
 class TransposeType(Enum):
     """
-    Possible ...
+    Possible transposition types
     """
 
     NO = "no"
-    SIMPLE = "simple"
     CONV2D = "conv2d"
 
 
@@ -74,30 +73,20 @@ def convert_tf_weight_name_to_pt_weight_name(
 
     # When should we transpose the weights
     if (
-        tf_name[-1] == "kernel"
+        tf_name[-1] in {"kernel", "depthwise_kernel"}
         and tf_weight_shape is not None
         and tf_weight_shape.rank == 4
     ):
         # A simple heuristic to detect conv layer using weight array shape
         transpose = TransposeType.CONV2D
-    elif bool(
-        tf_name[-1] in ["kernel", "pointwise_kernel", "depthwise_kernel"]
-        or "emb_projs" in tf_name
-        or "out_projs" in tf_name
-    ):
-        transpose = TransposeType.SIMPLE
     else:
         transpose = TransposeType.NO
 
     # Convert standard TF2.0 names in PyTorch names
-    if tf_name[-1] == "kernel" or tf_name[-1] == "embeddings" or tf_name[-1] == "gamma":
+    if tf_name[-1] in {"kernel", "depthwise_kernel", "embeddings", "gamma"}:
         tf_name[-1] = "weight"
     if tf_name[-1] == "beta":
         tf_name[-1] = "bias"
-
-    # The SeparableConv1D TF layer contains two weights that are translated to PyTorch Conv1D here
-    if tf_name[-1] == "pointwise_kernel" or tf_name[-1] == "depthwise_kernel":
-        tf_name[-1] = tf_name[-1].replace("_kernel", ".weight")
 
     # BatchNorm layers
     if tf_name[-1] == "moving_mean":
@@ -194,8 +183,6 @@ def load_pytorch_weights_in_tf2_model(
             #    PT: (num_out_channel, num_in_channel, kernel[0], kernel[1])
             # -> TF: (kernel[0], kernel[1], num_in_channel, num_out_channel)
             array = numpy.transpose(array, axes=(2, 3, 1, 0))
-        elif transpose is TransposeType.SIMPLE:
-            array = numpy.transpose(array)
 
         if len(symbolic_weight.shape) < len(array.shape):
             array = numpy.squeeze(array)
