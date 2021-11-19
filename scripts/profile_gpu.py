@@ -44,7 +44,7 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
                 "image_size",
                 "inference_batch_size",
                 "backprop_batch_size",
-                "infererence_img_per_sec",
+                "inference_img_per_sec",
                 "backprop_img_per_sec",
             ]
         )
@@ -58,7 +58,7 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
         results_df.loc[model_name, "image_size"] = cfg.input_size[0]
 
         batch_size = find_max_batch_size(
-            model_name, test_target="inference", verbose=False
+            model_name, test_target="inference", verbose=True
         )
         results_df.loc[model_name, "inference_batch_size"] = batch_size
         if batch_size > 0:
@@ -69,7 +69,7 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
         print(f"Inference: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         batch_size = find_max_batch_size(
-            model_name, test_target="backprop", verbose=False
+            model_name, test_target="backprop", verbose=True
         )
         results_df.loc[model_name, "backprop_batch_size"] = batch_size
         if batch_size > 0:

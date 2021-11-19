@@ -155,7 +155,7 @@ def find_max_batch_size(
             else:
                 next_batch_size = (upper_limit + batch_size) // 2
 
-        except tf.errors.ResourceExhaustedError:
+        except (tf.errors.ResourceExhaustedError, tf.errors.UnknownError):
             # Clear GPU memory
             tf.keras.backend.clear_session()
 
