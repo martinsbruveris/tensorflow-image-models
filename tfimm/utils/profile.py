@@ -39,7 +39,7 @@ def _time_function(fun, img, nb_batches, verbose):
     return duration
 
 
-def time_inference(model_name, batch_size, nb_batches=1, verbose=False):
+def time_inference(model_name, batch_size, float_policy, nb_batches=1, verbose=False):
     """
     Time inference of model.
 
@@ -47,16 +47,23 @@ def time_inference(model_name, batch_size, nb_batches=1, verbose=False):
         model_name: Model to be timed, will be created using `create_model`.
         batch_size: Batch size to be used for inference. Usually determined first
             by `find_max_batch_size`.
+        float_policy: Can be "float32" or "mixed_float16"
         nb_batches: Inference time is averages over `nb_batches` calls.
         verbose: If `True`, we print duration of each batch
 
     Returns:
         Inference throughput in img/sec.
     """
+    assert float_policy in {"float32", "mixed_float16"}
+
+    # Need to set policy before creating model
+    tf.keras.mixed_precision.set_global_policy(float_policy)
+    dtype = "float32" if float_policy == "float32" else "float16"
+
     model = create_model(model_name)
     img = tf.ones(
         (batch_size, *model.cfg.input_size, model.cfg.in_chans),
-        dtype="float32",
+        dtype=dtype,
     )
 
     @tf.function(experimental_relax_shapes=True)
@@ -69,7 +76,7 @@ def time_inference(model_name, batch_size, nb_batches=1, verbose=False):
     return img_per_sec
 
 
-def time_backprop(model_name, batch_size, nb_batches=1, verbose=False):
+def time_backprop(model_name, batch_size, float_policy, nb_batches=1, verbose=False):
     """
     Time backpropagation speed of model. The loss is simply the mean of all model
     outputs.
@@ -78,16 +85,21 @@ def time_backprop(model_name, batch_size, nb_batches=1, verbose=False):
         model_name: Model to be timed, will be created using `create_model`.
         batch_size: Batch size to be used for inference. Usually determined first
             by `find_max_batch_size`.
+        float_policy: Can be "float32" or "mixed_float16"
         nb_batches: Backpropagation time is averages over `nb_batches` calls.
         verbose: If `True`, we print duration of each batch
 
     Returns:
         Backpropagation throughput in img/sec.
     """
+    # Need to set policy before creating model
+    tf.keras.mixed_precision.set_global_policy(float_policy)
+    dtype = "float32" if float_policy == "float32" else "float16"
+
     model = create_model(model_name)
     img = tf.ones(
         (batch_size, *model.cfg.input_size, model.cfg.in_chans),
-        dtype="float32",
+        dtype=dtype,
     )
     optimizer = tf.optimizers.SGD(learning_rate=0.0001)
 
@@ -95,6 +107,9 @@ def time_backprop(model_name, batch_size, nb_batches=1, verbose=False):
     def _fun(x):
         with tf.GradientTape() as tape:
             output = model(x, training=True)
+            # The loss is always computed in float32 in order to not lose precision
+            # Here we simulate it to make profiling more accurate
+            output = tf.cast(output, "float32")
             loss = tf.reduce_mean(output)
             grads = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(grads, model.trainable_variables))
@@ -108,6 +123,7 @@ def time_backprop(model_name, batch_size, nb_batches=1, verbose=False):
 def find_max_batch_size(
     model_name: str,
     test_target: str = "inference",
+    float_policy: str = "float32",
     start_batch_size: int = 256,
     resolution_abs: int = 1,
     resolution_rel: Optional[float] = 0.1,
@@ -119,6 +135,7 @@ def find_max_batch_size(
     Args:
         model_name: Model to validate
         test_target: Can be "inference" or "backprop"
+        float_policy: Can be "float32" or "mixed_float16"
         start_batch_size: First batch size to try
         resolution_abs: We stop, if upper-lower <= resolution_abs
         resolution_rel: We stop, if (upper-lower) <= upper * resolution_rel
@@ -139,9 +156,9 @@ def find_max_batch_size(
             print(f"Trying: {batch_size}. Range: ({lower_limit}, {upper_limit})")
         try:
             if test_target == "inference":
-                time_inference(model_name, batch_size)
+                time_inference(model_name, batch_size, float_policy)
             else:
-                time_backprop(model_name, batch_size)
+                time_backprop(model_name, batch_size, float_policy)
 
             success = True
             lower_limit = batch_size
