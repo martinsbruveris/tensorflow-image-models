@@ -62,17 +62,23 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
         batch_size = find_max_batch_size(
             model_name, test_target="inference", verbose=False
         )
-        img_per_sec = time_inference(model_name, batch_size, nb_batches=3)
         results_df.loc[model_name, "inference_batch_size"] = batch_size
-        results_df.loc[model_name, "infererence_img_per_sec"] = round(img_per_sec, 2)
+        if batch_size > 0:
+            img_per_sec = time_inference(model_name, batch_size, nb_batches=3)
+            results_df.loc[model_name, "inference_img_per_sec"] = round(img_per_sec, 2)
+        else:
+            img_per_sec = None
         print(f"Inference: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         batch_size = find_max_batch_size(
             model_name, test_target="backprop", verbose=False
         )
-        img_per_sec = time_backprop(model_name, batch_size, nb_batches=3)
         results_df.loc[model_name, "backprop_batch_size"] = batch_size
-        results_df.loc[model_name, "backprop_img_per_sec"] = round(img_per_sec, 2)
+        if batch_size > 0:
+            img_per_sec = time_backprop(model_name, batch_size, nb_batches=3)
+            results_df.loc[model_name, "backprop_img_per_sec"] = round(img_per_sec, 2)
+        else:
+            img_per_sec = None
         print(f"Backprop: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         results_df.to_csv(results_file)
