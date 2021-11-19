@@ -1,3 +1,9 @@
+"""
+Script to test for max batch size possible on a GPU for inference and backpropagation
+and to measure batch inference and backpropagation throughput in img/sec.
+
+Copyright 2021 Martins Bruveris
+"""
 from pathlib import Path
 
 import click
@@ -15,6 +21,16 @@ from tfimm.utils.profile import time_inference, time_backprop, find_max_batch_si
 @click.option("--exclude-filters", type=str, default="", help="Regex to exclude models")
 @click.option("--ignore-results/--no-ignore-results", default=False)
 def main(results_file, name_filter, module, exclude_filters, ignore_results):
+    """
+    Main function to do the work.
+
+    The parameters `name_filter`, `module` and `exclude_filters` are passed directly to
+    `tfimm.list_models` to find which models to profile.
+
+    If `--ignore-results` is set, we ignore any results already existing in the results
+    file and rerun profiling for all models. Otherwise (default) we run profiling only
+    on models not already in the results file.
+    """
     model_names = tfimm.list_models(
         name_filter=name_filter,
         module=module,
@@ -48,7 +64,7 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
         )
         img_per_sec = time_inference(model_name, batch_size, nb_batches=3)
         results_df.loc[model_name, "inference_batch_size"] = batch_size
-        results_df.loc[model_name, "infererence_img_per_sec"] = img_per_sec
+        results_df.loc[model_name, "infererence_img_per_sec"] = round(img_per_sec, 2)
         print(f"Inference: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         batch_size = find_max_batch_size(
@@ -56,7 +72,7 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
         )
         img_per_sec = time_backprop(model_name, batch_size, nb_batches=3)
         results_df.loc[model_name, "backprop_batch_size"] = batch_size
-        results_df.loc[model_name, "backprop_img_per_sec"] = img_per_sec
+        results_df.loc[model_name, "backprop_img_per_sec"] = round(img_per_sec, 2)
         print(f"Backprop: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         results_df.to_csv(results_file)
