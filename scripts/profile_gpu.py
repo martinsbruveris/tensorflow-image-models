@@ -11,7 +11,7 @@ import pandas as pd
 
 import tfimm
 from tfimm.models import registry
-from tfimm.utils.profile import time_inference, time_backprop, find_max_batch_size
+from tfimm.utils.profile import find_max_batch_size, time_backprop, time_inference
 
 
 @click.command()
@@ -32,9 +32,7 @@ def main(results_file, name_filter, module, exclude_filters, ignore_results):
     on models not already in the results file.
     """
     model_names = tfimm.list_models(
-        name_filter=name_filter,
-        module=module,
-        exclude_filters=exclude_filters
+        name_filter=name_filter, module=module, exclude_filters=exclude_filters
     )
 
     results_file = Path(results_file)
