@@ -7,12 +7,12 @@ from tfimm.models.factory import create_model
 
 
 def _below_resolution(
-        lower: int,
-        upper: int,
-        resolution_abs: int,
-        resolution_rel: Optional[float],
+    lower: int,
+    upper: int,
+    resolution_abs: int,
+    resolution_rel: Optional[float],
 ):
-    """We check if upper - lower is below resolution"""
+    """We check if (upper - lower) <= resolution."""
     if resolution_rel is not None:
         if abs(upper - lower) <= upper * resolution_rel:
             return True
@@ -25,6 +25,7 @@ def _below_resolution(
 
 
 def _time_function(fun, img, nb_batches, verbose):
+    """Helper function to time the execution of `fun(img)`."""
     # We ignore the first run because graph compilation takes time. And some memory.
     _ = fun(img)
 
@@ -39,6 +40,19 @@ def _time_function(fun, img, nb_batches, verbose):
 
 
 def time_inference(model_name, batch_size, nb_batches=1, verbose=False):
+    """
+    Time inference of model.
+
+    Args:
+        model_name: Model to be timed, will be created using `create_model`.
+        batch_size: Batch size to be used for inference. Usually determined first
+            by `find_max_batch_size`.
+        nb_batches: Inference time is averages over `nb_batches` calls.
+        verbose: If `True`, we print duration of each batch
+
+    Returns:
+        Inference throughput in img/sec.
+    """
     model = create_model(model_name)
     img = tf.ones(
         (batch_size, *model.cfg.input_size, model.cfg.in_chans),
@@ -56,6 +70,20 @@ def time_inference(model_name, batch_size, nb_batches=1, verbose=False):
 
 
 def time_backprop(model_name, batch_size, nb_batches=1, verbose=False):
+    """
+    Time backpropagation speed of model. The loss is simply the mean of all model
+    outputs.
+
+    Args:
+        model_name: Model to be timed, will be created using `create_model`.
+        batch_size: Batch size to be used for inference. Usually determined first
+            by `find_max_batch_size`.
+        nb_batches: Backpropagation time is averages over `nb_batches` calls.
+        verbose: If `True`, we print duration of each batch
+
+    Returns:
+        Backpropagation throughput in img/sec.
+    """
     model = create_model(model_name)
     img = tf.ones(
         (batch_size, *model.cfg.input_size, model.cfg.in_chans),
@@ -78,12 +106,12 @@ def time_backprop(model_name, batch_size, nb_batches=1, verbose=False):
 
 
 def find_max_batch_size(
-        model_name: str,
-        test_target: str = "inference",
-        start_batch_size: int = 256,
-        resolution_abs: int = 2,
-        resolution_rel: Optional[float] = 0.1,
-        verbose: bool = False,
+    model_name: str,
+    test_target: str = "inference",
+    start_batch_size: int = 256,
+    resolution_abs: int = 1,
+    resolution_rel: Optional[float] = 0.1,
+    verbose: bool = False,
 ) -> int:
     """
     Searches for largest batch size that fits in memory.
@@ -92,8 +120,9 @@ def find_max_batch_size(
         model_name: Model to validate
         test_target: Can be "inference" or "backprop"
         start_batch_size: First batch size to try
-        resolution: How fine should the search go. Useful values are 0.1 (relative) or
-            32 (absolute)
+        resolution_abs: We stop, if upper-lower <= resolution_abs
+        resolution_rel: We stop, if (upper-lower) <= upper * resolution_rel
+        verbose: If True, we print information about search progress
     Returns:
         Maximum batch size that does not lead to OOM errors.
     """
@@ -120,7 +149,7 @@ def find_max_batch_size(
             if upper_limit is None:
                 next_batch_size = 2 * batch_size
             elif _below_resolution(
-                    lower_limit, upper_limit, resolution_abs, resolution_rel
+                lower_limit, upper_limit, resolution_abs, resolution_rel
             ):
                 continue_search = False
             else:
@@ -133,7 +162,7 @@ def find_max_batch_size(
             success = False
             upper_limit = batch_size
             if _below_resolution(
-                    lower_limit, upper_limit, resolution_abs, resolution_rel
+                lower_limit, upper_limit, resolution_abs, resolution_rel
             ):
                 continue_search = False
             else:
