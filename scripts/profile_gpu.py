@@ -66,11 +66,13 @@ def main(
 
         # Profile inference
         batch_size = find_max_batch_size(
-            model_name, test_target="inference", verbose=True
+            model_name, test_target="inference", float_policy=float_policy, verbose=True
         )
         results_df.loc[model_name, "inference_batch_size"] = batch_size
         if batch_size > 0:
-            img_per_sec = time_inference(model_name, batch_size, nb_batches=3)
+            img_per_sec = time_inference(
+                model_name, batch_size, float_policy, nb_batches=3
+            )
             results_df.loc[model_name, "inference_img_per_sec"] = round(img_per_sec, 2)
         else:
             img_per_sec = None
@@ -78,11 +80,13 @@ def main(
 
         # Profile backpropagation
         batch_size = find_max_batch_size(
-            model_name, test_target="backprop", verbose=True
+            model_name, test_target="backprop", float_policy=float_policy, verbose=True
         )
         results_df.loc[model_name, "backprop_batch_size"] = batch_size
         if batch_size > 0:
-            img_per_sec = time_backprop(model_name, batch_size, nb_batches=3)
+            img_per_sec = time_backprop(
+                model_name, batch_size, float_policy, nb_batches=3
+            )
             results_df.loc[model_name, "backprop_img_per_sec"] = round(img_per_sec, 2)
         else:
             img_per_sec = None

@@ -27,12 +27,12 @@ def _below_resolution(
 def _time_function(fun, img, nb_batches, verbose):
     """Helper function to time the execution of `fun(img)`."""
     # We ignore the first run because graph compilation takes time. And some memory.
-    _ = fun(img)
+    fun(img)
 
     # Now we start counting batches
     start = time()
     for j in range(nb_batches):
-        _ = fun(img)
+        fun(img)
         if verbose:
             print(f"Batch {j}: {(time() - start) / (j + 1):.3f}sec.")
     duration = time() - start
@@ -56,6 +56,7 @@ def time_inference(model_name, batch_size, float_policy, nb_batches=1, verbose=F
     """
     assert float_policy in {"float32", "mixed_float16"}
 
+    tf.keras.backend.clear_session()  # Release GPU memory
     # Need to set policy before creating model
     tf.keras.mixed_precision.set_global_policy(float_policy)
     dtype = "float32" if float_policy == "float32" else "float16"
@@ -72,7 +73,6 @@ def time_inference(model_name, batch_size, float_policy, nb_batches=1, verbose=F
 
     duration = _time_function(_fun, img, nb_batches, verbose)
     img_per_sec = batch_size * nb_batches / duration
-    tf.keras.backend.clear_session()  # Release GPU memory
     return img_per_sec
 
 
@@ -92,6 +92,9 @@ def time_backprop(model_name, batch_size, float_policy, nb_batches=1, verbose=Fa
     Returns:
         Backpropagation throughput in img/sec.
     """
+    assert float_policy in {"float32", "mixed_float16"}
+
+    tf.keras.backend.clear_session()  # Release GPU memory
     # Need to set policy before creating model
     tf.keras.mixed_precision.set_global_policy(float_policy)
     dtype = "float32" if float_policy == "float32" else "float16"
@@ -116,7 +119,6 @@ def time_backprop(model_name, batch_size, float_policy, nb_batches=1, verbose=Fa
 
     duration = _time_function(_fun, img, nb_batches, verbose)
     img_per_sec = batch_size * nb_batches / duration
-    tf.keras.backend.clear_session()  # Release GPU memory
     return img_per_sec
 
 
@@ -173,9 +175,6 @@ def find_max_batch_size(
                 next_batch_size = (upper_limit + batch_size) // 2
 
         except (tf.errors.ResourceExhaustedError, tf.errors.UnknownError):
-            # Clear GPU memory
-            tf.keras.backend.clear_session()
-
             success = False
             upper_limit = batch_size
             if _below_resolution(
