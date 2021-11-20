@@ -6,8 +6,8 @@ Based on transformers/models/vit by HuggingFace
 
 Copyright 2021 Martins Bruveris
 """
-from dataclasses import dataclass
-from typing import Optional, Tuple, Union
+from dataclasses import dataclass, field
+from typing import Callable, Dict, Optional, Tuple, Union
 
 import tensorflow as tf
 
@@ -42,6 +42,7 @@ class ViTConfig(ModelConfig):
     norm_layer: str = "layer_norm"
     act_layer: str = "gelu"
     # Parameters for inference
+    interpolate_input: bool = False
     crop_pct: float = 0.875
     interpolation: str = "bicubic"
     mean: Tuple[float, float, float] = IMAGENET_INCEPTION_MEAN
@@ -49,6 +50,7 @@ class ViTConfig(ModelConfig):
     first_conv: str = "patch_embed/proj"
     # DeiT models have two classifier heads, one for distillation
     classifier: Union[str, Tuple[str, str]] = "head"
+    transform_weights: Dict[str, Callable] = field(default_factory=dict)
 
     """
     Args:
@@ -69,6 +71,9 @@ class ViTConfig(ModelConfig):
         norm_layer: normalization layer
         act_layer: activation function
     """
+    def __post_init__(self):
+        self.transform_weights["pos_embed"] = ViT.transform_pos_embed
+
     @property
     def nb_tokens(self) -> int:
         return 2 if self.distilled else 1
@@ -140,14 +145,14 @@ class MultiHeadAttention(tf.keras.layers.Layer):
 
         attn = self.scale * tf.linalg.matmul(q, k, transpose_b=True)  # (B, H, N, N)
         attn = tf.nn.softmax(attn, axis=-1)  # (B, H, N, N)
-        attn = self.attn_drop(attn, training)
+        attn = self.attn_drop(attn, training=training)
 
         x = tf.linalg.matmul(attn, v)  # (B, H, N, D/H)
         x = tf.transpose(x, (0, 2, 1, 3))  # (B, N, H, D/H)
         x = tf.reshape(x, (batch_size, seq_length, -1))  # (B, N, D)
 
         x = self.proj(x)
-        x = self.proj_drop(x, training)
+        x = self.proj_drop(x, training=training)
         return x
 
 
@@ -169,9 +174,9 @@ class MLP(tf.keras.layers.Layer):
     def call(self, x, training=False):
         x = self.fc1(x)
         x = self.act(x)
-        x = self.drop1(x, training)
+        x = self.drop1(x, training=training)
         x = self.fc2(x)
-        x = self.drop2(x, training)
+        x = self.drop2(x, training=training)
         return x
 
 
@@ -186,8 +191,8 @@ class Block(tf.keras.layers.Layer):
         self.mlp = MLP(cfg, name="mlp")
 
     def call(self, x, training=False):
-        x = x + self.attn(self.norm1(x), training)
-        x = x + self.mlp(self.norm2(x), training)
+        x = x + self.attn(self.norm1(x, training=training), training=training)
+        x = x + self.mlp(self.norm2(x, training=training), training=training)
         return x
 
 
@@ -263,35 +268,38 @@ class ViT(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
-    @tf.function
-    def interpolate_pos_embed(self, height: int, width: int):
+    def transform_pos_embed(self, target_cfg: ViTConfig):
+        return self.interpolate_pos_embed(target_cfg.input_size)
+
+    def interpolate_pos_embed(self, input_size: Tuple[int, int]):
         """
         This method allows to interpolate the pre-trained position encodings, to be
         able to use the model on higher resolution images.
 
         Args:
-            height: Target image height
-            width: Target image width
+            input_size: Input size to which position embeddings should be adapted
 
         Returns:
-            Position embeddings (including class tokens) appropriate to image of size
-                (height, width)
+            Position embeddings (including class tokens) appropriate to input_size
         """
         cfg = self.cfg
 
-        if (height == cfg.input_size[0]) and (width == cfg.input_size[1]):
+        if input_size == cfg.input_size:
             return self.pos_embed  # No interpolation needed
 
         src_pos_embed = self.pos_embed[:, cfg.nb_tokens :]
         src_pos_embed = tf.reshape(
             src_pos_embed, shape=(1, *cfg.grid_size, cfg.embed_dim)
         )
-        tgt_grid_size = (height // cfg.patch_size, width // cfg.patch_size)
+        tgt_grid_size = (
+            input_size[0] // cfg.patch_size, input_size[1] // cfg.patch_size
+        )
         tgt_pos_embed = tf.image.resize(
             images=src_pos_embed,
             size=tgt_grid_size,
             method="bicubic",
         )
+        tgt_pos_embed = tf.cast(tgt_pos_embed, dtype=src_pos_embed.dtype)
         tgt_pos_embed = tf.reshape(tgt_pos_embed, shape=(1, -1, cfg.embed_dim))
         tgt_pos_embed = tf.concat(
             (self.pos_embed[:, : cfg.nb_tokens], tgt_pos_embed), axis=1
@@ -299,7 +307,8 @@ class ViT(tf.keras.Model):
         return tgt_pos_embed
 
     def forward_features(self, x, training=False):
-        batch_size, height, width = tf.unstack(tf.shape(x)[:3])
+        batch_size = tf.shape(x)[0]
+        input_size = tf.shape(x)[1:3]
 
         x = self.patch_embed(x)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
@@ -308,12 +317,15 @@ class ViT(tf.keras.Model):
         else:
             dist_token = tf.repeat(self.dist_token, repeats=batch_size, axis=0)
             x = tf.concat((cls_token, dist_token, x), axis=1)
-        x = x + self.interpolate_pos_embed(height, width)
-        x = self.pos_drop(x)
+        if not self.cfg.interpolate_input:
+            x = x + self.pos_embed
+        else:
+            x = x + self.interpolate_pos_embed(input_size)
+        x = self.pos_drop(x, training=training)
 
         for block in self.blocks:
-            x = block(x, training)
-        x = self.norm(x)
+            x = block(x, training=training)
+        x = self.norm(x, training=training)
 
         if self.cfg.distilled:
             # Here we diverge from timm and return both outputs as one tensor. That way

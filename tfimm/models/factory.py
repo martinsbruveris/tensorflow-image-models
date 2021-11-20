@@ -85,6 +85,10 @@ def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     if isinstance(dst_classifier, str):  # Some models have multiple classifier heads
         dst_classifier = [dst_classifier]
 
+    # For some weights we may have to apply custom transforms to adapt them to the new
+    # model config
+    transform_weights = getattr(src_model.cfg, "transform_weights", dict())
+
     src_weights = {_strip_prefix(w.name): w.numpy() for w in src_model.weights}
     weight_value_tuples = []
     for dst_weight in dst_model.weights:
@@ -105,8 +109,14 @@ def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):
                 raise ValueError("Different number of in_chans not supported yet.")
             weight_value_tuples.append((dst_weight, src_weights[w_name]))
 
+        elif var_name in transform_weights:
+            # We check if we need to apply a transform. In that case the weight
+            # taken from the model, it is *not* passed to the transform function.
+            src_weight = transform_weights[var_name](src_model, dst_model.cfg)
+            weight_value_tuples.append((dst_weight, src_weight))
+
         else:
-            # All other weights are copied over
+            # All other weights are simply copied over
             weight_value_tuples.append((dst_weight, src_weights[w_name]))
 
     # This modifies weights in place
