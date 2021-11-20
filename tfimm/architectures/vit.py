@@ -18,7 +18,6 @@ from tfimm.utils import (
     IMAGENET_DEFAULT_STD,
     IMAGENET_INCEPTION_MEAN,
     IMAGENET_INCEPTION_STD,
-    to_2tuple,
 )
 
 # model_registry will add each entrypoint fn to this
@@ -29,8 +28,8 @@ __all__ = ["ViT", "ViTConfig"]
 class ViTConfig(ModelConfig):
     nb_classes: int = 1000
     in_chans: int = 3
-    input_size: Union[int, Tuple[int, int]] = (224, 224)
-    patch_size: Union[int, Tuple[int, int]] = (16, 16)
+    input_size: Tuple[int, int] = (224, 224)
+    patch_size: int = 16
     embed_dim: int = 768
     depth: int = 12
     nb_heads: int = 12
@@ -70,11 +69,6 @@ class ViTConfig(ModelConfig):
         norm_layer: normalization layer
         act_layer: activation function
     """
-
-    def __post_init__(self):
-        self.input_size = to_2tuple(self.input_size)
-        self.patch_size = to_2tuple(self.patch_size)
-
     @property
     def nb_tokens(self) -> int:
         return 2 if self.distilled else 1
@@ -82,8 +76,8 @@ class ViTConfig(ModelConfig):
     @property
     def grid_size(self) -> Tuple[int, int]:
         return (
-            self.input_size[0] // self.patch_size[0],
-            self.input_size[1] // self.patch_size[1],
+            self.input_size[0] // self.patch_size,
+            self.input_size[1] // self.patch_size,
         )
 
     @property
@@ -115,7 +109,7 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         # Change the 2D spatial dimensions to a single temporal dimension.
         # shape = (batch_size, num_patches, out_channels=embed_dim)
         batch_size, height, width = tf.unstack(tf.shape(x)[:3])
-        num_patches = (width // self.patch_size[1]) * (height // self.patch_size[0])
+        num_patches = (width // self.patch_size) * (height // self.patch_size)
         emb = tf.reshape(tensor=emb, shape=(batch_size, num_patches, -1))
 
         return emb
@@ -292,7 +286,7 @@ class ViT(tf.keras.Model):
         src_pos_embed = tf.reshape(
             src_pos_embed, shape=(1, *cfg.grid_size, cfg.embed_dim)
         )
-        tgt_grid_size = (height // cfg.patch_size[0], width // cfg.patch_size[1])
+        tgt_grid_size = (height // cfg.patch_size, width // cfg.patch_size)
         tgt_pos_embed = tf.image.resize(
             images=src_pos_embed,
             size=tgt_grid_size,
