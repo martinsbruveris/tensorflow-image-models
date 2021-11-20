@@ -4,14 +4,17 @@ and to measure batch inference and backpropagation throughput in img/sec.
 
 Copyright 2021 Martins Bruveris
 """
+import os
 from pathlib import Path
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # noqa: E402
 
 import click
 import pandas as pd
 
 import tfimm
 from tfimm.models import registry
-from tfimm.utils.profile import find_max_batch_size, time_backprop, time_inference
+from tfimm.utils.profile import find_max_batch_size
 
 
 @click.command()
@@ -64,33 +67,17 @@ def main(
         cfg = registry.model_config(model_name)
         results_df.loc[model_name, "image_size"] = cfg.input_size[0]
 
-        # Profile inference
-        batch_size = find_max_batch_size(
-            model_name, test_target="inference", float_policy=float_policy, verbose=True
-        )
-        results_df.loc[model_name, "inference_batch_size"] = batch_size
-        if batch_size > 0:
-            img_per_sec = time_inference(
-                model_name, batch_size, float_policy, nb_batches=3
+        for target in ["inference", "backprop"]:
+            batch_size, img_per_sec = find_max_batch_size(
+                model_name,
+                target=target,
+                float_policy=float_policy,
+                verbose=True
             )
-            results_df.loc[model_name, "inference_img_per_sec"] = round(img_per_sec, 2)
-        else:
-            img_per_sec = None
-        print(f"Inference: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
-
-        # Profile backpropagation
-        batch_size = find_max_batch_size(
-            model_name, test_target="backprop", float_policy=float_policy, verbose=True
-        )
-        results_df.loc[model_name, "backprop_batch_size"] = batch_size
-        if batch_size > 0:
-            img_per_sec = time_backprop(
-                model_name, batch_size, float_policy, nb_batches=3
-            )
-            results_df.loc[model_name, "backprop_img_per_sec"] = round(img_per_sec, 2)
-        else:
-            img_per_sec = None
-        print(f"Backprop: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
+            img_per_sec = round(img_per_sec, 2)
+            results_df.loc[model_name, f"{target}_batch_size"] = batch_size
+            results_df.loc[model_name, f"{target}_img_per_sec"] = img_per_sec
+            print(f"{target}: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         results_df.to_csv(results_file)
 

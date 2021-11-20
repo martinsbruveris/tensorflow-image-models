@@ -1,5 +1,5 @@
 from time import time
-from typing import Optional
+from typing import Optional, Tuple
 
 import tensorflow as tf
 
@@ -39,52 +39,17 @@ def _time_function(fun, img, nb_batches, verbose):
     return duration
 
 
-def time_inference(model_name, batch_size, float_policy, nb_batches=1, verbose=False):
-    """
-    Time inference of model.
-
-    Args:
-        model_name: Model to be timed, will be created using `create_model`.
-        batch_size: Batch size to be used for inference. Usually determined first
-            by `find_max_batch_size`.
-        float_policy: Can be "float32" or "mixed_float16"
-        nb_batches: Inference time is averages over `nb_batches` calls.
-        verbose: If `True`, we print duration of each batch
-
-    Returns:
-        Inference throughput in img/sec.
-    """
-    assert float_policy in {"float32", "mixed_float16"}
-
-    tf.keras.backend.clear_session()  # Release GPU memory
-    # Need to set policy before creating model
-    tf.keras.mixed_precision.set_global_policy(float_policy)
-    dtype = "float32" if float_policy == "float32" else "float16"
-
-    model = create_model(model_name)
-    img = tf.ones(
-        (batch_size, *model.cfg.input_size, model.cfg.in_chans),
-        dtype=dtype,
-    )
-
-    @tf.function(experimental_relax_shapes=True)
-    def _fun(x):
-        return model(x, training=False)
-
-    duration = _time_function(_fun, img, nb_batches, verbose)
-    img_per_sec = batch_size * nb_batches / duration
-    return img_per_sec
-
-
-def time_backprop(model_name, batch_size, float_policy, nb_batches=1, verbose=False):
+def time_model(
+    model_name, target, batch_size, float_policy, nb_batches, verbose=False
+):
     """
     Time backpropagation speed of model. The loss is simply the mean of all model
     outputs.
 
     Args:
         model_name: Model to be timed, will be created using `create_model`.
-        batch_size: Batch size to be used for inference. Usually determined first
-            by `find_max_batch_size`.
+        target: One of "inference" or "backprop"
+        batch_size: Batch size to be used for testing.
         float_policy: Can be "float32" or "mixed_float16"
         nb_batches: Backpropagation time is averages over `nb_batches` calls.
         verbose: If `True`, we print duration of each batch
@@ -104,18 +69,26 @@ def time_backprop(model_name, batch_size, float_policy, nb_batches=1, verbose=Fa
         (batch_size, *model.cfg.input_size, model.cfg.in_chans),
         dtype=dtype,
     )
-    optimizer = tf.optimizers.SGD(learning_rate=0.0001)
 
-    @tf.function(experimental_relax_shapes=True)
-    def _fun(x):
-        with tf.GradientTape() as tape:
-            output = model(x, training=True)
-            # The loss is always computed in float32 in order to not lose precision
-            # Here we simulate it to make profiling more accurate
-            output = tf.cast(output, "float32")
-            loss = tf.reduce_mean(output)
-            grads = tape.gradient(loss, model.trainable_variables)
-        optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    if target == "inference":
+        @tf.function(experimental_relax_shapes=True)
+        def _fun(x):
+            return model(x, training=False)
+    elif target == "backprop":
+        optimizer = tf.optimizers.SGD(learning_rate=0.0001)
+
+        @tf.function(experimental_relax_shapes=True)
+        def _fun(x):
+            with tf.GradientTape() as tape:
+                output = model(x, training=True)
+                # The loss is always computed in float32 in order to not lose precision
+                # Here we simulate it to make profiling more accurate
+                output = tf.cast(output, "float32")
+                loss = tf.reduce_mean(output)
+                grads = tape.gradient(loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    else:
+        raise ValueError(f"Unknown target: {target}.")
 
     duration = _time_function(_fun, img, nb_batches, verbose)
     img_per_sec = batch_size * nb_batches / duration
@@ -124,44 +97,48 @@ def time_backprop(model_name, batch_size, float_policy, nb_batches=1, verbose=Fa
 
 def find_max_batch_size(
     model_name: str,
-    test_target: str = "inference",
+    target: str = "inference",
     float_policy: str = "float32",
+    nb_batches: int = 3,
     start_batch_size: int = 256,
     resolution_abs: int = 1,
     resolution_rel: Optional[float] = 0.1,
     verbose: bool = False,
-) -> int:
+) -> Tuple[int, float]:
     """
     Searches for largest batch size that fits in memory.
 
     Args:
         model_name: Model to validate
-        test_target: Can be "inference" or "backprop"
+        target: Can be "inference" or "backprop"
         float_policy: Can be "float32" or "mixed_float16"
+        nb_batches: For how many batches to run the test
         start_batch_size: First batch size to try
         resolution_abs: We stop, if upper-lower <= resolution_abs
         resolution_rel: We stop, if (upper-lower) <= upper * resolution_rel
         verbose: If True, we print information about search progress
     Returns:
         Maximum batch size that does not lead to OOM errors.
+        Inference time in img/sec with that batch size
     """
-    assert test_target in {"inference", "backprop"}
-
     upper_limit = None
     lower_limit = 0
 
     continue_search = True
     next_batch_size = start_batch_size
+    img_per_sec = 0.0
     while continue_search:
         batch_size = next_batch_size
         if verbose:
             print(f"Trying: {batch_size}. Range: ({lower_limit}, {upper_limit})")
         try:
-            if test_target == "inference":
-                time_inference(model_name, batch_size, float_policy)
-            else:
-                time_backprop(model_name, batch_size, float_policy)
-
+            img_per_sec = time_model(
+                model_name=model_name,
+                target=target,
+                batch_size=batch_size,
+                float_policy=float_policy,
+                nb_batches=nb_batches,
+            )
             success = True
             lower_limit = batch_size
 
@@ -188,4 +165,4 @@ def find_max_batch_size(
             if verbose:
                 print(f"Batch size {batch_size}: {'valid' if success else 'oom'}")
 
-    return lower_limit
+    return lower_limit, img_per_sec
