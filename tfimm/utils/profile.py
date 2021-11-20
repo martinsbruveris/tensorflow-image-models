@@ -144,6 +144,11 @@ def find_max_batch_size(
 
             if upper_limit is None:
                 next_batch_size = 2 * batch_size
+                # I got a core dump error when using batch size 16,384 with
+                # deit_tiny_distilled_patch16_224 on a V100 in mixed precision. So we
+                # put a hard cap on the batch size at 10,240, which should be big
+                # enough for all practical purposes.
+                next_batch_size = min(next_batch_size, 10_240)
             elif _below_resolution(
                 lower_limit, upper_limit, resolution_abs, resolution_rel
             ):
