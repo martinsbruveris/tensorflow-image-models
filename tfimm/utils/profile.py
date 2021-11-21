@@ -142,15 +142,19 @@ def find_max_batch_size(
             success = True
             lower_limit = batch_size
 
-            if batch_size == 10_240:
+            if batch_size == 1024:
                 continue_search = False  # See comment about hard cap below
             elif upper_limit is None:
                 next_batch_size = 2 * batch_size
-                # I got a core dump error when using batch size 16,384 with
-                # deit_tiny_distilled_patch16_224 on a V100 in mixed precision. So we
-                # put a hard cap on the batch size at 10,240, which should be big
-                # enough for all practical purposes.
-                next_batch_size = min(next_batch_size, 10_240)
+                # A batch size of 16,384 with image size 224 leads to core dumps. So
+                # does a batch size of 8,192 with image size 384. This is probably because
+                # 16,384 * 224 * 224 * 3 = 2.4 * 10^9 and
+                # 8,192 * 384 * 384 * 3 = 3.62 * 10^9
+                # so simply allocating space for the batch is not possible. So we will
+                # cap the batch size at 1,024. Let's be conservative, larger batches
+                # are unlikely to arise for backprop anyways and they don't matter that
+                # much for inference.
+                next_batch_size = min(next_batch_size, 1024)
             elif _below_resolution(
                 lower_limit, upper_limit, resolution_abs, resolution_rel
             ):
