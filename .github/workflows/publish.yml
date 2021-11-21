@@ -1,9 +1,10 @@
 name: Publish to pypi.org
 
 on:
+  workflow_dispatch
   release:
     types:
-      - created
+      - published
 
 jobs:
   publish:
