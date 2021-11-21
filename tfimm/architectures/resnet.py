@@ -3,6 +3,9 @@ TensorFlow implementation of ResNets
 
 Based on timm/models/resnet.py by Ross Wightman.
 
+TO DO list:
+- [ ] Update documentation
+
 Copyright 2021 Martins Bruveris
 """
 
@@ -20,38 +23,48 @@ from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
 
 
+# TODO: Implement DropBlock, drop_block_rate in timm
+#       See: https://arxiv.org/pdf/1810.12890.pdf)
+# TODO: Implement anti-aliasing layer
+#       See: https://arxiv.org/abs/1904.11486
 @dataclass
 class ResNetConfig(ModelConfig):
-    block: str
-    nb_blocks: List
     nb_classes: int = 1000
     in_chans: int = 3
     input_size: Tuple[int, int] = (224, 224)
-    pool_size: Tuple[int, int] = (7, 7)
-    cardinality: int = 1
-    base_width: int = 64
+    # Residual blocks
+    block: str = "basic_block"
+    nb_blocks: Tuple = (2, 2, 2, 2)
+    nb_channels: Tuple = (64, 128, 256, 512)
+    cardinality: int = 1  # Number of groups in bottleneck conv
+    base_width: int = 64  # Determines number of channels in block
+    downsample_mode: str = "conv"
+    zero_init_last_bn: bool = True
+    # Stem
     stem_width: int = 64
     stem_type: str = ""
-    replace_stem_pool: bool = False
-    output_stride: int = 32
+    replace_stem_pool: bool = False  # TODO: Not implemented
+    # Other params
     block_reduce_first: int = 1
     down_kernel_size: int = 1
-    avg_down: bool = False
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
     aa_layer: Any = None  # TODO: Not implemented
+    attn_layer: Any = None  # TODO: Not implemented
+    # Regularization
     drop_rate: float = 0.0
-    drop_path_rate: float = 0.0
-    drop_block_rate: float = 0.0
+    drop_path_rate: float = 0.0  # TODO: Not implemented
+    # Head
     global_pool: str = "avg"
-    block_args: Any = None  # TODO: What is this?
-    zero_init_last_bn: bool = True
     # Parameters for inference
     test_input_size: Optional[Tuple[int, int]] = None
+    pool_size: int = 7  # For test-time pooling (not implemented yet)
     crop_pct: float = 0.875
     interpolation: str = "bilinear"
+    # Preprocessing
     mean: float = IMAGENET_DEFAULT_MEAN
     std: float = IMAGENET_DEFAULT_STD
+    # Weight transfer
     first_conv: str = "conv1"
     classifier: str = "fc"
 
@@ -65,84 +78,58 @@ class BasicBlock(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        cardinality=1,
-        base_width=64,
-        reduce_first=1,
-        dilation=1,
-        first_dilation=None,
-        act_layer="relu",
-        norm_layer="batch_norm",
-        attn_layer=None,
-        aa_layer=None,
-        drop_block=None,
-        drop_path=None,
-        zero_init_last_bn=True,
+        cfg: ResNetConfig,
+        nb_channels: int,
+        stride: int,
+        downsample_layer,
+        drop_path,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        assert cardinality == 1, "BasicBlock only supports cardinality of 1"
-        assert base_width == 64, "BasicBlock does not support changing base width"
+        assert cfg.cardinality == 1, "BasicBlock only supports cardinality of 1"
+        assert cfg.base_width == 64, "BasicBlock does not support changing base width"
 
-        self.planes = planes
-        self.stride = stride
-        self.downsample = downsample
-        self.reduce_first = reduce_first
-        self.dilation = dilation
-        self.first_dilation = first_dilation
-        self.act_layer = act_layer_factory(act_layer)
-        self.norm_layer = norm_layer_factory(norm_layer)
-        self.attn_layer = attn_layer
-        self.aa_layer = aa_layer
-        self.drop_block = drop_block
+        self.cfg = cfg
+        self.downsample_layer = downsample_layer
         self.drop_path = drop_path
-        self.zero_init_last_bn = zero_init_last_bn
+        self.act_layer = act_layer_factory(cfg.act_layer)
+        self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
-    def build(self, input_shape: tf.TensorShape):
-        first_planes = self.planes // self.reduce_first
-        out_planes = self.planes * self.expansion
-        first_dilation = self.first_dilation or self.dilation
-        use_aa = self.aa_layer is not None and (
-            self.stride == 2 or first_dilation != self.dilation
-        )
+        # Num channels after first conv
+        first_planes = nb_channels // cfg.block_reduce_first
+        out_planes = nb_channels * self.expansion  # Num channels after second conv
+        use_aa = cfg.aa_layer is not None and stride == 2
         if use_aa:
             raise NotImplementedError("use_aa=True not implemented yet.")
-        if self.dilation != 1:
-            raise NotImplementedError("dilation!=1 not implemented yet.")
-        if self.first_dilation != 1:
-            raise NotImplementedError("first_dilation!=1 not implemented yet.")
 
-        self.pad1 = tf.keras.layers.ZeroPadding2D(padding=first_dilation)
+        self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv1 = tf.keras.layers.Conv2D(
             filters=first_planes,
             kernel_size=3,
-            strides=1 if use_aa else self.stride,
+            # If we use anti-aliasing, the anti-aliasing layer takes care of strides
+            strides=1 if use_aa else stride,
             use_bias=False,
             name="conv1",
         )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
         self.aa = (
-            aa_layer(channels=first_planes, stride=self.stride) if use_aa else None
+            cfg.aa_layer(channels=first_planes, stride=stride) if use_aa else None
         )
 
+        self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv2 = tf.keras.layers.Conv2D(
             filters=out_planes,
             kernel_size=3,
-            padding="same",  # TODO: Only for dilation=1 (pytorch: padding=dilation)
-            dilation_rate=self.dilation,
             use_bias=False,
             name="conv2",
         )
         self.bn2 = self.norm_layer(
-            gamma_initializer="zeros" if self.zero_init_last_bn else "ones",
-            moving_variance_initializer="zeros" if self.zero_init_last_bn else "ones",
+            gamma_initializer="zeros" if cfg.zero_init_last_bn else "ones",
+            moving_variance_initializer="zeros" if cfg.zero_init_last_bn else "ones",
             name="bn2",
         )
-        self.se = create_attn(self.attn_layer, out_planes)
+        self.se = create_attn(cfg.attn_layer, out_planes)
         self.act2 = self.act_layer()
 
     def call(self, x, training=False):
@@ -150,20 +137,15 @@ class BasicBlock(tf.keras.layers.Layer):
 
         x = self.pad1(x)
         x = self.conv1(x)
-        x = self.bn1(x, training)
-        if self.drop_block is not None:
-            raise NotImplementedError("drop_block!=None not implemented yet...")
-            # x = self.drop_block(x)
+        x = self.bn1(x, training=training)
         x = self.act1(x)
         if self.aa is not None:
             raise NotImplementedError("aa!=None not implemented yet...")
             # x = self.aa(x)
 
+        x = self.pad2(x)
         x = self.conv2(x)
-        x = self.bn2(x, training)
-        if self.drop_block is not None:
-            raise NotImplementedError("drop_block!=None not implemented yet...")
-            # x = self.drop_block(x)
+        x = self.bn2(x, training=training)
 
         if self.se is not None:
             raise NotImplementedError("se!=None not implemented yet...")
@@ -173,8 +155,8 @@ class BasicBlock(tf.keras.layers.Layer):
             raise NotImplementedError("drop_path!=None not implemented yet...")
             # x = self.drop_path(x)
 
-        if self.downsample is not None:
-            shortcut = self.downsample(shortcut, training)
+        if self.downsample_layer is not None:
+            shortcut = self.downsample_layer(shortcut, training=training)
         x += shortcut
         x = self.act2(x)
 
@@ -186,50 +168,28 @@ class Bottleneck(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        inplanes,
-        planes,
-        stride=1,
-        downsample=None,
-        cardinality=1,
-        base_width=64,
-        reduce_first=1,
-        dilation=1,
-        first_dilation=None,
-        act_layer="relu",
-        norm_layer="batch_norm",
-        attn_layer=None,
-        aa_layer=None,
-        drop_block=None,
-        drop_path=None,
-        zero_init_last_bn=True,
+        cfg: ResNetConfig,
+        nb_channels: int,
+        stride: int,
+        downsample_layer,
+        drop_path,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
-        self.planes = planes
-        self.stride = stride
-        self.downsample = downsample
-        self.cardinality = cardinality
-        self.base_width = base_width
-        self.reduce_first = reduce_first
-        self.dilation = dilation
-        self.first_dilation = first_dilation
-        self.act_layer = act_layer_factory(act_layer)
-        self.norm_layer = norm_layer_factory(norm_layer)
-        self.attn_layer = attn_layer
-        self.aa_layer = aa_layer
-        self.drop_block = drop_block
+        self.cfg = cfg
+        self.downsample_layer = downsample_layer
         self.drop_path = drop_path
-        self.zero_init_last_bn = zero_init_last_bn
+        self.act_layer = act_layer_factory(cfg.act_layer)
+        self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
-    def build(self, inpu_shape: tf.TensorShape):
-        width = int(math.floor(self.planes * (self.base_width / 64)) * self.cardinality)
-        first_planes = width // self.reduce_first
-        outplanes = self.planes * self.expansion
-        first_dilation = self.first_dilation or self.dilation
-        use_aa = self.aa_layer is not None and (
-            self.stride == 2 or first_dilation != self.dilation
-        )
+        # Number of channels after second convolution
+        width = int(math.floor(nb_channels * (cfg.base_width / 64)) * cfg.cardinality)
+        # Number of channels after first convolution
+        first_planes = width // cfg.block_reduce_first
+        # Number of channels after third convolution
+        out_planes = nb_channels * self.expansion
+        use_aa = cfg.aa_layer is not None and stride == 2
         if use_aa:
             raise NotImplementedError("use_aa=True not implemented yet.")
 
@@ -242,71 +202,62 @@ class Bottleneck(tf.keras.layers.Layer):
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
 
-        self.pad2 = tf.keras.layers.ZeroPadding2D(padding=first_dilation)
+        self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv2 = tf.keras.layers.Conv2D(
             filters=width,
             kernel_size=3,
-            strides=1 if use_aa else self.stride,
-            dilation_rate=first_dilation,
-            groups=self.cardinality,
+            # If we use anti-aliasing, the anti-aliasing layer takes care of strides
+            strides=1 if use_aa else stride,
+            groups=cfg.cardinality,
             use_bias=False,
             name="conv2",
         )
         self.bn2 = self.norm_layer(name="bn2")
         self.act2 = self.act_layer()
 
-        self.aa = aa_layer(channels=width, stride=self.stride) if use_aa else None
+        self.aa = cfg.aa_layer(channels=width, stride=stride) if use_aa else None
 
         self.conv3 = tf.keras.layers.Conv2D(
-            filters=outplanes,
+            filters=out_planes,
             kernel_size=1,
             use_bias=False,
             name="conv3",
         )
         self.bn3 = self.norm_layer(
-            gamma_initializer="zeros" if self.zero_init_last_bn else "ones",
-            moving_variance_initializer="zeros" if self.zero_init_last_bn else "ones",
+            gamma_initializer="zeros" if cfg.zero_init_last_bn else "ones",
+            moving_variance_initializer="zeros" if cfg.zero_init_last_bn else "ones",
             name="bn3",
         )
-        self.se = create_attn(self.attn_layer, outplanes)
+        self.se = create_attn(cfg.attn_layer, out_planes)
         self.act3 = self.act_layer()
 
     def call(self, x, training=False):
         shortcut = x
 
         x = self.conv1(x)
-        x = self.bn1(x, training)
-        if self.drop_block is not None:
-            raise NotImplementedError("drop_block!=None not implemented yet...")
-            # x = self.drop_block(x)
+        x = self.bn1(x, training=training)
         x = self.act1(x)
 
         x = self.pad2(x)
         x = self.conv2(x)
-        x = self.bn2(x, training)
-        if self.drop_block is not None:
-            raise NotImplementedError("drop_block!=None not implemented yet...")
-            # x = self.drop_block(x)
+        x = self.bn2(x, training=training)
         x = self.act2(x)
         if self.aa is not None:
             raise NotImplementedError("aa!=None not implemented yet...")
             # x = self.aa(x)
 
         x = self.conv3(x)
-        x = self.bn3(x, training)
-        if self.drop_block is not None:
-            raise NotImplementedError("drop_block!=None not implemented yet...")
-            # x = self.drop_block(x)
+        x = self.bn3(x, training=training)
 
         if self.se is not None:
             raise NotImplementedError("se!=None not implemented yet...")
             # x  = self.se(x)
 
         if self.drop_path is not None:
-            x = self.drop_path(x)
+            x = self.drop_path(x, training=training)
 
-        if self.downsample is not None:
-            shortcut = self.downsample(shortcut, training)
+        if self.downsample_layer is not None:
+            shortcut = self.downsample_layer(shortcut, training=training)
         x += shortcut
         x = self.act3(x)
 
@@ -318,36 +269,22 @@ def aa_layer(channels, stride):
 
 
 def create_attn(attn_layer, outplanes):
-    if attn_layer is None:
-        return None
-    else:
+    if attn_layer is not None:
         raise NotImplementedError("create_attn not implemented.")
-
-
-def get_padding(kernel_size, stride, dilation=1):
-    padding = ((stride - 1) + dilation * (kernel_size - 1)) // 2
-    return padding
+    return None
 
 
 def downsample_avg(
-    in_channels,
-    out_channels,
-    kernel_size,
-    stride=1,
-    dilation=1,
-    first_dilation=None,
-    norm_layer=None,
-    name="",
+    cfg: ResNetConfig, out_channels: int, stride: int, name: str
 ):
-    norm_layer = norm_layer_factory(norm_layer)
-    avg_stride = stride if dilation == 1 else 1
+    norm_layer = norm_layer_factory(cfg.norm_layer)
 
-    layers = []
-    if stride != 1 or dilation != 1:
+    if stride != 1:
         pool = tf.keras.layers.AveragePooling2D(
-            pool_size=2, strides=avg_stride, padding="same"
+            pool_size=2, strides=stride, padding="same"
         )
-        layers.append(pool)
+    else:
+        pool = tf.keras.layers.Activation("linear")
     conv = tf.keras.layers.Conv2D(
         filters=out_channels,
         kernel_size=1,
@@ -356,32 +293,22 @@ def downsample_avg(
         name=name + "/downsample/1",
     )
     bn = norm_layer(name=name + "/downsample/2")
-    layers.extend([conv, bn])
-    return tf.keras.Sequential(layers)
+    return tf.keras.Sequential([pool, conv, bn])
 
 
 def downsample_conv(
-    in_channels,
-    out_channels,
-    kernel_size,
-    stride=1,
-    dilation=1,
-    first_dilation=None,
-    norm_layer="batch_norm",
-    name="",
+        cfg: ResNetConfig, out_channels: int, stride: int, name: str
 ):
-    norm_layer = norm_layer_factory(norm_layer)
-    kernel_size = 1 if stride == 1 and dilation == 1 else kernel_size
-    first_dilation = (first_dilation or dilation) if kernel_size > 1 else 1
-    p = get_padding(kernel_size, stride, first_dilation)
+    norm_layer = norm_layer_factory(cfg.norm_layer)
 
     # This layer is part of the conv layer in pytorch and so is not being tracked here
+    p = (stride + cfg.down_kernel_size) // 2 - 1
     pad = tf.keras.layers.ZeroPadding2D(padding=p)
+
     conv = tf.keras.layers.Conv2D(
         filters=out_channels,
-        kernel_size=kernel_size,
+        kernel_size=cfg.down_kernel_size,
         strides=stride,
-        dilation_rate=first_dilation,
         use_bias=False,
         name=name + "/downsample/0",
     )
@@ -389,92 +316,58 @@ def downsample_conv(
     return tf.keras.Sequential([pad, conv, bn])
 
 
-def drop_blocks(drop_block_rate=0.0):
-    if drop_block_rate:
-        raise NotImplementedError("drop_block_rate>0 not implemented.")
-    return [None, None, None, None]
-
-
-def make_blocks(
-    block_fn,
-    channels,
-    block_repeats,
-    inplanes,
-    reduce_first=1,
-    output_stride=32,
-    down_kernel_size=1,
-    avg_down=False,
-    drop_block_rate=0.0,
-    drop_path_rate=0.0,
-    norm_layer="batch_norm",
-    **kwargs,
+def make_stage(
+    idx: int,
+    in_chans: int,
+    cfg: ResNetConfig,
+    name: str,
 ):
-    stages = []
-    feature_info = []
-    net_num_blocks = sum(block_repeats)
-    net_block_idx = 0
-    net_stride = 4
-    dilation = prev_dilation = 1
-    for stage_idx, (planes, num_blocks, db) in enumerate(
-        zip(channels, block_repeats, drop_blocks(drop_block_rate))
-    ):
-        # never liked this name, but weight compat requires it
-        stage_name = f"layer{stage_idx + 1}"
-        stride = 1 if stage_idx == 0 else 2
-        if net_stride >= output_stride:
-            dilation *= stride
-            stride = 1
+    stage_name = f"layer{idx + 1}"  # Weight compatibility requires this name
+
+    assert cfg.block in {"basic_block", "bottleneck"}
+    block_cls = BasicBlock if cfg.block == "basic_block" else Bottleneck
+    nb_blocks = cfg.nb_blocks[idx]
+    nb_channels = cfg.nb_channels[idx]
+    # The actual number of channels after the block. Not the same as nb_channels,
+    # because Bottleneck blocks have an expansion factor = 4.
+    out_channels = nb_channels * block_cls.expansion
+
+    assert cfg.downsample_mode in {"avg", "conv"}
+    downsample_fn = downsample_avg if cfg.downsample_mode == "avg" else downsample_conv
+
+    # We need to know the absolute number of blocks to set stochastic depth decay
+    total_nb_blocks = sum(cfg.nb_blocks)
+    total_block_idx = sum(cfg.nb_blocks[:idx])
+
+    blocks = []
+    for block_idx in range(nb_blocks):
+        stride = 1 if idx == 0 or block_idx > 0 else 2
+        if (block_idx == 0) and (stride != 1 or in_chans != out_channels):
+            downsample_layer = downsample_fn(
+                cfg, out_channels, stride, name=f"{name}/{stage_name}/0"
+            )
         else:
-            net_stride *= stride
+            downsample_layer = None
 
-        downsample = None
-        if stride != 1 or inplanes != planes * block_fn.expansion:
-            down_kwargs = dict(
-                in_channels=inplanes,
-                out_channels=planes * block_fn.expansion,
-                kernel_size=down_kernel_size,
+        # Stochastic depth linear decay rule
+        block_dpr = cfg.drop_path_rate * total_block_idx / (total_nb_blocks - 1)
+        if block_dpr > 0.0:
+            raise NotImplementedError("block_dpr>0. not implemented yet.")
+
+        blocks.append(
+            block_cls(
+                cfg,
+                nb_channels=nb_channels,
                 stride=stride,
-                dilation=dilation,
-                first_dilation=prev_dilation,
-                norm_layer=norm_layer,
-                name=f"res_net/{stage_name}/0",
+                downsample_layer=downsample_layer,
+                drop_path=None,
+                name=f"{stage_name}/{block_idx}",
             )
-            if avg_down:
-                downsample = downsample_avg(**down_kwargs)
-            else:
-                downsample = downsample_conv(**down_kwargs)
-
-        block_kwargs = dict(
-            reduce_first=reduce_first, dilation=dilation, drop_block=db, **kwargs
         )
-        blocks = []
-        for block_idx in range(num_blocks):
-            downsample = downsample if block_idx == 0 else None
-            stride = stride if block_idx == 0 else 1
-            # stochastic depth linear decay rule
-            block_dpr = drop_path_rate * net_block_idx / (net_num_blocks - 1)
-            if block_dpr > 0.0:
-                raise NotImplementedError("block_dpr>0. not implemented yet.")
-            blocks.append(
-                block_fn(
-                    inplanes,
-                    planes,
-                    stride,
-                    downsample,
-                    first_dilation=prev_dilation,
-                    drop_path=None,
-                    **block_kwargs,
-                    # TODO: sort out name scope
-                    name=f"res_net/{stage_name}/{block_idx}",
-                )
-            )
-            prev_dilation = dilation
-            inplanes = planes * block_fn.expansion
-            net_block_idx += 1
 
-        stages.append(tf.keras.Sequential(blocks))
-
-    return stages, feature_info
+        in_chans = nb_channels
+        total_block_idx += 1
+    return blocks, in_chans
 
 
 @keras_serializable
@@ -549,16 +442,13 @@ class ResNet(tf.keras.Model):
     avg_down : bool, default False
         Whether to use average pooling for projection skip connection between
         stages/downsample.
-    output_stride : int, default 32
-        Set the output stride of the network, 32, 16, or 8. Typically used in
-        segmentation.
     act_layer : nn.Module, activation layer
     norm_layer : nn.Module, normalization layer
     aa_layer : nn.Module, anti-aliasing layer
     drop_rate : float, default 0.
         Dropout probability before classifier, for training
     global_pool : str, default 'avg'
-        Global pooling type. One of 'avg', 'max', 'avgmax', 'catavgmax'
+        Global pooling type. One of 'avg', 'max'
     """
 
     cfg_class = ResNetConfig
@@ -567,46 +457,15 @@ class ResNet(tf.keras.Model):
         super().__init__(*args, **kwargs)
         self.cfg = cfg
 
-        self.block = eval(cfg.block)
-        self.nb_blocks = cfg.nb_blocks
-        self.nb_classes = cfg.nb_classes
-        self.in_chans = cfg.in_chans
-        self.input_size = cfg.input_size
-        self.cardinality = cfg.cardinality
-        self.base_width = cfg.base_width
-        self.stem_width = cfg.stem_width
-        self.stem_type = cfg.stem_type
-        self.output_stride = cfg.output_stride
-        self.block_reduce_first = cfg.block_reduce_first
-        self.down_kernel_size = cfg.down_kernel_size
-        self.avg_down = cfg.avg_down
-        self.replace_stem_pool = cfg.replace_stem_pool
-        self.act_layer_str = cfg.act_layer
         self.act_layer = act_layer_factory(cfg.act_layer)
-        self.norm_layer_str = cfg.norm_layer
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
-        self.aa_layer = cfg.aa_layer
-        self.drop_rate = cfg.drop_rate
-        self.drop_path_rate = cfg.drop_path_rate
-        self.drop_block_rate = cfg.drop_block_rate
-        self.global_pool = cfg.global_pool
-        # TODO: Always true
-        self.zero_init_last_bn = cfg.zero_init_last_bn
-        # TODO: Only used to set attn_layer
-        self.block_args = cfg.block_args or dict()
 
-        # TODO: Add feature info for feature pyramid extraction
-
-    @property
-    def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.input_size, self.in_chans))
-
-    def build(self, input_shape: tf.TensorShape):
-        if "deep" in self.stem_type:
-            in_planes = self.stem_width * 2
-            stem_chns = (self.stem_width, self.stem_width)
-            if "tiered" in self.stem_type:
-                stem_chns = (3 * (self.stem_width // 4), self.stem_width)
+        if cfg.stem_type in {"deep", "deep_tiered"}:
+            in_chans = cfg.stem_width * 2
+            if cfg.stem_type == "deep_tiered":
+                stem_chns = (3 * (cfg.stem_width // 4), cfg.stem_width)
+            else:
+                stem_chns = (cfg.stem_width, cfg.stem_width)
             self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
             conv1_0 = tf.keras.layers.Conv2D(
                 filters=stem_chns[0],
@@ -615,7 +474,7 @@ class ResNet(tf.keras.Model):
                 use_bias=False,
                 name=f"{self.name}/conv1/0",
             )
-            bn1_0 = self.norm_layer(name="resnet/conv1/1")
+            bn1_0 = self.norm_layer(name=f"{self.name}/conv1/1")
             act1_0 = self.act_layer()
             conv1_1 = tf.keras.layers.Conv2D(
                 filters=stem_chns[1],
@@ -624,10 +483,10 @@ class ResNet(tf.keras.Model):
                 use_bias=False,
                 name=f"{self.name}/conv1/3",
             )
-            bn1_1 = self.norm_layer(name="resnet/conv1/4")
+            bn1_1 = self.norm_layer(name=f"{self.name}/conv1/4")
             act1_1 = self.act_layer()
             conv1_2 = tf.keras.layers.Conv2D(
-                filters=in_planes,
+                filters=in_chans,
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
@@ -637,12 +496,12 @@ class ResNet(tf.keras.Model):
                 [conv1_0, bn1_0, act1_0, conv1_1, bn1_1, act1_1, conv1_2]
             )
         else:
-            in_planes = 64
-            # In TF "same" paddding with strides != 1 is not the same as (3, 3) padding
+            in_chans = 64
+            # In TF "same" padding with strides != 1 is not the same as (3, 3) padding
             # in pytorch, hence the need for an explicit padding layer
             self.pad1 = tf.keras.layers.ZeroPadding2D(padding=3)
             self.conv1 = tf.keras.layers.Conv2D(
-                filters=in_planes,
+                filters=in_chans,
                 kernel_size=7,
                 strides=2,
                 use_bias=False,
@@ -652,53 +511,35 @@ class ResNet(tf.keras.Model):
         self.act1 = self.act_layer()
 
         # Stem Pooling
-        if self.replace_stem_pool:
+        if cfg.replace_stem_pool:
             raise NotImplementedError("replace_stem_pool=True not implemented")
         else:
-            if self.aa_layer is not None:
+            if cfg.aa_layer is not None:
                 raise NotImplementedError("aa_layer!=None not implemented.")
             else:
-                self.maxpool = tf.keras.Sequential(
-                    [
-                        tf.keras.layers.ZeroPadding2D(padding=1),
-                        tf.keras.layers.MaxPool2D(pool_size=3, strides=2),
-                    ]
-                )
+                pad = tf.keras.layers.ZeroPadding2D(padding=1)
+                pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=2)
+                self.maxpool = tf.keras.Sequential([pad, pool])
 
-        # Feature Blocks
-        channels = [64, 128, 256, 512]
-        stage_modules, stage_feature_info = make_blocks(
-            self.block,
-            channels,
-            self.nb_blocks,
-            in_planes,
-            cardinality=self.cardinality,
-            base_width=self.base_width,
-            output_stride=self.output_stride,
-            reduce_first=self.block_reduce_first,
-            avg_down=self.avg_down,
-            down_kernel_size=self.down_kernel_size,
-            act_layer=self.act_layer_str,
-            norm_layer=self.norm_layer_str,
-            aa_layer=self.aa_layer,
-            drop_block_rate=self.drop_block_rate,
-            drop_path_rate=self.drop_path_rate,
-            **self.block_args,
-        )
+        self.blocks = []
+        for idx in range(4):
+            stage_blocks, in_chans = make_stage(
+                idx=idx, in_chans=in_chans, cfg=cfg, name=self.name
+            )
+            self.blocks.extend(stage_blocks)
 
-        self.layer1 = stage_modules[0]
-        self.layer2 = stage_modules[1]
-        self.layer3 = stage_modules[2]
-        self.layer4 = stage_modules[3]
-
-        # Head (pooling and classifier))
+        # Head (pooling and classifier)
         self.head = ClassifierHead(
-            nb_classes=self.nb_classes,
-            pool_type=self.global_pool,
-            drop_rate=self.drop_rate,
+            nb_classes=cfg.nb_classes,
+            pool_type=cfg.global_pool,
+            drop_rate=cfg.drop_rate,
             use_conv=False,
             name="remove",
         )
+
+    @property
+    def dummy_inputs(self) -> tf.Tensor:
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
     def forward_features(self, x, training=False):
         x = self.pad1(x)
@@ -707,16 +548,16 @@ class ResNet(tf.keras.Model):
         x = self.act1(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x, training)
-        x = self.layer2(x, training)
-        x = self.layer3(x, training)
-        x = self.layer4(x, training)
+        for block in self.blocks:
+            # noinspection PyCallingNonCallable
+            x = block(x, training=training)
+
         return x
 
     def call(self, x, training=False):
-        x = self.forward_features(x, training)
+        x = self.forward_features(x, training=training)
         # noinspection PyCallingNonCallable
-        x = self.head(x)
+        x = self.head(x, training=training)
         return x
 
 
@@ -724,7 +565,7 @@ class ResNet(tf.keras.Model):
 def resnet18():
     """Constructs a ResNet-18 model."""
     cfg = ResNetConfig(
-        name="resnet18", url="", block="BasicBlock", nb_blocks=[2, 2, 2, 2]
+        name="resnet18", url="", block="basic_block", nb_blocks=(2, 2, 2, 2)
     )
     return ResNet, cfg
 
@@ -735,11 +576,11 @@ def resnet18d():
     cfg = ResNetConfig(
         name="resnet18d",
         url="",
-        block="BasicBlock",
-        nb_blocks=[2, 2, 2, 2],
+        block="basic_block",
+        nb_blocks=(2, 2, 2, 2),
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         interpolation="bicubic",
         first_conv="conv1/0",
     )
@@ -752,8 +593,8 @@ def resnet26():
     cfg = ResNetConfig(
         name="resnet26",
         url="",
-        block="Bottleneck",
-        nb_blocks=[2, 2, 2, 2],
+        block="bottleneck",
+        nb_blocks=(2, 2, 2, 2),
         interpolation="bicubic",
     )
     return ResNet, cfg
@@ -765,11 +606,11 @@ def resnet26d():
     cfg = ResNetConfig(
         name="resnet26d",
         url="",
-        block="Bottleneck",
-        nb_blocks=[2, 2, 2, 2],
+        block="bottleneck",
+        nb_blocks=(2, 2, 2, 2),
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         interpolation="bicubic",
         first_conv="conv1/0",
     )
@@ -783,12 +624,12 @@ def resnet26t():
         name="resnet26t",
         url="",
         input_size=(256, 256),
-        block="Bottleneck",
-        nb_blocks=[2, 2, 2, 2],
-        pool_size=(8, 8),
+        block="bottleneck",
+        nb_blocks=(2, 2, 2, 2),
+        pool_size=8,
         stem_width=32,
         stem_type="deep_tiered",
-        avg_down=True,
+        downsample_mode="avg",
         crop_pct=0.94,
         interpolation="bicubic",
         first_conv="conv1/0",
@@ -800,7 +641,7 @@ def resnet26t():
 def resnet34():
     """Constructs a ResNet-34 model."""
     cfg = ResNetConfig(
-        name="resnet34", url="", block="BasicBlock", nb_blocks=[3, 4, 6, 3]
+        name="resnet34", url="", block="basic_block", nb_blocks=(3, 4, 6, 3)
     )
     return ResNet, cfg
 
@@ -811,11 +652,11 @@ def resnet34d():
     cfg = ResNetConfig(
         name="resnet34d",
         url="",
-        block="BasicBlock",
-        nb_blocks=[3, 4, 6, 3],
+        block="basic_block",
+        nb_blocks=(3, 4, 6, 3),
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         interpolation="bicubic",
         first_conv="conv1/0",
     )
@@ -828,8 +669,8 @@ def resnet50():
     cfg = ResNetConfig(
         name="resnet50",
         url="",
-        block="Bottleneck",
-        nb_blocks=[3, 4, 6, 3],
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
         interpolation="bicubic",
         crop_pct=0.95,
     )
@@ -842,11 +683,11 @@ def resnet50d():
     cfg = ResNetConfig(
         name="resnet50d",
         url="",
-        block="Bottleneck",
-        nb_blocks=[3, 4, 6, 3],
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         interpolation="bicubic",
         first_conv="conv1/0",
     )
@@ -859,8 +700,8 @@ def resnet101():
     cfg = ResNetConfig(
         name="resnet101",
         url="",
-        block="Bottleneck",
-        nb_blocks=[3, 4, 23, 3],
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
         interpolation="bicubic",
         crop_pct=0.95,
     )
@@ -874,12 +715,12 @@ def resnet101d():
         name="resnet101d",
         url="",
         input_size=(256, 256),
-        block="Bottleneck",
-        nb_blocks=[3, 4, 23, 3],
-        pool_size=(8, 8),
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        pool_size=8,
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         test_input_size=(320, 320),
         interpolation="bicubic",
         crop_pct=1.0,
@@ -894,8 +735,8 @@ def resnet152():
     cfg = ResNetConfig(
         name="resnet152",
         url="",
-        block="Bottleneck",
-        nb_blocks=[3, 8, 36, 3],
+        block="bottleneck",
+        nb_blocks=(3, 8, 36, 3),
         interpolation="bicubic",
         crop_pct=0.95,
     )
@@ -909,12 +750,12 @@ def resnet152d():
         name="resnet152d",
         url="",
         input_size=(256, 256),
-        block="Bottleneck",
-        nb_blocks=[3, 8, 36, 3],
-        pool_size=(8, 8),
+        block="bottleneck",
+        nb_blocks=(3, 8, 36, 3),
+        pool_size=8,
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         test_input_size=(320, 320),
         interpolation="bicubic",
         crop_pct=1.0,
@@ -930,12 +771,12 @@ def resnet200d():
         name="resnet200d",
         url="",
         input_size=(256, 256),
-        block="Bottleneck",
-        nb_blocks=[3, 24, 36, 3],
-        pool_size=(8, 8),
+        block="bottleneck",
+        nb_blocks=(3, 24, 36, 3),
+        pool_size=8,
         stem_width=32,
         stem_type="deep",
-        avg_down=True,
+        downsample_mode="avg",
         test_input_size=(320, 320),
         interpolation="bicubic",
         crop_pct=1.0,
