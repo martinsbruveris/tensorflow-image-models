@@ -17,7 +17,7 @@ class ClassifierHead(tf.keras.layers.Layer):
         pool_type: str = "avg",
         drop_rate: float = 0.0,
         use_conv: bool = False,
-        name: str = "/",  # Use empty name by default to ease conversion from PyTorch.
+        name: str = "head",
         **kwargs,
     ):
         super().__init__(name=name, **kwargs)
@@ -66,7 +66,7 @@ class ClassifierHead(tf.keras.layers.Layer):
         if self.pool is not None:
             x = self.pool(x)
         if self.drop is not None:
-            x = self.drop(x, training)
+            x = self.drop(x, training=training)
         if self.fc is not None:
             x = self.fc(x)
         if self.flatten is not None:
