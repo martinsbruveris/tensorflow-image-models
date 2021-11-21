@@ -9,12 +9,12 @@ from pathlib import Path
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # noqa: E402
 
-import click
-import pandas as pd
+import click  # noqa: E402
+import pandas as pd  # noqa: E402
 
-import tfimm
-from tfimm.models import registry
-from tfimm.utils.profile import find_max_batch_size
+import tfimm  # noqa: E402
+from tfimm.models import registry  # noqa: E402
+from tfimm.utils.profile import find_max_batch_size  # noqa: E402
 
 
 @click.command()
@@ -69,10 +69,7 @@ def main(
 
         for target in ["inference", "backprop"]:
             batch_size, img_per_sec = find_max_batch_size(
-                model_name,
-                target=target,
-                float_policy=float_policy,
-                verbose=True
+                model_name, target=target, float_policy=float_policy, verbose=True
             )
             img_per_sec = round(img_per_sec, 2)
             results_df.loc[model_name, f"{target}_batch_size"] = batch_size

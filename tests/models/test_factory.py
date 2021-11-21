@@ -4,11 +4,14 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from tfimm.models.factory import create_model, transfer_weigths
+from tfimm import list_models
+from tfimm.models.factory import create_model, create_preprocessing, transfer_weigths
 
 
-# TODO: Add DeiT as test case for test_transfer_weights
-@pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
+@pytest.mark.parametrize(
+    "model_name",
+    ["resnet18", "vit_tiny_patch16_224", "deit_tiny_distilled_patch16_224"],
+)
 @pytest.mark.parametrize("nb_classes", [10, 0])
 def test_transfer_weights(model_name, nb_classes):
     # Create two models with same architecture, but different classifiers
@@ -58,3 +61,14 @@ def test_model_path(model_name):
     y_2 = loaded_model(img).numpy()
 
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
+
+
+@pytest.mark.parametrize("model_name", list_models())
+@pytest.mark.parametrize("input_shape", [(8, 8, 3), (1, 4, 4, 3)])
+@pytest.mark.parametrize("dtype", ["float32", "float16"])
+def test_preprocessing(model_name, input_shape, dtype):
+    img = tf.ones(input_shape, dtype)
+    preprocess = create_preprocessing(model_name, dtype)
+    img = preprocess(img)
+    assert img.shape == input_shape
+    assert img.dtype == dtype

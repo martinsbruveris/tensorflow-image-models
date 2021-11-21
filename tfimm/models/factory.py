@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Optional, Union
+from typing import Callable, Optional, Union
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
@@ -75,6 +75,29 @@ def create_model(
         transfer_weigths(loaded_model, model)
 
     return model
+
+
+def create_preprocessing(model_name: str, dtype: str = "float32") -> Callable:
+    """
+    Creates a function to preprocess images for a particular model.
+
+    The input to the preprocessing function is assumed to be values in range [0, 255].
+
+    Args:
+        model_name: Model for which to create preprocessing function.
+        dtype: Output dtype
+    """
+    if not is_model(model_name):
+        raise ValueError(f"Unknown model: {model_name}.")
+
+    cfg = model_config(model_name)
+
+    def _preprocess(img: tf.Tensor) -> tf.Tensor:
+        img = tf.cast(img, dtype=dtype) / 255.0
+        img = (img - cfg.mean) / cfg.std
+        return img
+
+    return _preprocess
 
 
 def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):

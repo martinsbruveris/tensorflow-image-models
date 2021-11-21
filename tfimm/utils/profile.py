@@ -39,9 +39,7 @@ def _time_function(fun, img, nb_batches, verbose):
     return duration
 
 
-def time_model(
-    model_name, target, batch_size, float_policy, nb_batches, verbose=False
-):
+def time_model(model_name, target, batch_size, float_policy, nb_batches, verbose=False):
     """
     Time backpropagation speed of model. The loss is simply the mean of all model
     outputs.
@@ -71,9 +69,11 @@ def time_model(
     )
 
     if target == "inference":
+
         @tf.function(experimental_relax_shapes=True)
         def _fun(x):
             return model(x, training=False)
+
     elif target == "backprop":
         optimizer = tf.optimizers.SGD(learning_rate=0.0001)
 
@@ -87,6 +87,7 @@ def time_model(
                 loss = tf.reduce_mean(output)
                 grads = tape.gradient(loss, model.trainable_variables)
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
     else:
         raise ValueError(f"Unknown target: {target}.")
 
@@ -147,7 +148,8 @@ def find_max_batch_size(
             elif upper_limit is None:
                 next_batch_size = 2 * batch_size
                 # A batch size of 16,384 with image size 224 leads to core dumps. So
-                # does a batch size of 8,192 with image size 384. This is probably because
+                # does a batch size of 8,192 with image size 384. This is probably
+                # because
                 # 16,384 * 224 * 224 * 3 = 2.4 * 10^9 and
                 # 8,192 * 384 * 384 * 3 = 3.62 * 10^9
                 # so simply allocating space for the batch is not possible. So we will

@@ -11,7 +11,7 @@ Copyright 2021 Martins Bruveris
 
 import math
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, Tuple
 
 import tensorflow as tf
 
@@ -113,9 +113,7 @@ class BasicBlock(tf.keras.layers.Layer):
         )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
-        self.aa = (
-            cfg.aa_layer(channels=first_planes, stride=stride) if use_aa else None
-        )
+        self.aa = cfg.aa_layer(channels=first_planes, stride=stride) if use_aa else None
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv2 = tf.keras.layers.Conv2D(
@@ -274,9 +272,7 @@ def create_attn(attn_layer, outplanes):
     return None
 
 
-def downsample_avg(
-    cfg: ResNetConfig, out_channels: int, stride: int, name: str
-):
+def downsample_avg(cfg: ResNetConfig, out_channels: int, stride: int, name: str):
     norm_layer = norm_layer_factory(cfg.norm_layer)
 
     if stride != 1:
@@ -296,9 +292,7 @@ def downsample_avg(
     return tf.keras.Sequential([pool, conv, bn])
 
 
-def downsample_conv(
-        cfg: ResNetConfig, out_channels: int, stride: int, name: str
-):
+def downsample_conv(cfg: ResNetConfig, out_channels: int, stride: int, name: str):
     norm_layer = norm_layer_factory(cfg.norm_layer)
 
     # This layer is part of the conv layer in pytorch and so is not being tracked here

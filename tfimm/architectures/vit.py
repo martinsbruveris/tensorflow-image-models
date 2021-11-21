@@ -71,6 +71,7 @@ class ViTConfig(ModelConfig):
         norm_layer: normalization layer
         act_layer: activation function
     """
+
     def __post_init__(self):
         self.transform_weights["pos_embed"] = ViT.transform_pos_embed
 
@@ -292,7 +293,8 @@ class ViT(tf.keras.Model):
             src_pos_embed, shape=(1, *cfg.grid_size, cfg.embed_dim)
         )
         tgt_grid_size = (
-            input_size[0] // cfg.patch_size, input_size[1] // cfg.patch_size
+            input_size[0] // cfg.patch_size,
+            input_size[1] // cfg.patch_size,
         )
         tgt_pos_embed = tf.image.resize(
             images=src_pos_embed,
