@@ -61,6 +61,16 @@ classifier altogether. We can do this by setting the `nb_classes` parameter in
 classification layer will be randomly initialized, while all other weights will be
 copied from the pretrained model.
 
+The preprocessing function for each model can be created via
+```python
+import tensorflow as tf
+import tfimm
+
+preprocess = tfimm.create_preprocessing("vit_tiny_patch16_224", dtype="float32")
+img = tf.ones((1, 224, 224, 3), dtype="uint8")
+img_preprocessed = preprocess(img)
+```
+
 ### Saving and loading models
 
 All models are subclassed from `tf.keras.Model` (they are _not_ functional models).
