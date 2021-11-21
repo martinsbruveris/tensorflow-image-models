@@ -3,6 +3,7 @@
 - [Introduction](#introduction)
 - [Usage](#usage)
 - [Models](#models)
+- [Profiling](#profiling)
 - [License](#license)
 
 ## Introduction
@@ -122,6 +123,27 @@ The following architectures are currently available:
 - ResNet (work in progress, most available weights are from `timm`)
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)
+
+## Profiling
+
+To understand how big each of the models is, I have done some profiling to measure
+- maximum batch size that fits in GPU memory and
+- throughput in images/second
+for both inference and backpropagation on K80 and V100 GPUs. For V100, measurements 
+were done for both `float32` and mixed precision.
+
+The results can be found in the `results/profiling_{k80, v100}.csv` files.
+
+For backpropagation, we use as loss the mean of model outputs
+
+```python
+def backprop():
+    with tf.GradientTape() as tape:
+        output = model(x, training=True)
+        loss = tf.reduce_mean(output)
+        grads = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(grads, model.trainable_variables))
+```
 
 ## License
 
