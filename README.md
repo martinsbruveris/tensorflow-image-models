@@ -14,7 +14,7 @@ weights, obtained by porting architectures from
 that the number of available architectures will grow over time. For now it contains
 vision transformers (ViT and DeiT) and ResNets.
 
-This work would now have been possible wihout Ross Wightman's `timm` library and the
+This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
 I tried to make sure all source material is acknowledged. Please let me know if I have
 missed something.
