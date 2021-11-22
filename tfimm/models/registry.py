@@ -166,6 +166,8 @@ def _to_timm_module_name(module):
     """
     if module == "vit":
         module = "vision_transformer"
+    elif module == "swin":
+        module = "swin_transformer"
     return module
 
 

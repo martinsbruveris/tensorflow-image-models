@@ -10,7 +10,12 @@ from tfimm.models.factory import create_model, create_preprocessing, transfer_we
 
 @pytest.mark.parametrize(
     "model_name",
-    ["resnet18", "vit_tiny_patch16_224", "deit_tiny_distilled_patch16_224"],
+    [
+        "resnet18",
+        "vit_tiny_patch16_224",
+        "deit_tiny_distilled_patch16_224",
+        "swin_tiny_patch4_window7_224",
+    ],
 )
 @pytest.mark.parametrize("nb_classes", [10, 0])
 def test_transfer_weights(model_name, nb_classes):
@@ -29,7 +34,10 @@ def test_transfer_weights(model_name, nb_classes):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
+@pytest.mark.parametrize(
+    "model_name",
+    ["resnet18", "vit_tiny_patch16_224", "swin_tiny_patch4_window7_224"]
+)
 def test_save_load_model(model_name):
     """Tests ability to use keras save() and load() functions."""
     model = create_model(model_name)
@@ -46,7 +54,10 @@ def test_save_load_model(model_name):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize("model_name", ["resnet18", "vit_tiny_patch16_224"])
+@pytest.mark.parametrize(
+    "model_name",
+    ["resnet18", "vit_tiny_patch16_224", "swin_tiny_patch4_window7_224"]
+)
 def test_model_path(model_name):
     """Tests ability to use `model_path` parameter in `create_model`."""
     model = create_model(model_name)
