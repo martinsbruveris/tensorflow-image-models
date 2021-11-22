@@ -1,5 +1,9 @@
 # Change Log
 
+## Unpublished
+
+- Added Swin Transformer models (saving doesn't work yet)
+
 ## v0.1.1 - 2021-11-22
 
 - Refactored code in `resnet.py`.

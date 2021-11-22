@@ -35,6 +35,8 @@
 
 ## Collections
 
+- [Vision-Transformer-papers](https://github.com/NielsRogge/Vision-Transformer-papers)
+  another list of resources and papers on vision transformers.
 - [Transformer-in-vision](https://github.com/Yangzhangcst/Transformer-in-Computer-Vision)
   list of resources and papers on vision transformers.
 - [vit-pytorch](https://github.com/lucidrains/vit-pytorch) repository with 
