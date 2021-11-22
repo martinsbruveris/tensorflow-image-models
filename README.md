@@ -120,6 +120,12 @@ The following architectures are currently available:
   - Includes models from: ImageNet-21K Pretraining for the Masses
     [\[arXiv:2104.10972\]](https://arxiv.org/abs/2104.10972) 
     [\[github\]](https://github.com/Alibaba-MIIL/ImageNet21K)
+- Swin Transformer 
+  [\[github\]](https://github.com/microsoft/Swin-Transformer)
+  - Swin Transformer: Hierarchical Vision Transformer using Shifted Windows. 
+    [\[arXiv:2103.14030\]](https://arxiv.org/abs/2103.14030)
+  - Tensorflow code adapted from 
+    [Swin-Transformer-TF](https://github.com/rishigami/Swin-Transformer-TF)
 - ResNet (work in progress, most available weights are from `timm`)
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)
