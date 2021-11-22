@@ -14,6 +14,12 @@
   [\[paper\]](https://arxiv.org/pdf/2107.00641.pdf) 
   [\[github\]](https://github.com/microsoft/Focal-Transformer)
 
+## Training methods
+
+- TransMix: Attend to Mix for Vision Transformers. 
+  [\[paper\]](https://arxiv.org/pdf/2111.09833.pdf)
+  [\[github\]](https://github.com/beckschen/transmix)
+
 ## Explainability
 
 - Exploring explainability for vision transformers. 
