@@ -11,7 +11,7 @@ from typing import Callable, Dict, Optional, Tuple, Union
 
 import tensorflow as tf
 
-from tfimm.layers import MLP, norm_layer_factory
+from tfimm.layers import MLP, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import (
     IMAGENET_DEFAULT_MEAN,
@@ -91,36 +91,6 @@ class ViTConfig(ModelConfig):
         return self.grid_size[0] * self.grid_size[1]
 
 
-class PatchEmbeddings(tf.keras.layers.Layer):
-    """
-    Image to Patch Embedding.
-    """
-
-    def __init__(self, cfg: ViTConfig, **kwargs):
-        super().__init__(**kwargs)
-        self.patch_size = cfg.patch_size
-        self.embed_dim = cfg.embed_dim
-
-        self.projection = tf.keras.layers.Conv2D(
-            filters=self.embed_dim,
-            kernel_size=self.patch_size,
-            strides=self.patch_size,
-            use_bias=True,
-            name="proj",
-        )
-
-    def call(self, x):
-        emb = self.projection(x)
-
-        # Change the 2D spatial dimensions to a single temporal dimension.
-        # shape = (batch_size, num_patches, out_channels=embed_dim)
-        batch_size, height, width = tf.unstack(tf.shape(x)[:3])
-        num_patches = (width // self.patch_size) * (height // self.patch_size)
-        emb = tf.reshape(tensor=emb, shape=(batch_size, num_patches, -1))
-
-        return emb
-
-
 class MultiHeadAttention(tf.keras.layers.Layer):
     def __init__(self, cfg: ViTConfig, **kwargs):
         super().__init__(**kwargs)
@@ -189,7 +159,12 @@ class ViT(tf.keras.Model):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.cfg = cfg
 
-        self.patch_embed = PatchEmbeddings(cfg, name="patch_embed")
+        self.patch_embed = PatchEmbeddings(
+            patch_size=cfg.patch_size,
+            embed_dim=cfg.embed_dim,
+            norm_layer="",  # ViT does not use normalization in patch embeddings
+            name="patch_embed",
+        )
         self.cls_token = self.add_weight(
             shape=(1, 1, cfg.embed_dim),
             initializer="zeros",
