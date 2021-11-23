@@ -246,7 +246,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
     def call(self, x):
         H, W = self.input_resolution
         B, L, C = x.get_shape().as_list()
-        assert L == H * W, "input feature has wrong size"
+        # assert L == H * W, "input feature has wrong size"
 
         shortcut = x
         x = self.norm1(x)
@@ -299,8 +299,8 @@ class PatchMerging(tf.keras.layers.Layer):
     def call(self, x):
         H, W = self.input_resolution
         B, L, C = x.get_shape().as_list()
-        assert L == H * W, "input feature has wrong size"
-        assert H % 2 == 0 and W % 2 == 0, f"x size ({H}*{W}) are not even."
+        # assert L == H * W, "input feature has wrong size"
+        # assert H % 2 == 0 and W % 2 == 0, f"x size ({H}*{W}) are not even."
 
         x = tf.reshape(x, shape=[-1, H, W, C])
 
