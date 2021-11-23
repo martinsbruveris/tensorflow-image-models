@@ -11,8 +11,8 @@ def act_layer_factory(act_layer: str):
 
 def norm_layer_factory(norm_layer: str):
     """Returns a function that creates a normalization layer"""
-    if norm_layer == "none":
-        return lambda **kwargs: lambda x, training=True: x
+    if norm_layer == "":
+        return lambda **kwargs: tf.keras.layers.Activation("linear")
     elif norm_layer == "batch_norm":
         bn_class = tf.keras.layers.BatchNormalization
         bn_args = {
