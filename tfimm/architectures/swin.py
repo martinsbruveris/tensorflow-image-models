@@ -184,9 +184,29 @@ class WindowAttention(tf.keras.layers.Layer):
 
 
 class SwinTransformerBlock(tf.keras.layers.Layer):
-    def __init__(self, dim, input_resolution, num_heads, window_size=7, shift_size=0, mlp_ratio=4.,
-                 qkv_bias=True, drop=0., attn_drop=0., drop_path_prob=0., norm_layer=LayerNormalization, **kwargs):
+    def __init__(
+        self,
+        cfg: SwinTransformerConfig,
+        input_size: Tuple[int, int],
+        embed_dim: int,
+        nb_heads: int,
+        drop_path_prob: float,
+        shift_size: int,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
+        self.cfg = cfg
+        self.norm_layer = norm_layer_factory(cfg.norm_layer)
+
+        dim = embed_dim
+        input_resolution = input_size
+        num_heads = nb_heads
+        window_size = cfg.window_size
+        mlp_ratio = cfg.mlp_ratio
+        qkv_bias = cfg.qkv_bias
+        drop = cfg.drop_rate
+        attn_drop = cfg.attn_drop_rate
+
         self.dim = dim
         self.input_resolution = input_resolution
         self.num_heads = num_heads
@@ -198,12 +218,12 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             self.window_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
 
-        self.norm1 = norm_layer(epsilon=1e-5, name=f'norm1')
+        self.norm1 = self.norm_layer(name="norm1")
         self.attn = WindowAttention(dim, window_size=(self.window_size, self.window_size), num_heads=num_heads,
                                     qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop,
                                     name="attn")
         self.drop_path = DropPath(drop_prob=drop_path_prob)
-        self.norm2 = norm_layer(epsilon=1e-5, name=f'norm2')
+        self.norm2 = self.norm_layer(name="norm2")
         self.mlp = MLP(
             hidden_dim=int(dim * mlp_ratio),
             embed_dim=dim,
@@ -288,32 +308,37 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
 
 
 class PatchMerging(tf.keras.layers.Layer):
-    def __init__(self, input_resolution, dim, norm_layer=LayerNormalization, **kwargs):
+    def __init__(
+        self,
+        cfg: SwinTransformerConfig,
+        input_size: Tuple[int, int],
+        embed_dim: int,
+        **kwargs,
+    ):
         super().__init__(**kwargs)
-        self.input_resolution = input_resolution
-        self.dim = dim
-        self.reduction = Dense(2 * dim, use_bias=False,
-                               name=f'reduction')
-        self.norm = norm_layer(epsilon=1e-5, name=f'norm')
+        self.cfg = cfg
+        self.input_size = input_size
+        self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
-    def call(self, x):
-        H, W = self.input_resolution
-        B, L, C = x.get_shape().as_list()
-        # assert L == H * W, "input feature has wrong size"
-        # assert H % 2 == 0 and W % 2 == 0, f"x size ({H}*{W}) are not even."
+        self.reduction = tf.keras.layers.Dense(
+            units=2 * embed_dim, use_bias=False, name="reduction"
+        )
+        self.norm = self.norm_layer(name="norm")
 
-        x = tf.reshape(x, shape=[-1, H, W, C])
+    def call(self, x, training=False):
+        h, w = self.input_size
+        b, l, c = tf.unstack(tf.shape(x))
 
+        x = tf.reshape(x, shape=(-1, h, w, c))
         x0 = x[:, 0::2, 0::2, :]  # B H/2 W/2 C
         x1 = x[:, 1::2, 0::2, :]  # B H/2 W/2 C
         x2 = x[:, 0::2, 1::2, :]  # B H/2 W/2 C
         x3 = x[:, 1::2, 1::2, :]  # B H/2 W/2 C
-        x = tf.concat([x0, x1, x2, x3], axis=-1)
-        x = tf.reshape(x, shape=[-1, (H // 2) * (W // 2), 4 * C])
+        x = tf.concat((x0, x1, x2, x3), axis=-1)
+        x = tf.reshape(x, shape=(-1, (h // 2) * (w // 2), 4 * c))
 
-        x = self.norm(x)
+        x = self.norm(x, training=training)
         x = self.reduction(x)
-
         return x
 
 
@@ -332,36 +357,21 @@ class SwinTransformerStage(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.cfg = cfg
 
-        input_resolution = input_size
-        dim = embed_dim
-        depth = nb_blocks
-        num_heads = nb_heads
-        window_size = cfg.window_size
-        mlp_ratio = cfg.mlp_ratio
-        qkv_bias = cfg.qkv_bias
-        drop = cfg.drop_rate
-        attn_drop = cfg.attn_drop_rate
-        norm_layer = LayerNormalization  # TODO: Replace with factory
-        # downsample = PatchMerging if downsample else None
-
-        self.dim = dim
-        self.input_resolution = input_resolution
-        self.depth = depth
-
-        # build blocks
-        self.blocks = [SwinTransformerBlock(dim=dim, input_resolution=input_resolution,
-                                           num_heads=num_heads, window_size=window_size,
-                                           shift_size=0 if (
-                                               i % 2 == 0) else window_size // 2,
-                                           mlp_ratio=mlp_ratio,
-                                           qkv_bias=qkv_bias,
-                                           drop=drop, attn_drop=attn_drop,
-                                           drop_path_prob=drop_path_prob[i],
-                                           norm_layer=norm_layer,
-                                            name=f"blocks/{i}") for i in range(depth)]
+        self.blocks = [
+            SwinTransformerBlock(
+                cfg=cfg,
+                input_size=input_size,
+                embed_dim=embed_dim,
+                nb_heads=nb_heads,
+                drop_path_prob=drop_path_prob[idx],
+                shift_size=0 if idx % 2 == 0 else cfg.window_size // 2,
+                name=f"blocks/{idx}"
+            ) for idx in range(nb_blocks)
+        ]
         if downsample:
             self.downsample = PatchMerging(
-                input_resolution, dim=dim, norm_layer=norm_layer, name="downsample")
+                cfg=cfg, input_size=input_size, embed_dim=embed_dim, name="downsample"
+            )
         else:
             self.downsample = tf.keras.layers.Activation("linear")
 
@@ -418,7 +428,7 @@ class SwinTransformer(tf.keras.Model):
                     nb_blocks=cfg.nb_blocks[idx],
                     nb_heads=cfg.nb_heads[idx],
                     drop_path_prob=dpr[block_idx_from:block_idx_to],
-                    downsample=idx < nb_stages - 1,
+                    downsample=idx < nb_stages - 1,  # Don't downsample the last stage
                     name=f"layers/{idx}",
                     ))
         self.norm = self.norm_layer(name="norm")
