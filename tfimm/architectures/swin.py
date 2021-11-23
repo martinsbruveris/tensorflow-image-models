@@ -17,12 +17,16 @@ from typing import Tuple
 import numpy as np
 import tensorflow as tf
 
+from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 
 # TODO: old imports
-from tensorflow.keras.layers import Dense, Dropout, Conv2D, LayerNormalization, GlobalAveragePooling1D
+from tensorflow.keras.layers import Dense, Dropout, Conv2D, LayerNormalization
+
+# model_registry will add each entrypoint fn to this
+__all__ = ["SwinTransformer", "SwinTransformerConfig"]
 
 
 @dataclass
@@ -43,6 +47,7 @@ class SwinTransformerConfig(ModelConfig):
     drop_path_rate: float = 0.1
     # Other parameters
     norm_layer: str = "layer_norm"
+    act_layer: str = "gelu"
     ape: bool = False  # Absolute position embedding
     patch_norm: bool = True
     # Parameters for inference
@@ -58,12 +63,12 @@ class SwinTransformerConfig(ModelConfig):
 
 
 class Mlp(tf.keras.layers.Layer):
-    def __init__(self, in_features, hidden_features=None, out_features=None, drop=0., prefix='', **kwargs):
+    def __init__(self, in_features, hidden_features=None, out_features=None, drop=0., **kwargs):
         super().__init__(**kwargs)
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
-        self.fc1 = Dense(hidden_features, name=f'{prefix}/mlp/fc1')
-        self.fc2 = Dense(out_features, name=f'{prefix}/mlp/fc2')
+        self.fc1 = Dense(hidden_features, name=f'fc1')
+        self.fc2 = Dense(out_features, name=f'fc2')
         self.drop = Dropout(drop)
 
     def call(self, x):
@@ -93,23 +98,22 @@ def window_reverse(windows, window_size, H, W, C):
 
 
 class WindowAttention(tf.keras.layers.Layer):
-    def __init__(self, dim, window_size, num_heads, qkv_bias=True, qk_scale=None, attn_drop=0., proj_drop=0., prefix='', **kwargs):
+    def __init__(self, dim, window_size, num_heads, qkv_bias=True, attn_drop=0., proj_drop=0., **kwargs):
         super().__init__(**kwargs)
         self.dim = dim
         self.window_size = window_size
         self.num_heads = num_heads
         head_dim = dim // num_heads
-        self.scale = qk_scale or head_dim ** -0.5
-        self.prefix = prefix
+        self.scale = head_dim ** -0.5
 
         self.qkv = Dense(dim * 3, use_bias=qkv_bias,
-                         name=f'{self.prefix}/attn/qkv')
+                         name=f'qkv')
         self.attn_drop = Dropout(attn_drop)
-        self.proj = Dense(dim, name=f'{self.prefix}/attn/proj')
+        self.proj = Dense(dim, name=f'proj')
         self.proj_drop = Dropout(proj_drop)
 
     def build(self, input_shape):
-        self.relative_position_bias_table = self.add_weight(f'{self.prefix}/attn/relative_position_bias_table',
+        self.relative_position_bias_table = self.add_weight(f'relative_position_bias_table',
                                                             shape=(
                                                                 (2 * self.window_size[0] - 1) * (2 * self.window_size[1] - 1), self.num_heads),
                                                             initializer=tf.initializers.Zeros(), trainable=True)
@@ -126,7 +130,7 @@ class WindowAttention(tf.keras.layers.Layer):
         relative_coords[:, :, 0] *= 2 * self.window_size[1] - 1
         relative_position_index = relative_coords.sum(-1).astype(np.int64)
         self.relative_position_index = tf.Variable(initial_value=tf.convert_to_tensor(
-            relative_position_index), trainable=False, name=f'{self.prefix}/attn/relative_position_index')
+            relative_position_index), trainable=False, name=f'relative_position_index')
         self.built = True
 
     def call(self, x, mask=None):
@@ -191,8 +195,8 @@ class DropPath(tf.keras.layers.Layer):
 
 class SwinTransformerBlock(tf.keras.layers.Layer):
     def __init__(self, dim, input_resolution, num_heads, window_size=7, shift_size=0, mlp_ratio=4.,
-                 qkv_bias=True, qk_scale=None, drop=0., attn_drop=0., drop_path_prob=0., norm_layer=LayerNormalization, prefix=''):
-        super().__init__()
+                 qkv_bias=True, drop=0., attn_drop=0., drop_path_prob=0., norm_layer=LayerNormalization, **kwargs):
+        super().__init__(**kwargs)
         self.dim = dim
         self.input_resolution = input_resolution
         self.num_heads = num_heads
@@ -203,18 +207,17 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             self.shift_size = 0
             self.window_size = min(self.input_resolution)
         assert 0 <= self.shift_size < self.window_size, "shift_size must in 0-window_size"
-        self.prefix = prefix
 
-        self.norm1 = norm_layer(epsilon=1e-5, name=f'{self.prefix}/norm1')
+        self.norm1 = norm_layer(epsilon=1e-5, name=f'norm1')
         self.attn = WindowAttention(dim, window_size=(self.window_size, self.window_size), num_heads=num_heads,
-                                    qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop, prefix=self.prefix,
-                                    name="remove")
+                                    qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop,
+                                    name="attn")
         self.drop_path = DropPath(
             drop_path_prob if drop_path_prob > 0. else 0.)
-        self.norm2 = norm_layer(epsilon=1e-5, name=f'{self.prefix}/norm2')
+        self.norm2 = norm_layer(epsilon=1e-5, name=f'norm2')
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim,
-                       drop=drop, prefix=self.prefix, name="remove")
+                       drop=drop, name="mlp")
 
     def build(self, input_shape):
         if self.shift_size > 0:
@@ -241,7 +244,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             attn_mask = tf.where(attn_mask != 0, -100.0, attn_mask)
             attn_mask = tf.where(attn_mask == 0, 0.0, attn_mask)
             self.attn_mask = tf.Variable(
-                initial_value=attn_mask, trainable=False, name=f'{self.prefix}/attn_mask')
+                initial_value=attn_mask, trainable=False, name=f'attn_mask')
         else:
             self.attn_mask = None
 
@@ -292,13 +295,13 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
 
 
 class PatchMerging(tf.keras.layers.Layer):
-    def __init__(self, input_resolution, dim, norm_layer=LayerNormalization, prefix='', **kwargs):
+    def __init__(self, input_resolution, dim, norm_layer=LayerNormalization, **kwargs):
         super().__init__(**kwargs)
         self.input_resolution = input_resolution
         self.dim = dim
         self.reduction = Dense(2 * dim, use_bias=False,
-                               name=f'{prefix}/downsample/reduction')
-        self.norm = norm_layer(epsilon=1e-5, name=f'{prefix}/downsample/norm')
+                               name=f'reduction')
+        self.norm = norm_layer(epsilon=1e-5, name=f'norm')
 
     def call(self, x):
         H, W = self.input_resolution
@@ -323,34 +326,35 @@ class PatchMerging(tf.keras.layers.Layer):
 
 class BasicLayer(tf.keras.layers.Layer):
     def __init__(self, dim, input_resolution, depth, num_heads, window_size,
-                 mlp_ratio=4., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path_prob=0., norm_layer=LayerNormalization, downsample=None, use_checkpoint=False, prefix=''):
-        super().__init__()
+                 mlp_ratio=4., qkv_bias=True, drop=0., attn_drop=0.,
+                 drop_path_prob=0., norm_layer=LayerNormalization, downsample=None,
+                 **kwargs):
+        super().__init__(**kwargs)
         self.dim = dim
         self.input_resolution = input_resolution
         self.depth = depth
-        self.use_checkpoint = use_checkpoint
 
         # build blocks
-        self.blocks = tf.keras.Sequential([SwinTransformerBlock(dim=dim, input_resolution=input_resolution,
+        self.blocks = [SwinTransformerBlock(dim=dim, input_resolution=input_resolution,
                                            num_heads=num_heads, window_size=window_size,
                                            shift_size=0 if (
                                                i % 2 == 0) else window_size // 2,
                                            mlp_ratio=mlp_ratio,
-                                           qkv_bias=qkv_bias, qk_scale=qk_scale,
+                                           qkv_bias=qkv_bias,
                                            drop=drop, attn_drop=attn_drop,
                                            drop_path_prob=drop_path_prob[i] if isinstance(
                                                drop_path_prob, list) else drop_path_prob,
                                            norm_layer=norm_layer,
-                                           prefix=f'{prefix}.blocks.{i}') for i in range(depth)])
+                                            name=f"blocks/{i}") for i in range(depth)]
         if downsample is not None:
             self.downsample = downsample(
-                input_resolution, dim=dim, norm_layer=norm_layer, prefix=prefix, name="remove")
+                input_resolution, dim=dim, norm_layer=norm_layer, name="downsample")
         else:
             self.downsample = None
 
     def call(self, x):
-        x = self.blocks(x)
+        for block in self.blocks:
+            x = block(x)
 
         if self.downsample is not None:
             x = self.downsample(x)
@@ -397,6 +401,10 @@ class SwinTransformer(tf.keras.Model):
         super().__init__(*args, **kwargs)
         self.cfg = cfg
 
+        self.norm_layer = norm_layer_factory(cfg.norm_layer)
+
+        nb_stages = len(cfg.nb_blocks)
+
         include_top = cfg.nb_classes > 0
         img_size = cfg.input_size
         patch_size = (cfg.patch_size, cfg.patch_size)
@@ -408,14 +416,12 @@ class SwinTransformer(tf.keras.Model):
         window_size = cfg.window_size
         mlp_ratio = cfg.mlp_ratio
         qkv_bias = cfg.qkv_bias
-        qk_scale = None
         drop_rate = cfg.drop_rate
         attn_drop_rate = cfg.attn_drop_rate
         drop_path_rate = cfg.drop_path_rate
         norm_layer = LayerNormalization  # TODO: Replace with norm_layer_factory
         ape = cfg.ape
         patch_norm = cfg.patch_norm
-        use_checkpoint = False
 
         self.include_top = include_top
 
@@ -435,61 +441,72 @@ class SwinTransformer(tf.keras.Model):
         patches_resolution = self.patch_embed.patches_resolution
         self.patches_resolution = patches_resolution
 
-        # absolute postion embedding
-        if self.ape:
-            self.absolute_pos_embed = self.add_weight('absolute_pos_embed',
-                                                      shape=(
-                                                          1, num_patches, embed_dim),
-                                                      initializer=tf.initializers.Zeros())
+        # Absolute position embedding
+        if cfg.ape:
+            self.absolute_pos_embed = self.add_weight(
+                name="absolute_pos_embed",
+                shape=(1, num_patches, cfg.embed_dim),
+                initializer=tf.initializers.Zeros()
+            )
+        self.drop = Dropout(drop_rate)
 
-        self.pos_drop = Dropout(drop_rate)
-
-        # stochastic depth
-        dpr = [x for x in np.linspace(0., drop_path_rate, sum(depths))]
+        # Stochastic depth
+        # TODO: Should not need to be a list
+        dpr = list(np.linspace(0., cfg.drop_path_rate, sum(cfg.nb_blocks)))
 
         # build layers
-        self.basic_layers = tf.keras.Sequential([BasicLayer(dim=int(embed_dim * 2 ** i_layer),
-                                                input_resolution=(patches_resolution[0] // (2 ** i_layer),
-                                                                  patches_resolution[1] // (2 ** i_layer)),
-                                                depth=depths[i_layer],
-                                                num_heads=num_heads[i_layer],
-                                                window_size=window_size,
-                                                mlp_ratio=self.mlp_ratio,
-                                                qkv_bias=qkv_bias, qk_scale=qk_scale,
-                                                drop=drop_rate, attn_drop=attn_drop_rate,
-                                                drop_path_prob=dpr[sum(depths[:i_layer]):sum(
-                                                    depths[:i_layer + 1])],
-                                                norm_layer=norm_layer,
-                                                downsample=PatchMerging if (
-                                                    i_layer < self.num_layers - 1) else None,
-                                                use_checkpoint=use_checkpoint,
-                                                prefix=f'layers.{i_layer}') for i_layer in range(self.num_layers)])
-        self.norm = norm_layer(epsilon=1e-5, name='norm')
-        self.avgpool = GlobalAveragePooling1D()
-        if self.include_top:
-            self.head = Dense(num_classes, name='head')
-        else:
-            self.head = None
+        self.blocks = []
+        block_idx_to = 0
+        for idx in range(nb_stages):
+            block_idx_from = block_idx_to
+            block_idx_to = block_idx_to + cfg.nb_blocks[idx]
+
+            self.blocks.append(
+                BasicLayer(
+                    dim=int(cfg.embed_dim * 2 ** idx),
+                    input_resolution=(patches_resolution[0] // (2 ** idx),
+                                      patches_resolution[1] // (2 ** idx)),
+                    depth=cfg.nb_blocks[idx],
+                    num_heads=cfg.nb_heads[idx],
+                    window_size=cfg.window_size,
+                    mlp_ratio=cfg.mlp_ratio,
+                    qkv_bias=cfg.qkv_bias,
+                    drop=cfg.drop_rate,
+                    attn_drop=cfg.attn_drop_rate,
+                    drop_path_prob=dpr[block_idx_from:block_idx_to],
+                    norm_layer=norm_layer,
+                    downsample=PatchMerging if (idx < nb_stages - 1) else None,
+                    name=f"layers/{idx}",
+                    ))
+        # END to do
+
+        self.norm = self.norm_layer(name="norm")
+        self.pool = tf.keras.layers.GlobalAveragePooling1D()
+        self.head = (
+            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            if cfg.nb_classes > 0
+            else tf.keras.layers.Activation("linear")  # Identity layer
+        )
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
-    def forward_features(self, x):
-        x = self.patch_embed(x)
-        if self.ape:
+    def forward_features(self, x, training=False):
+        x = self.patch_embed(x, training=training)
+        if self.cfg.ape:
             x = x + self.absolute_pos_embed
-        x = self.pos_drop(x)
+        x = self.drop(x, training=training)
 
-        x = self.basic_layers(x)
-        x = self.norm(x)
-        x = self.avgpool(x)
+        for block in self.blocks:
+            x = block(x, training=training)
+        x = self.norm(x, training=training)
+        x = self.pool(x)
         return x
 
-    def call(self, x):
-        x = self.forward_features(x)
-        if self.include_top:
-            x = self.head(x)
+    def call(self, x, training=False):
+        x = self.forward_features(x, training=training)
+        x = self.head(x)
         return x
 
 

@@ -11,7 +11,7 @@ from typing import Callable, Dict, Optional, Tuple, Union
 
 import tensorflow as tf
 
-from tfimm.layers import act_layer_factory, norm_layer_factory
+from tfimm.layers import MLP, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import (
     IMAGENET_DEFAULT_MEAN,
@@ -157,30 +157,6 @@ class MultiHeadAttention(tf.keras.layers.Layer):
         return x
 
 
-class MLP(tf.keras.layers.Layer):
-    """MLP as used in Vision Transformer, MLP-Mixer and related networks"""
-
-    def __init__(self, cfg: ViTConfig, **kwargs):
-        super().__init__(**kwargs)
-        act_layer = act_layer_factory(cfg.act_layer)
-
-        self.fc1 = tf.keras.layers.Dense(
-            units=int(cfg.embed_dim * cfg.mlp_ratio), name="fc1"
-        )
-        self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=cfg.drop_rate)
-        self.fc2 = tf.keras.layers.Dense(units=cfg.embed_dim, name="fc2")
-        self.drop2 = tf.keras.layers.Dropout(rate=cfg.drop_rate)
-
-    def call(self, x, training=False):
-        x = self.fc1(x)
-        x = self.act(x)
-        x = self.drop1(x, training=training)
-        x = self.fc2(x)
-        x = self.drop2(x, training=training)
-        return x
-
-
 class Block(tf.keras.layers.Layer):
     def __init__(self, cfg: ViTConfig, **kwargs):
         super().__init__(**kwargs)
@@ -189,7 +165,13 @@ class Block(tf.keras.layers.Layer):
         self.norm1 = self.norm_layer(name="norm1")
         self.attn = MultiHeadAttention(cfg, name="attn")
         self.norm2 = self.norm_layer(name="norm2")
-        self.mlp = MLP(cfg, name="mlp")
+        self.mlp = MLP(
+            hidden_dim=int(cfg.embed_dim * cfg.mlp_ratio),
+            embed_dim=cfg.embed_dim,
+            drop_rate=cfg.drop_rate,
+            act_layer=cfg.act_layer,
+            name="mlp"
+        )
 
     def call(self, x, training=False):
         x = x + self.attn(self.norm1(x, training=training), training=training)
