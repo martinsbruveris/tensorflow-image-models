@@ -12,10 +12,7 @@ import tensorflow as tf
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import (
-    IMAGENET_DEFAULT_MEAN,
-    IMAGENET_DEFAULT_STD,
-)
+from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["ConvMixer", "ConvMixerConfig"]
@@ -30,6 +27,7 @@ class ConvMixerConfig(ModelConfig):
     embed_dim: int = 768
     depth: int = 32
     kernel_size: int = 9
+    norm_layer: str = "batch_norm"
     act_layer: str = "gelu"
     # Parameters for inference
     crop_pct: float = 0.96
@@ -44,7 +42,7 @@ class Block(tf.keras.layers.Layer):
     def __init__(self, cfg: ConvMixerConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
         act_layer = act_layer_factory(cfg.act_layer)
-        norm_layer = norm_layer_factory("batch_norm")
+        norm_layer = norm_layer_factory(cfg.norm_layer)
 
         self.conv1 = tf.keras.layers.DepthwiseConv2D(
             kernel_size=cfg.kernel_size,
@@ -83,7 +81,7 @@ class ConvMixer(tf.keras.Model):
         super().__init__(*args, **kwargs)
         self.nb_features = cfg.embed_dim  # For consistency with other models
         self.act_layer = act_layer_factory(cfg.act_layer)
-        self.norm_layer = norm_layer_factory("batch_norm")
+        self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.cfg = cfg
 
         conv1 = tf.keras.layers.Conv2D(
@@ -111,7 +109,7 @@ class ConvMixer(tf.keras.Model):
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
     def forward_features(self, x, training=False):
-        x = self.stem(x)
+        x = self.stem(x, training=training)
         for block in self.blocks:
             x = block(x, training=training)
         x = self.pool(x)
@@ -119,26 +117,9 @@ class ConvMixer(tf.keras.Model):
         return x
 
     def call(self, x, training=False):
-        x = self.forward_features(x, training)
+        x = self.forward_features(x, training=training)
         x = self.head(x)
         return x
-
-
-@register_model
-def convmixer_1536_20():
-    """
-    ConvMixer-1536/20.
-    Source: https://github.com/tmp-iclr/convmixer
-    """
-    cfg = ConvMixerConfig(
-        name="convmixer_1536_20",
-        url="",
-        patch_size=(7, 7),
-        embed_dim=1536,
-        depth=20,
-        kernel_size=9
-    )
-    return ConvMixer, cfg
 
 
 @register_model
@@ -176,7 +157,19 @@ def convmixer_1024_20_ks9_p14():
     )
     return ConvMixer, cfg
 
-# TODO: Check timm.py, possible simplifications
-# TODO: Run unit tests
-# TODO: style check
-# TODO: Add info to readme file
+
+@register_model
+def convmixer_1536_20():
+    """
+    ConvMixer-1536/20.
+    Source: https://github.com/tmp-iclr/convmixer
+    """
+    cfg = ConvMixerConfig(
+        name="convmixer_1536_20",
+        url="",
+        patch_size=(7, 7),
+        embed_dim=1536,
+        depth=20,
+        kernel_size=9,
+    )
+    return ConvMixer, cfg
