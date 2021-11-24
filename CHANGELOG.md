@@ -2,6 +2,7 @@
 
 ## Unpublished
 
+- Added ConvMixer models
 - Added Swin Transformer models (mixed precision untested)
 
 ## v0.1.1 - 2021-11-22
