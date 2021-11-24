@@ -140,7 +140,7 @@ class Block(tf.keras.layers.Layer):
             embed_dim=cfg.embed_dim,
             drop_rate=cfg.drop_rate,
             act_layer=cfg.act_layer,
-            name="mlp"
+            name="mlp",
         )
 
     def call(self, x, training=False):

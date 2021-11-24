@@ -12,13 +12,8 @@ class PatchEmbeddings(tf.keras.layers.Layer):
     """
     Image to Patch Embedding.
     """
-    def __init__(
-        self,
-        patch_size: int,
-        embed_dim: int,
-        norm_layer: str = "",
-        **kwargs
-    ):
+
+    def __init__(self, patch_size: int, embed_dim: int, norm_layer: str = "", **kwargs):
         super().__init__(**kwargs)
         self.patch_size = patch_size
         self.embed_dim = embed_dim

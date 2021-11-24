@@ -9,6 +9,9 @@
 
 ## Vision transformers
 
+- Escaping the Big Data Paradigm with Compact Transformers (CCT) 
+  [\[paper\]](https://arxiv.org/pdf/2104.05704.pdf) 
+  [\[github\]](https://github.com/SHI-Labs/Compact-Transformers) 
 - Focal self-attention for local-global interactions in vision transformers (focal
   transformer). 
   [\[paper\]](https://arxiv.org/pdf/2107.00641.pdf) 
@@ -35,6 +38,8 @@
 
 ## Collections
 
+- [Keras_cv_attention_models](https://github.com/leondgarse/keras_cv_attention_models)
+  Collection of implemented attention architectures and pretrained weights
 - [Vision-Transformer-papers](https://github.com/NielsRogge/Vision-Transformer-papers)
   another list of resources and papers on vision transformers.
 - [Transformer-in-vision](https://github.com/Yangzhangcst/Transformer-in-Computer-Vision)
