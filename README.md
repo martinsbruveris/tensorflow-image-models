@@ -126,6 +126,10 @@ The following architectures are currently available:
     [\[arXiv:2103.14030\]](https://arxiv.org/abs/2103.14030)
   - Tensorflow code adapted from 
     [Swin-Transformer-TF](https://github.com/rishigami/Swin-Transformer-TF)
+- ConvMixer 
+  [\[github\]](https://github.com/tmp-iclr/convmixer)
+  - Patches Are All You Need? 
+    [\[ICLR 2022 submission\]](https://openreview.net/forum?id=TVHS5Y4dNvM)
 - ResNet (work in progress, most available weights are from `timm`)
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)
