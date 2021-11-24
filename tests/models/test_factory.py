@@ -11,10 +11,11 @@ from tfimm.models.factory import create_model, create_preprocessing, transfer_we
 @pytest.mark.parametrize(
     "model_name",
     [
-        "resnet18",
-        "vit_tiny_patch16_224",
+        "convmixer_768_32",
         "deit_tiny_distilled_patch16_224",
+        "resnet18",
         "swin_tiny_patch4_window7_224",
+        "vit_tiny_patch16_224",
     ],
 )
 @pytest.mark.parametrize("nb_classes", [10, 0])
@@ -35,7 +36,13 @@ def test_transfer_weights(model_name, nb_classes):
 
 
 @pytest.mark.parametrize(
-    "model_name", ["resnet18", "vit_tiny_patch16_224", "swin_tiny_patch4_window7_224"]
+    "model_name",
+    [
+        "convmixer_768_32",
+        "resnet18",
+        "vit_tiny_patch16_224",
+        "swin_tiny_patch4_window7_224",
+    ]
 )
 def test_save_load_model(model_name):
     """Tests ability to use keras save() and load() functions."""
@@ -54,7 +61,13 @@ def test_save_load_model(model_name):
 
 
 @pytest.mark.parametrize(
-    "model_name", ["resnet18", "vit_tiny_patch16_224", "swin_tiny_patch4_window7_224"]
+    "model_name",
+    [
+        "convmixer_768_32",
+        "resnet18",
+        "vit_tiny_patch16_224",
+        "swin_tiny_patch4_window7_224",
+    ]
 )
 def test_model_path(model_name):
     """Tests ability to use `model_path` parameter in `create_model`."""
