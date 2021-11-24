@@ -17,10 +17,9 @@ from typing import Tuple
 import numpy as np
 import tensorflow as tf
 
-from tfimm.layers import DropPath, MLP, PatchEmbeddings, norm_layer_factory
+from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
-
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["SwinTransformer", "SwinTransformerConfig"]
@@ -124,10 +123,10 @@ class WindowAttention(tf.keras.layers.Layer):
         self.nb_heads = nb_heads
 
         self.qkv = tf.keras.layers.Dense(
-            embed_dim * 3, use_bias=cfg.qkv_bias, name=f"qkv"
+            embed_dim * 3, use_bias=cfg.qkv_bias, name="qkv"
         )
         self.attn_drop = tf.keras.layers.Dropout(cfg.attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(embed_dim, name=f"proj")
+        self.proj = tf.keras.layers.Dense(embed_dim, name="proj")
         self.proj_drop = tf.keras.layers.Dropout(cfg.drop_rate)
 
     def build(self, input_shape):
@@ -266,9 +265,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
 
             img_mask = tf.convert_to_tensor(img_mask)
             mask_windows = window_partition(img_mask, window_size)
-            mask_windows = tf.reshape(
-                mask_windows, shape=(-1, window_size ** 2)
-            )
+            mask_windows = tf.reshape(mask_windows, shape=(-1, window_size ** 2))
             attn_mask = tf.expand_dims(mask_windows, axis=1) - tf.expand_dims(
                 mask_windows, axis=2
             )
