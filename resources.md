@@ -38,6 +38,7 @@
 
 ## Collections
 
+- [tf2v](https://github.com/osmr/imgclsmob) another TF model zoo
 - [Keras_cv_attention_models](https://github.com/leondgarse/keras_cv_attention_models)
   Collection of implemented attention architectures and pretrained weights
 - [Vision-Transformer-papers](https://github.com/NielsRogge/Vision-Transformer-papers)
