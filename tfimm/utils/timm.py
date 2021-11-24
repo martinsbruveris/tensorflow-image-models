@@ -31,6 +31,7 @@ class TransposeType(Enum):
     """
 
     NO = "no"
+    SIMPLE = "simple"
     CONV2D = "conv2d"
 
 
@@ -79,6 +80,12 @@ def convert_tf_weight_name_to_pt_weight_name(
     ):
         # A simple heuristic to detect conv layer using weight array shape
         transpose = TransposeType.CONV2D
+    elif bool(
+        tf_name[-1] in ["kernel", "pointwise_kernel", "depthwise_kernel"]
+        or "emb_projs" in tf_name
+        or "out_projs" in tf_name
+    ):
+        transpose = TransposeType.SIMPLE
     else:
         transpose = TransposeType.NO
 
@@ -183,6 +190,8 @@ def load_pytorch_weights_in_tf2_model(
             #    PT: (num_out_channel, num_in_channel, kernel[0], kernel[1])
             # -> TF: (kernel[0], kernel[1], num_in_channel, num_out_channel)
             array = numpy.transpose(array, axes=(2, 3, 1, 0))
+        elif transpose is TransposeType.SIMPLE:
+            array = numpy.transpose(array)
 
         if len(symbolic_weight.shape) < len(array.shape):
             array = numpy.squeeze(array)
