@@ -34,7 +34,7 @@ python = ">=3.7,<3.10"
 # See: https://github.com/python-poetry/poetry/issues/4777
 markdown = "3.3.4"
 numpy = "*"
-tensorflow = "^2.5"
+tensorflow = "^2.4"
 
 pyyaml = { version = "*", optional = true }
 tensorflow-datasets = { version="*", optional = true }
