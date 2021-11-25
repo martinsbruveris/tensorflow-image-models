@@ -2,8 +2,13 @@
 
 ## Unpublished
 
+TBA
+
+## v0.1.2 - 2021-11-25
+
+- Reduced TF version requirement from 2.5 to 2.4.
 - Added ConvMixer models
-- Added Swin Transformer models (mixed precision untested)
+- Added Swin Transformer models
 
 ## v0.1.1 - 2021-11-22
 
