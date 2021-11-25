@@ -24,5 +24,9 @@ def norm_layer_factory(norm_layer: str):
         bn_class = tf.keras.layers.LayerNormalization
         bn_args = {"epsilon": 1e-5}  # We use PyTorch default args here
         return lambda **kwargs: bn_class(**bn_args, **kwargs)
+    elif norm_layer == "layer_norm_eps_1e-6":
+        bn_class = tf.keras.layers.LayerNormalization
+        bn_args = {"epsilon": 1e-6}
+        return lambda **kwargs: bn_class(**bn_args, **kwargs)
     else:
         raise ValueError(f"Unknown normalization layer: {norm_layer}")

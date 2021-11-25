@@ -62,8 +62,8 @@ class ResNetConfig(ModelConfig):
     crop_pct: float = 0.875
     interpolation: str = "bilinear"
     # Preprocessing
-    mean: float = IMAGENET_DEFAULT_MEAN
-    std: float = IMAGENET_DEFAULT_STD
+    mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN
+    std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD
     # Weight transfer
     first_conv: str = "conv1"
     classifier: str = "fc"
