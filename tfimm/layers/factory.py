@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+from tfimm.layers.norm import Affine
+
 
 def act_layer_factory(act_layer: str):
     """Returns a function that creates the required activation layer."""
@@ -28,5 +30,7 @@ def norm_layer_factory(norm_layer: str):
         bn_class = tf.keras.layers.LayerNormalization
         bn_args = {"epsilon": 1e-6}
         return lambda **kwargs: bn_class(**bn_args, **kwargs)
+    elif norm_layer == "affine":
+        return Affine
     else:
         raise ValueError(f"Unknown normalization layer: {norm_layer}")
