@@ -29,7 +29,14 @@ from typing import Tuple
 
 import tensorflow as tf
 
-from tfimm.layers import DropPath, GluMLP, MLP, PatchEmbeddings, act_layer_factory, norm_layer_factory
+from tfimm.layers import (
+    MLP,
+    DropPath,
+    GatedMLP,
+    GluMLP,
+    PatchEmbeddings,
+    norm_layer_factory,
+)
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -68,66 +75,9 @@ class MLPMixerConfig(ModelConfig):
 
     @property
     def nb_patches(self) -> int:
-        return (self.input_size[0] // self.patch_size) * (self.input_size[1] // self.patch_size)
-
-#
-# def _cfg(url='', **kwargs):
-#     return {
-#         'url': url,
-#         'num_classes': 1000, 'input_size': (3, 224, 224), 'pool_size': None,
-#         'crop_pct': 0.875, 'interpolation': 'bicubic', 'fixed_input_size': True,
-#         'mean': (0.5, 0.5, 0.5), 'std': (0.5, 0.5, 0.5),
-#         'first_conv': 'stem.proj', 'classifier': 'head',
-#         **kwargs
-#     }
-#
-#
-# default_cfgs = dict(
-#
-#     resmlp_12_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_12_no_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_24_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_24_no_dist.pth',
-#         #url='https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/resmlp_24_224_raa-a8256759.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_36_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_36_no_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_big_24_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlpB_24_no_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#
-#     resmlp_12_distilled_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_12_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_24_distilled_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_24_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_36_distilled_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_36_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_big_24_distilled_224=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlpB_24_dist.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#
-#     resmlp_big_24_224_in22ft1k=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlpB_24_22k.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#
-#     resmlp_12_224_dino=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_12_dino.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#     resmlp_24_224_dino=_cfg(
-#         url='https://dl.fbaipublicfiles.com/deit/resmlp_24_dino.pth',
-#         mean=IMAGENET_DEFAULT_MEAN, std=IMAGENET_DEFAULT_STD),
-#
-#     gmlp_ti16_224=_cfg(),
-#     gmlp_s16_224=_cfg(
-#         url='https://github.com/rwightman/pytorch-image-models/releases/download/v0.1-weights/gmlp_s16_224_raa-10536d42.pth',
-#     ),
-#     gmlp_b16_224=_cfg(),
-# )
+        return (self.input_size[0] // self.patch_size) * (
+            self.input_size[1] // self.patch_size
+        )
 
 
 class MixerBlock(tf.keras.layers.Layer):
@@ -135,6 +85,7 @@ class MixerBlock(tf.keras.layers.Layer):
     Residual Block w/ token mixing and channel MLPs
     Based on: "MLP-Mixer: An all-MLP Architecture for Vision"
     """
+
     def __init__(self, cfg: MLPMixerConfig, **kwargs):
         super().__init__(**kwargs)
         self.cfg = cfg
@@ -151,11 +102,7 @@ class MixerBlock(tf.keras.layers.Layer):
             act_layer=cfg.act_layer,
             name="mlp_tokens",
         )
-        self.drop_path = (
-            DropPath(drop_prob=cfg.drop_path_rate)
-            if cfg.drop_path_rate > 0
-            else tf.keras.layers.Activation("linear")
-        )
+        self.drop_path = DropPath(drop_prob=cfg.drop_path_rate)
         self.norm2 = norm_layer(name="norm2")
         self.mlp_channels = mlp_layer(
             hidden_dim=channels_dim,
@@ -189,6 +136,7 @@ class ResBlock(tf.keras.layers.Layer):
 
     Based on: ResMLP: Feedforward networks for image classification...
     """
+
     def __init__(self, cfg: MLPMixerConfig, **kwargs):
         super().__init__(**kwargs)
         self.cfg = cfg
@@ -200,11 +148,7 @@ class ResBlock(tf.keras.layers.Layer):
             units=cfg.nb_patches,
             name="linear_tokens",
         )
-        self.drop_path = (
-            DropPath(drop_prob=cfg.drop_path_rate)
-            if cfg.drop_path_rate > 0
-            else tf.keras.layers.Activation("linear")
-        )
+        self.drop_path = DropPath(drop_prob=cfg.drop_path_rate)
         self.norm2 = norm_layer(name="norm2")
         self.mlp_channels = mlp_layer(
             hidden_dim=int(cfg.embed_dim * cfg.mlp_ratio[1]),
@@ -247,59 +191,48 @@ class ResBlock(tf.keras.layers.Layer):
         return x
 
 
-# class SpatialGatingUnit(nn.Module):
-#     """ Spatial Gating Unit
-#
-#     Based on: `Pay Attention to MLPs` - https://arxiv.org/abs/2105.08050
-#     """
-#     def __init__(self, dim, seq_len, norm_layer=nn.LayerNorm):
-#         super().__init__()
-#         gate_dim = dim // 2
-#         self.norm = norm_layer(gate_dim)
-#         self.proj = nn.Linear(seq_len, seq_len)
-#
-#     def init_weights(self):
-#         # special init for the projection gate, called as override by base model init
-#         nn.init.normal_(self.proj.weight, std=1e-6)
-#         nn.init.ones_(self.proj.bias)
-#
-#     def forward(self, x):
-#         u, v = x.chunk(2, dim=-1)
-#         v = self.norm(v)
-#         v = self.proj(v.transpose(-1, -2))
-#         return u * v.transpose(-1, -2)
-#
-#
-# class SpatialGatingBlock(nn.Module):
-#     """ Residual Block w/ Spatial Gating
-#
-#     Based on: `Pay Attention to MLPs` - https://arxiv.org/abs/2105.08050
-#     """
-#     def __init__(
-#             self, dim, seq_len, mlp_ratio=4, mlp_layer=GatedMlp,
-#             norm_layer=partial(nn.LayerNorm, eps=1e-6), act_layer=nn.GELU, drop=0., drop_path=0.):
-#         super().__init__()
-#         channel_dim = int(dim * mlp_ratio)
-#         self.norm = norm_layer(dim)
-#         sgu = partial(SpatialGatingUnit, seq_len=seq_len)
-#         self.mlp_channels = mlp_layer(dim, channel_dim, act_layer=act_layer, gate_layer=sgu, drop=drop)
-#         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
-#
-#     def forward(self, x):
-#         x = x + self.drop_path(self.mlp_channels(self.norm(x)))
-#         return x
+class SpatialGatingBlock(tf.keras.layers.Layer):
+    """
+    Residual Block with Spatial Gating
+
+    Based on: Pay Attention to MLPs - https://arxiv.org/abs/2105.08050
+    """
+
+    def __init__(self, cfg: MLPMixerConfig, **kwargs):
+        super().__init__(**kwargs)
+        self.cfg = cfg
+
+        norm_layer = norm_layer_factory(cfg.norm_layer)
+        mlp_layer = MLP_LAYER_DICT[cfg.mlp_layer]
+        self.norm = norm_layer(name="norm")
+        self.mlp_channels = mlp_layer(
+            hidden_dim=int(cfg.embed_dim * cfg.mlp_ratio[1]),
+            embed_dim=cfg.embed_dim,
+            drop_rate=cfg.drop_rate,
+            act_layer=cfg.act_layer,
+            name="mlp_channels",
+        )
+        self.drop_path = DropPath(drop_prob=cfg.drop_path_rate)
+
+    def call(self, x, training=False):
+        shortcut = x
+        x = self.norm(x, training=training)
+        x = self.mlp_channels(x, training=training)
+        x = self.drop_path(x, training=training)
+        x = x + shortcut
+        return x
 
 
 BLOCK_LAYER_DICT = {
     "mixer_block": MixerBlock,
     "res_block": ResBlock,
-    # "spatial_gating_block": SpatialGatingBlock,
+    "spatial_gating_block": SpatialGatingBlock,
 }
 
 MLP_LAYER_DICT = {
     "mlp": MLP,
     "glu_mlp": GluMLP,
-    # "gated_mlp": GatedMLP,
+    "gated_mlp": GatedMLP,
 }
 
 
@@ -347,119 +280,6 @@ class MLPMixer(tf.keras.Model):
         x = self.forward_features(x, training=training)
         x = self.head(x)
         return x
-
-
-# class MlpMixer(nn.Module):
-#
-#     def __init__(
-#             self,
-#             num_classes=1000,
-#             img_size=224,
-#             in_chans=3,
-#             patch_size=16,
-#             num_blocks=8,
-#             embed_dim=512,
-#             mlp_ratio=(0.5, 4.0),
-#             block_layer=MixerBlock,
-#             mlp_layer=Mlp,
-#             norm_layer=partial(nn.LayerNorm, eps=1e-6),
-#             act_layer=nn.GELU,
-#             drop_rate=0.,
-#             drop_path_rate=0.,
-#             nlhb=False,
-#             stem_norm=False,
-#     ):
-#         super().__init__()
-#         self.num_classes = num_classes
-#         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
-#
-#         self.stem = PatchEmbed(
-#             img_size=img_size, patch_size=patch_size, in_chans=in_chans,
-#             embed_dim=embed_dim, norm_layer=norm_layer if stem_norm else None)
-#         # FIXME drop_path (stochastic depth scaling rule or all the same?)
-#         self.blocks = nn.Sequential(*[
-#             block_layer(
-#                 embed_dim, self.stem.num_patches, mlp_ratio, mlp_layer=mlp_layer, norm_layer=norm_layer,
-#                 act_layer=act_layer, drop=drop_rate, drop_path=drop_path_rate)
-#             for _ in range(num_blocks)])
-#         self.norm = norm_layer(embed_dim)
-#         self.head = nn.Linear(embed_dim, self.num_classes) if num_classes > 0 else nn.Identity()
-#
-#         self.init_weights(nlhb=nlhb)
-#
-#     def init_weights(self, nlhb=False):
-#         head_bias = -math.log(self.num_classes) if nlhb else 0.
-#         named_apply(partial(_init_weights, head_bias=head_bias), module=self)  # depth-first
-#
-#     def get_classifier(self):
-#         return self.head
-#
-#     def reset_classifier(self, num_classes, global_pool=''):
-#         self.num_classes = num_classes
-#         self.head = nn.Linear(self.embed_dim, num_classes) if num_classes > 0 else nn.Identity()
-#
-#     def forward_features(self, x):
-#         x = self.stem(x)
-#         x = self.blocks(x)
-#         x = self.norm(x)
-#         x = x.mean(dim=1)
-#         return x
-#
-#     def forward(self, x):
-#         x = self.forward_features(x)
-#         x = self.head(x)
-#         return x
-#
-#
-# def _init_weights(module: nn.Module, name: str, head_bias: float = 0., flax=False):
-#     """ Mixer weight initialization (trying to match Flax defaults)
-#     """
-#     if isinstance(module, nn.Linear):
-#         if name.startswith('head'):
-#             nn.init.zeros_(module.weight)
-#             nn.init.constant_(module.bias, head_bias)
-#         else:
-#             if flax:
-#                 # Flax defaults
-#                 lecun_normal_(module.weight)
-#                 if module.bias is not None:
-#                     nn.init.zeros_(module.bias)
-#             else:
-#                 # like MLP init in vit (my original init)
-#                 nn.init.xavier_uniform_(module.weight)
-#                 if module.bias is not None:
-#                     if 'mlp' in name:
-#                         nn.init.normal_(module.bias, std=1e-6)
-#                     else:
-#                         nn.init.zeros_(module.bias)
-#     elif isinstance(module, nn.Conv2d):
-#         lecun_normal_(module.weight)
-#         if module.bias is not None:
-#             nn.init.zeros_(module.bias)
-#     elif isinstance(module, (nn.LayerNorm, nn.BatchNorm2d, nn.GroupNorm)):
-#         nn.init.ones_(module.weight)
-#         nn.init.zeros_(module.bias)
-#     elif hasattr(module, 'init_weights'):
-#         # NOTE if a parent module contains init_weights method, it can override the init of the
-#         # child modules as this will be called in depth-first order.
-#         module.init_weights()
-#
-#
-# def checkpoint_filter_fn(state_dict, model):
-#     """ Remap checkpoints if needed """
-#     if 'patch_embed.proj.weight' in state_dict:
-#         # Remap FB ResMlp models -> timm
-#         out_dict = {}
-#         for k, v in state_dict.items():
-#             k = k.replace('patch_embed.', 'stem.')
-#             k = k.replace('attn.', 'linear_tokens.')
-#             k = k.replace('mlp.', 'mlp_channels.')
-#             k = k.replace('gamma_', 'ls')
-#             if k.endswith('.alpha') or k.endswith('.beta'):
-#                 v = v.reshape(1, 1, -1)
-#             out_dict[k] = v
-#         return out_dict
-#     return state_dict
 
 
 @register_model
@@ -515,7 +335,7 @@ def mixer_b32_224():
 
 @register_model
 def mixer_b16_224():
-    """ Mixer-B/16 224x224. ImageNet-1k pretrained weights.
+    """Mixer-B/16 224x224. ImageNet-1k pretrained weights.
     Paper: MLP-Mixer: An all-MLP Architecture for Vision
     Link: https://arxiv.org/abs/2105.01601
     """
@@ -938,37 +758,61 @@ def resmlp_24_224_dino():
     return MLPMixer, cfg
 
 
-# @register_model
-# def gmlp_ti16_224(pretrained=False, **kwargs):
-#     """ gMLP-Tiny
-#     Paper: `Pay Attention to MLPs` - https://arxiv.org/abs/2105.08050
-#     """
-#     model_args = dict(
-#         patch_size=16, num_blocks=30, embed_dim=128, mlp_ratio=6, block_layer=SpatialGatingBlock,
-#         mlp_layer=GatedMlp, **kwargs)
-#     model = _create_mixer('gmlp_ti16_224', pretrained=pretrained, **model_args)
-#     return model
-#
-#
-# @register_model
-# def gmlp_s16_224(pretrained=False, **kwargs):
-#     """ gMLP-Small
-#     Paper: `Pay Attention to MLPs` - https://arxiv.org/abs/2105.08050
-#     """
-#     model_args = dict(
-#         patch_size=16, num_blocks=30, embed_dim=256, mlp_ratio=6, block_layer=SpatialGatingBlock,
-#         mlp_layer=GatedMlp, **kwargs)
-#     model = _create_mixer('gmlp_s16_224', pretrained=pretrained, **model_args)
-#     return model
-#
-#
-# @register_model
-# def gmlp_b16_224(pretrained=False, **kwargs):
-#     """ gMLP-Base
-#     Paper: `Pay Attention to MLPs` - https://arxiv.org/abs/2105.08050
-#     """
-#     model_args = dict(
-#         patch_size=16, num_blocks=30, embed_dim=512, mlp_ratio=6, block_layer=SpatialGatingBlock,
-#         mlp_layer=GatedMlp, **kwargs)
-#     model = _create_mixer('gmlp_b16_224', pretrained=pretrained, **model_args)
-#     return model
+@register_model
+def gmlp_ti16_224():
+    """
+    gMLP-Tiny
+    Paper: Pay Attention to MLPs
+    Link: https://arxiv.org/abs/2105.08050
+    """
+    cfg = MLPMixerConfig(
+        name="gmlp_ti16_224",
+        url="",
+        patch_size=16,
+        embed_dim=128,
+        nb_blocks=30,
+        mlp_ratio=(6.0, 6.0),
+        block_layer="spatial_gating_block",
+        mlp_layer="gated_mlp",
+    )
+    return MLPMixer, cfg
+
+
+@register_model
+def gmlp_s16_224():
+    """
+    gMLP-Small
+    Paper: Pay Attention to MLPs
+    Link: https://arxiv.org/abs/2105.08050
+    """
+    cfg = MLPMixerConfig(
+        name="gmlp_s16_224",
+        url="",
+        patch_size=16,
+        embed_dim=256,
+        nb_blocks=30,
+        mlp_ratio=(6.0, 6.0),
+        block_layer="spatial_gating_block",
+        mlp_layer="gated_mlp",
+    )
+    return MLPMixer, cfg
+
+
+@register_model
+def gmlp_b16_224():
+    """
+    gMLP-Base
+    Paper: Pay Attention to MLPs
+    Link: https://arxiv.org/abs/2105.08050
+    """
+    cfg = MLPMixerConfig(
+        name="gmlp_b16_224",
+        url="",
+        patch_size=16,
+        embed_dim=512,
+        nb_blocks=30,
+        mlp_ratio=(6.0, 6.0),
+        block_layer="spatial_gating_block",
+        mlp_layer="gated_mlp",
+    )
+    return MLPMixer, cfg
