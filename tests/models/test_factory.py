@@ -7,17 +7,19 @@ import tensorflow as tf
 from tfimm import list_models
 from tfimm.models.factory import create_model, create_preprocessing, transfer_weigths
 
+MODEL_LIST = [
+    "convmixer_768_32",  # convmixer.py
+    "mixer_s32_224",  # mlp_mixer.py
+    "resmlp_12_224",
+    "gmlp_ti16_224",
+    "resnet18",  # resnet.py
+    "swin_tiny_patch4_window7_224",  # swin.py
+    "deit_tiny_distilled_patch16_224",  # vit.py
+    "vit_tiny_patch16_224",
+]
 
-@pytest.mark.parametrize(
-    "model_name",
-    [
-        "convmixer_768_32",
-        "deit_tiny_distilled_patch16_224",
-        "resnet18",
-        "swin_tiny_patch4_window7_224",
-        "vit_tiny_patch16_224",
-    ],
-)
+
+@pytest.mark.parametrize("model_name", MODEL_LIST)
 @pytest.mark.parametrize("nb_classes", [10, 0])
 def test_transfer_weights(model_name, nb_classes):
     # Create two models with same architecture, but different classifiers
@@ -35,15 +37,7 @@ def test_transfer_weights(model_name, nb_classes):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize(
-    "model_name",
-    [
-        "convmixer_768_32",
-        "resnet18",
-        "vit_tiny_patch16_224",
-        "swin_tiny_patch4_window7_224",
-    ]
-)
+@pytest.mark.parametrize("model_name", MODEL_LIST)
 def test_save_load_model(model_name):
     """Tests ability to use keras save() and load() functions."""
     model = create_model(model_name)
@@ -60,15 +54,7 @@ def test_save_load_model(model_name):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize(
-    "model_name",
-    [
-        "convmixer_768_32",
-        "resnet18",
-        "vit_tiny_patch16_224",
-        "swin_tiny_patch4_window7_224",
-    ]
-)
+@pytest.mark.parametrize("model_name", MODEL_LIST)
 def test_model_path(model_name):
     """Tests ability to use `model_path` parameter in `create_model`."""
     model = create_model(model_name)
