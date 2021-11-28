@@ -24,7 +24,7 @@ class DropPath(tf.keras.layers.Layer):
         self.keep_prob = 1.0 - self.drop_prob
 
     def call(self, x, training=False):
-        if not training or self.drop_prob == 0.0:
+        if not training or not self.drop_prob > 0.0:
             return x
 
         # Compute drop_connect tensor
