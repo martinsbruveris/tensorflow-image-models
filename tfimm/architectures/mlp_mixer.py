@@ -609,7 +609,7 @@ def resmlp_12_distilled_224():
         url="",
         patch_size=16,
         embed_dim=384,
-        nb_blocks=16,
+        nb_blocks=12,
         mlp_ratio=(4.0, 4.0),
         block_layer="res_block",
         norm_layer="affine",
