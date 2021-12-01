@@ -30,11 +30,8 @@ include = [
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
-# There is a problem with markdown=3.3.5 and poetry. Should be temporary
-# See: https://github.com/python-poetry/poetry/issues/4777
-markdown = "3.3.4"
 numpy = "*"
-tensorflow = "^2.4"
+tensorflow = "^2.5"
 
 pyyaml = { version = "*", optional = true }
 tensorflow-datasets = { version="*", optional = true }
