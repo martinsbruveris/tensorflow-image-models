@@ -134,21 +134,6 @@ def load_pytorch_weights_in_tf2_model(
 
     if tf_inputs is not None:
         tf_model(tf_inputs, training=False)  # Make sure model is built
-    # Adapt state dict - TODO remove this and update the AWS weights files instead
-    # Convert old format to new format if needed from a PyTorch state_dict
-    old_keys = []
-    new_keys = []
-    for key in pt_state_dict.keys():
-        new_key = None
-        if "gamma" in key:
-            new_key = key.replace("gamma", "weight")
-        if "beta" in key:
-            new_key = key.replace("beta", "bias")
-        if new_key:
-            old_keys.append(key)
-            new_keys.append(new_key)
-    for old_key, new_key in zip(old_keys, new_keys):
-        pt_state_dict[new_key] = pt_state_dict.pop(old_key)
 
     # Make sure we are able to load PyTorch base models as well as derived models (with heads)
     # TF models always have a prefix, some of PyTorch models (base ones) don't
