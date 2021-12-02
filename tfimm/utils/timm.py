@@ -125,10 +125,8 @@ def load_pytorch_weights_in_tf2_model(
     new_keys = []
     for key in pt_state_dict.keys():
         new_key = None
-        if "gamma" in key:
-            new_key = key.replace("gamma", "weight")
-        if "beta" in key:
-            new_key = key.replace("beta", "bias")
+        if key.endswith(".beta"):
+            new_key = key.replace(".beta", ".bias")
         if new_key:
             old_keys.append(key)
             new_keys.append(new_key)
