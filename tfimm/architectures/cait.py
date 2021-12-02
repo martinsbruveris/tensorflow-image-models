@@ -457,7 +457,7 @@ def cait_s24_384():
     cfg = CaiTConfig(
         name="cait_s24_384",
         url="",
-        input_size=(394, 384),
+        input_size=(384, 384),
         patch_size=16,
         embed_dim=384,
         nb_blocks=24,
@@ -487,7 +487,7 @@ def cait_m36_384():
     cfg = CaiTConfig(
         name="cait_m36_384",
         url="",
-        input_size=(224, 224),
+        input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
         nb_blocks=36,
