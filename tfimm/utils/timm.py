@@ -93,6 +93,8 @@ def convert_tf_weight_name_to_pt_weight_name(
     # Convert standard TF2.0 names in PyTorch names
     if tf_name[-1] in {"kernel", "depthwise_kernel", "embeddings", "gamma"}:
         tf_name[-1] = "weight"
+    if tf_name[-1] == "beta":
+        tf_name[-1] = "bias"
 
     # BatchNorm layers
     if tf_name[-1] == "moving_mean":
@@ -115,6 +117,23 @@ def load_pytorch_weights_in_tf2_model(
 
     if tf_inputs is not None:
         tf_model(tf_inputs, training=False)  # Make sure model is built
+
+    # Adapt pt state dict. TF "beta" -> PT "bias"
+    # But some models have PT weight "beta" (ResMLP affine layer)
+    # To fix that we need to change PT name to "bias" first...
+    old_keys = []
+    new_keys = []
+    for key in pt_state_dict.keys():
+        new_key = None
+        if "gamma" in key:
+            new_key = key.replace("gamma", "weight")
+        if "beta" in key:
+            new_key = key.replace("beta", "bias")
+        if new_key:
+            old_keys.append(key)
+            new_keys.append(new_key)
+    for old_key, new_key in zip(old_keys, new_keys):
+        pt_state_dict[new_key] = pt_state_dict.pop(old_key)
 
     symbolic_weights = tf_model.trainable_weights + tf_model.non_trainable_weights
     tf_loaded_numel = 0
