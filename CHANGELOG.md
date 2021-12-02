@@ -2,7 +2,8 @@
 
 ## Unpublished
 
-TBA
+- Added CaiT models
+- Added MLP-Mixer, ResMLP and gMLP models
 
 ## v0.1.2 - 2021-11-25
 

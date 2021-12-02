@@ -12,7 +12,8 @@ TensorfFlow-Image-Models (`tfimm`) is a collection of image models with pretrain
 weights, obtained by porting architectures from 
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
-vision transformers (ViT, DeiT and Swin Transformers) and ResNets.
+vision transformers (ViT, DeiT, CaiT and Swin Transformers), MLP-Mixer models 
+(MLP-Mixer, ResMLP, gMLP and ConvMixer) and ResNets.
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
@@ -104,6 +105,10 @@ Otherwise, we obtain the following output
 
 The following architectures are currently available:
 
+- CaiT (vision transformer) 
+  [\[github\]](https://github.com/facebookresearch/deit/blob/main/README_cait.md)
+  - Going deeper with Image Transformers 
+    [\[arXiv:2103.17239\]](https://arxiv.org/abs/2103.17239)
 - DeiT (vision transformer) 
   [\[github\]](https://github.com/facebookresearch/deit)
   - Training data-efficient image transformers & distillation through attention. 
@@ -126,6 +131,13 @@ The following architectures are currently available:
     [\[arXiv:2103.14030\]](https://arxiv.org/abs/2103.14030)
   - Tensorflow code adapted from 
     [Swin-Transformer-TF](https://github.com/rishigami/Swin-Transformer-TF)
+- MLP-Mixer and friends
+  - MLP-Mixer: An all-MLP Architecture for Vision 
+    [\[arXiv:2105.01601\]](https://arxiv.org/abs/2105.01601)
+  - ResMLP: Feedforward networks for image classification... 
+    [\[arXiv:2105.03404\]](https://arxiv.org/abs/2105.03404)
+  - Pay Attention to MLPs (gMLP)
+    [\[arXiv:2105.08050\]](https://arxiv.org/abs/2105.08050)
 - ConvMixer 
   [\[github\]](https://github.com/tmp-iclr/convmixer)
   - Patches Are All You Need? 
