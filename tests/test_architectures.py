@@ -11,8 +11,9 @@ from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 
 # Exclude models that cause specific test failures
 if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
-    # GitHub Linux runner is slower and hits memory limits sooner than MacOS
-    EXCLUDE_FILTERS = ["vit_large_*", "vit_huge_*", "cait_m*"]
+    EXCLUDE_FILTERS = [
+        "vit_large_*", "vit_huge_*", "cait_m*", "ig_resnext101_32x48d"
+    ]
 else:
     EXCLUDE_FILTERS = ["cait_m*"]
 
