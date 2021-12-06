@@ -148,6 +148,11 @@ def load_pytorch_weights_in_tf2_model(
             if allow_missing_keys:
                 missing_keys.append(name)
                 continue
+            keys_to_ignore = getattr(tf_model, "keys_to_ignore_on_load_missing", None)
+            if keys_to_ignore is not None:
+                # authorized missing keys don't have to be loaded
+                if any(re.search(pat, name) is not None for pat in keys_to_ignore):
+                    continue
             print(name, sw_name)
             raise AttributeError(f"{name} not found in PyTorch model")
 

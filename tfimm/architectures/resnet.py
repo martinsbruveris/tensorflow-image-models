@@ -51,7 +51,7 @@ class ResNetConfig(ModelConfig):
     down_kernel_size: int = 1
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
-    aa_layer: str = "blur_pool"
+    aa_layer: str = ""
     attn_layer: str = ""
     se_ratio: float = 0.0625
     # Regularization
@@ -101,7 +101,7 @@ class BasicBlock(tf.keras.layers.Layer):
         # Num channels after first conv
         first_planes = nb_channels // cfg.block_reduce_first
         out_planes = nb_channels * self.expansion  # Num channels after second conv
-        use_aa = cfg.aa_layer is not None and stride == 2
+        use_aa = cfg.aa_layer and stride == 2
 
         self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv1 = tf.keras.layers.Conv2D(
@@ -192,7 +192,7 @@ class Bottleneck(tf.keras.layers.Layer):
         first_planes = width // cfg.block_reduce_first
         # Number of channels after third convolution
         out_planes = nb_channels * self.expansion
-        use_aa = cfg.aa_layer is not None and stride == 2
+        use_aa = cfg.aa_layer and stride == 2
 
         self.conv1 = tf.keras.layers.Conv2D(
             filters=first_planes,
@@ -442,6 +442,8 @@ class ResNet(tf.keras.Model):
 
     cfg_class = ResNetConfig
 
+    keys_to_ignore_on_load_missing = ["blur_kernel"]
+
     def __init__(self, cfg: ResNetConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cfg = cfg
@@ -515,10 +517,10 @@ class ResNet(tf.keras.Model):
             act = self.act_layer()
             self.maxpool = tf.keras.Sequential([pad, conv, bn, act])
         else:
-            if cfg.aa_layer is not None:
+            if cfg.aa_layer:
                 pad = tf.keras.layers.ZeroPadding2D(padding=1)
                 pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=1)
-                aa = BlurPool2D(stride=2)
+                aa = BlurPool2D(stride=2, name=f"{self.name}/maxpool/2")
                 self.maxpool = tf.keras.Sequential([pad, pool, aa])
             else:
                 pad = tf.keras.layers.ZeroPadding2D(padding=1)
