@@ -8,11 +8,12 @@ Copyright 2021 Martins Bruveris
 
 import math
 from dataclasses import dataclass
-from typing import Any, Optional, Tuple
+from typing import Optional, Tuple
 
 import tensorflow as tf
 
 from tfimm.layers import (
+    BlurPool2D,
     ClassifierHead,
     DropPath,
     act_layer_factory,
@@ -28,8 +29,6 @@ __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
 
 # TODO: Implement DropBlock, drop_block_rate in timm
 #       See: https://arxiv.org/pdf/1810.12890.pdf)
-# TODO: Implement anti-aliasing layer
-#       See: https://arxiv.org/abs/1904.11486
 @dataclass
 class ResNetConfig(ModelConfig):
     nb_classes: int = 1000
@@ -46,13 +45,13 @@ class ResNetConfig(ModelConfig):
     # Stem
     stem_width: int = 64
     stem_type: str = ""
-    replace_stem_pool: bool = False  # TODO: Not implemented
+    replace_stem_pool: bool = False
     # Other params
     block_reduce_first: int = 1
     down_kernel_size: int = 1
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
-    aa_layer: Any = None  # TODO: Not implemented
+    aa_layer: str = "blur_pool"
     attn_layer: str = ""
     se_ratio: float = 0.0625
     # Regularization
@@ -103,8 +102,6 @@ class BasicBlock(tf.keras.layers.Layer):
         first_planes = nb_channels // cfg.block_reduce_first
         out_planes = nb_channels * self.expansion  # Num channels after second conv
         use_aa = cfg.aa_layer is not None and stride == 2
-        if use_aa:
-            raise NotImplementedError("use_aa=True not implemented yet.")
 
         self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv1 = tf.keras.layers.Conv2D(
@@ -117,7 +114,7 @@ class BasicBlock(tf.keras.layers.Layer):
         )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
-        self.aa = cfg.aa_layer(channels=first_planes, stride=stride) if use_aa else None
+        self.aa = BlurPool2D(stride=stride) if use_aa else None
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
         self.conv2 = tf.keras.layers.Conv2D(
@@ -151,8 +148,7 @@ class BasicBlock(tf.keras.layers.Layer):
         x = self.bn1(x, training=training)
         x = self.act1(x)
         if self.aa is not None:
-            raise NotImplementedError("aa!=None not implemented yet...")
-            # x = self.aa(x)
+            x = self.aa(x)
 
         x = self.pad2(x)
         x = self.conv2(x)
@@ -197,8 +193,6 @@ class Bottleneck(tf.keras.layers.Layer):
         # Number of channels after third convolution
         out_planes = nb_channels * self.expansion
         use_aa = cfg.aa_layer is not None and stride == 2
-        if use_aa:
-            raise NotImplementedError("use_aa=True not implemented yet.")
 
         self.conv1 = tf.keras.layers.Conv2D(
             filters=first_planes,
@@ -221,8 +215,7 @@ class Bottleneck(tf.keras.layers.Layer):
         )
         self.bn2 = self.norm_layer(name="bn2")
         self.act2 = self.act_layer()
-
-        self.aa = cfg.aa_layer(channels=width, stride=stride) if use_aa else None
+        self.aa = BlurPool2D(stride=stride) if use_aa else None
 
         self.conv3 = tf.keras.layers.Conv2D(
             filters=out_planes,
@@ -259,8 +252,7 @@ class Bottleneck(tf.keras.layers.Layer):
         x = self.bn2(x, training=training)
         x = self.act2(x)
         if self.aa is not None:
-            raise NotImplementedError("aa!=None not implemented yet...")
-            # x = self.aa(x)
+            x = self.aa(x)
 
         x = self.conv3(x)
         x = self.bn3(x, training=training)
@@ -275,10 +267,6 @@ class Bottleneck(tf.keras.layers.Layer):
         x = self.act3(x)
 
         return x
-
-
-def aa_layer(channels, stride):
-    raise NotImplementedError("aa_layer not implemented.")
 
 
 def downsample_avg(cfg: ResNetConfig, out_channels: int, stride: int, name: str):
@@ -513,6 +501,8 @@ class ResNet(tf.keras.Model):
 
         # Stem Pooling
         if cfg.replace_stem_pool:
+            # Note that if replace_stem_pool=True, we are ignoring the aa_layer
+            # None of the timm models use both.
             pad = tf.keras.layers.ZeroPadding2D(padding=1)
             conv = tf.keras.layers.Conv2D(
                 filters=in_chans,
@@ -526,7 +516,10 @@ class ResNet(tf.keras.Model):
             self.maxpool = tf.keras.Sequential([pad, conv, bn, act])
         else:
             if cfg.aa_layer is not None:
-                raise NotImplementedError("aa_layer!=None not implemented.")
+                pad = tf.keras.layers.ZeroPadding2D(padding=1)
+                pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=1)
+                aa = BlurPool2D(stride=2)
+                self.maxpool = tf.keras.Sequential([pad, pool, aa])
             else:
                 pad = tf.keras.layers.ZeroPadding2D(padding=1)
                 pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=2)
@@ -1375,6 +1368,21 @@ def ecaresnet269d():
         crop_pct=1.0,
         interpolation="bicubic",
         first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetblur50():
+    """Constructs a ResNet-50 model with blur anti-aliasing
+    """
+    cfg = ResNetConfig(
+        name="resnetblur50",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        aa_layer="blur_pool",
+        interpolation="bicubic",
     )
     return ResNet, cfg
 
