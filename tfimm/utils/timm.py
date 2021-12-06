@@ -36,9 +36,7 @@ class TransposeType(Enum):
     CONV2D = "conv2d"
 
 
-def convert_tf_weight_name_to_pt_weight_name(
-    tf_name, tf_weight_shape=None
-):
+def convert_tf_weight_name_to_pt_weight_name(tf_name, tf_weight_shape=None):
     """
     Convert a TF 2.0 model variable name in a pytorch model weight name.
 
@@ -141,7 +139,8 @@ def load_pytorch_weights_in_tf2_model(
     for symbolic_weight in symbolic_weights:
         sw_name = symbolic_weight.name
         name, transpose = convert_tf_weight_name_to_pt_weight_name(
-            sw_name, tf_weight_shape=symbolic_weight.shape,
+            sw_name,
+            tf_weight_shape=symbolic_weight.shape,
         )
 
         # Find associated numpy array in pytorch model state dict
