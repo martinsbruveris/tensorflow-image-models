@@ -1,8 +1,10 @@
+import math
 from time import time
 from typing import Optional, Tuple
 
 import tensorflow as tf
 
+from tfimm.models import registry
 from tfimm.models.factory import create_model
 
 
@@ -125,6 +127,14 @@ def find_max_batch_size(
     upper_limit = None
     lower_limit = 0
 
+    # Find hard batch size cap depending on model input size. The whole batch should
+    # be <2 GB of memory.
+    cfg = registry.model_config(model_name)
+    img_size = 4 * cfg.input_size[0] * cfg.input_size[1] * cfg.in_chans
+    max_memory = 2 * 10**9
+    # We want max batch size to be a power of 2
+    max_batch_size = 2 ** math.floor(math.log2(max_memory / img_size))
+
     continue_search = True
     next_batch_size = start_batch_size
     img_per_sec = 0.0
@@ -143,20 +153,11 @@ def find_max_batch_size(
             success = True
             lower_limit = batch_size
 
-            if batch_size == 1024:
+            if batch_size >= max_batch_size:
                 continue_search = False  # See comment about hard cap below
             elif upper_limit is None:
                 next_batch_size = 2 * batch_size
-                # A batch size of 16,384 with image size 224 leads to core dumps. So
-                # does a batch size of 8,192 with image size 384. This is probably
-                # because
-                # 16,384 * 224 * 224 * 3 = 2.4 * 10^9 and
-                # 8,192 * 384 * 384 * 3 = 3.62 * 10^9
-                # so simply allocating space for the batch is not possible. So we will
-                # cap the batch size at 1,024. Let's be conservative, larger batches
-                # are unlikely to arise for backprop anyways and they don't matter that
-                # much for inference.
-                next_batch_size = min(next_batch_size, 1024)
+                next_batch_size = min(next_batch_size, max_batch_size)
             elif _below_resolution(
                 lower_limit, upper_limit, resolution_abs, resolution_rel
             ):
