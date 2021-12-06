@@ -3,9 +3,6 @@ TensorFlow implementation of ResNets
 
 Based on timm/models/resnet.py by Ross Wightman.
 
-TO DO list:
-- [ ] Update documentation
-
 Copyright 2021 Martins Bruveris
 """
 
@@ -15,7 +12,7 @@ from typing import Any, Optional, Tuple
 
 import tensorflow as tf
 
-from tfimm.layers import ClassifierHead, act_layer_factory, norm_layer_factory
+from tfimm.layers import ClassifierHead, act_layer_factory, attn_layer_factory, norm_layer_factory, DropPath
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -50,7 +47,8 @@ class ResNetConfig(ModelConfig):
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
     aa_layer: Any = None  # TODO: Not implemented
-    attn_layer: Any = None  # TODO: Not implemented
+    # For attn_layer = "se", rd_ratio = 0.25
+    attn_layer: str = ""
     # Regularization
     drop_rate: float = 0.0
     drop_path_rate: float = 0.0  # TODO: Not implemented
@@ -81,8 +79,8 @@ class BasicBlock(tf.keras.layers.Layer):
         cfg: ResNetConfig,
         nb_channels: int,
         stride: int,
+        drop_path_rate: float,
         downsample_layer,
-        drop_path,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -91,7 +89,6 @@ class BasicBlock(tf.keras.layers.Layer):
 
         self.cfg = cfg
         self.downsample_layer = downsample_layer
-        self.drop_path = drop_path
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
@@ -127,7 +124,9 @@ class BasicBlock(tf.keras.layers.Layer):
             moving_variance_initializer="zeros" if cfg.zero_init_last_bn else "ones",
             name="bn2",
         )
+        self.attn_layer = attn_layer_factory(cfg.attn_layer)
         self.se = create_attn(cfg.attn_layer, out_planes)
+        self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.act2 = self.act_layer()
 
     def call(self, x, training=False):
@@ -149,9 +148,7 @@ class BasicBlock(tf.keras.layers.Layer):
             raise NotImplementedError("se!=None not implemented yet...")
             # x = self.se(x)
 
-        if self.drop_path is not None:
-            raise NotImplementedError("drop_path!=None not implemented yet...")
-            # x = self.drop_path(x)
+        x = self.drop_path(x, training=training)
 
         if self.downsample_layer is not None:
             shortcut = self.downsample_layer(shortcut, training=training)
@@ -169,17 +166,17 @@ class Bottleneck(tf.keras.layers.Layer):
         cfg: ResNetConfig,
         nb_channels: int,
         stride: int,
+        drop_path_rate: float,
         downsample_layer,
-        drop_path,
         **kwargs,
     ):
         super().__init__(**kwargs)
 
         self.cfg = cfg
         self.downsample_layer = downsample_layer
-        self.drop_path = drop_path
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
+        self.attn_layer = attn_layer_factory(cfg.attn_layer)
 
         # Number of channels after second convolution
         width = int(math.floor(nb_channels * (cfg.base_width / 64)) * cfg.cardinality)
@@ -226,7 +223,8 @@ class Bottleneck(tf.keras.layers.Layer):
             moving_variance_initializer="zeros" if cfg.zero_init_last_bn else "ones",
             name="bn3",
         )
-        self.se = create_attn(cfg.attn_layer, out_planes)
+        self.se = self.attn_layer(name="se")
+        self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.act3 = self.act_layer()
 
     def call(self, x, training=False):
@@ -247,12 +245,9 @@ class Bottleneck(tf.keras.layers.Layer):
         x = self.conv3(x)
         x = self.bn3(x, training=training)
 
-        if self.se is not None:
-            raise NotImplementedError("se!=None not implemented yet...")
-            # x  = self.se(x)
+        x = self.se(x)
 
-        if self.drop_path is not None:
-            x = self.drop_path(x, training=training)
+        x = self.drop_path(x, training=training)
 
         if self.downsample_layer is not None:
             shortcut = self.downsample_layer(shortcut, training=training)
@@ -264,12 +259,6 @@ class Bottleneck(tf.keras.layers.Layer):
 
 def aa_layer(channels, stride):
     raise NotImplementedError("aa_layer not implemented.")
-
-
-def create_attn(attn_layer, outplanes):
-    if attn_layer is not None:
-        raise NotImplementedError("create_attn not implemented.")
-    return None
 
 
 def downsample_avg(cfg: ResNetConfig, out_channels: int, stride: int, name: str):
@@ -345,8 +334,6 @@ def make_stage(
 
         # Stochastic depth linear decay rule
         block_dpr = cfg.drop_path_rate * total_block_idx / (total_nb_blocks - 1)
-        if block_dpr > 0.0:
-            raise NotImplementedError("block_dpr>0. not implemented yet.")
 
         blocks.append(
             block_cls(
@@ -354,7 +341,7 @@ def make_stage(
                 nb_channels=nb_channels,
                 stride=stride,
                 downsample_layer=downsample_layer,
-                drop_path=None,
+                drop_path_rate=block_dpr,
                 name=f"{stage_name}/{block_idx}",
             )
         )
@@ -775,5 +762,872 @@ def resnet200d():
         interpolation="bicubic",
         crop_pct=1.0,
         first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def tv_resnet34():
+    """Constructs a ResNet-34 model with original Torchvision weights."""
+    cfg = ResNetConfig(
+        name="tv_resnet34", url="", block="basic_block", nb_blocks=(3, 4, 6, 3)
+    )
+    return ResNet, cfg
+
+
+@register_model
+def tv_resnet50():
+    """Constructs a ResNet-50 model with original Torchvision weights."""
+    cfg = ResNetConfig(
+        name="tv_resnet50", url="", block="bottleneck", nb_blocks=(3, 4, 6, 3)
+    )
+    return ResNet, cfg
+
+
+@register_model
+def tv_resnet101():
+    """Constructs a ResNet-101 model w/ Torchvision pretrained weights."""
+    cfg = ResNetConfig(
+        name="tv_resnet101", url="", block="bottleneck", nb_blocks=(3, 4, 23, 3)
+    )
+    return ResNet, cfg
+
+
+@register_model
+def tv_resnet152():
+    """Constructs a ResNet-152 model w/ Torchvision pretrained weights."""
+    cfg = ResNetConfig(
+        name="tv_resnet152", url="", block="bottleneck", nb_blocks=(3, 8, 36, 3)
+    )
+    return ResNet, cfg
+
+
+@register_model
+def wide_resnet50_2():
+    """Constructs a Wide ResNet-50-2 model.
+    The model is the same as ResNet except for the bottleneck number of channels
+    which is twice larger in every block. The number of channels in outer 1x1
+    convolutions is the same, e.g. last block in ResNet-50 has 2048-512-2048
+    channels, and in Wide ResNet-50-2 has 2048-1024-2048.
+    """
+    cfg = ResNetConfig(
+        name="wide_resnet50_2",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        base_width=128,
+        interpolation="bicubic",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def wide_resnet101_2():
+    """Constructs a Wide ResNet-101-2 model.
+    The model is the same as ResNet except for the bottleneck number of channels
+    which is twice larger in every block. The number of channels in outer 1x1
+    convolutions is the same.
+    """
+    cfg = ResNetConfig(
+        name="wide_resnet101_2",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        base_width=128,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnet50_gn():
+    """Constructs a ResNet-50 model w/ GroupNorm"""
+    cfg = ResNetConfig(
+        name="resnet50_gn",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        norm_layer="group_norm",
+        crop_pct=0.94,
+        interpolation="bicubic",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnext50_32x4d():
+    """Constructs a ResNeXt50-32x4d model."""
+    cfg = ResNetConfig(
+        name="resnext50_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        cardinality=32,
+        base_width=4,
+        crop_pct=0.95,
+        interpolation="bicubic",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnext50d_32x4d():
+    """
+    Constructs a ResNeXt50d-32x4d model. ResNext50 w/ deep stem & avg pool downsample
+    """
+    cfg = ResNetConfig(
+        name="resnext50d_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        cardinality=32,
+        base_width=4,
+        stem_width=32,
+        stem_type="deep",
+        downsample_mode="avg",
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnext101_32x8d():
+    """Constructs a ResNeXt-101 32x8d model."""
+    cfg = ResNetConfig(
+        name="resnext101_32x8d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=8,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def tv_resnext50_32x4d():
+    """Constructs a ResNeXt50-32x4d model with original Torchvision weights."""
+    cfg = ResNetConfig(
+        name="tv_resnext50_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        cardinality=32,
+        base_width=4,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ig_resnext101_32x8d():
+    """Constructs a ResNeXt-101 32x8 model pre-trained on weakly-supervised data
+    and finetuned on ImageNet from Figure 5 in
+    `"Exploring the Limits of Weakly Supervised Pretraining"
+    <https://arxiv.org/abs/1805.00932>`_
+    Weights from https://pytorch.org/hub/facebookresearch_WSL-Images_resnext/
+    """
+    cfg = ResNetConfig(
+        name="ig_resnext101_32x8d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=8,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ig_resnext101_32x16d():
+    """Constructs a ResNeXt-101 32x16 model pre-trained on weakly-supervised data
+    and finetuned on ImageNet from Figure 5 in
+    `"Exploring the Limits of Weakly Supervised Pretraining"
+    <https://arxiv.org/abs/1805.00932>`_
+    Weights from https://pytorch.org/hub/facebookresearch_WSL-Images_resnext/
+    """
+    cfg = ResNetConfig(
+        name="ig_resnext101_32x16d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=16,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ig_resnext101_32x32d():
+    """Constructs a ResNeXt-101 32x32 model pre-trained on weakly-supervised data
+    and finetuned on ImageNet from Figure 5 in
+    `"Exploring the Limits of Weakly Supervised Pretraining"
+    <https://arxiv.org/abs/1805.00932>`_
+    Weights from https://pytorch.org/hub/facebookresearch_WSL-Images_resnext/
+    """
+    cfg = ResNetConfig(
+        name="ig_resnext101_32x32d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=32,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ig_resnext101_32x48d():
+    """Constructs a ResNeXt-101 32x48 model pre-trained on weakly-supervised data
+    and finetuned on ImageNet from Figure 5 in
+    `"Exploring the Limits of Weakly Supervised Pretraining"
+    <https://arxiv.org/abs/1805.00932>`_
+    Weights from https://pytorch.org/hub/facebookresearch_WSL-Images_resnext/
+    """
+    cfg = ResNetConfig(
+        name="ig_resnext101_32x48d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=48,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ssl_resnet18():
+    """Constructs a semi-supervised ResNet-18 model pre-trained on YFCC100M dataset and
+    finetuned on ImageNet
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="ssl_resnet18",
+        url="",
+        block="basic_block",
+        nb_blocks=(2, 2, 2, 2),
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ssl_resnet50():
+    """Constructs a semi-supervised ResNet-50 model pre-trained on YFCC100M dataset and
+    finetuned on ImageNet
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="ssl_resnet50",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ssl_resnext50_32x4d():
+    """
+    Constructs a semi-supervised ResNeXt-50 32x4 model pre-trained on YFCC100M dataset
+    and finetuned on ImageNet
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="ssl_resnext50_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        cardinality=32,
+        base_width=4,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ssl_resnext101_32x4d():
+    """
+    Constructs a semi-supervised ResNeXt-101 32x4 model pre-trained on YFCC100M dataset
+    and finetuned on ImageNet
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="ssl_resnext101_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=4,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ssl_resnext101_32x8d():
+    """
+    Constructs a semi-supervised ResNeXt-101 32x8 model pre-trained on YFCC100M dataset
+    and finetuned on ImageNet
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="ssl_resnext101_32x8d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=8,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ssl_resnext101_32x16d():
+    """
+    Constructs a semi-supervised ResNeXt-101 32x16 model pre-trained on YFCC100M dataset
+    and finetuned on ImageNet
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="ssl_resnext101_32x16d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=16,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def swsl_resnet18():
+    """
+    Constructs a semi-weakly supervised Resnet-18 model pre-trained on 1B weakly
+    supervised image dataset and finetuned on ImageNet.
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="swsl_resnet18",
+        url="",
+        block="basic_block",
+        nb_blocks=(2, 2, 2, 2),
+    )
+    return ResNet, cfg
+
+
+@register_model
+def swsl_resnet50():
+    """
+    Constructs a semi-weakly supervised ResNet-50 model pre-trained on 1B weakly
+    supervised image dataset and finetuned on ImageNet.
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="swsl_resnet50",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+    )
+    return ResNet, cfg
+
+
+@register_model
+def swsl_resnext50_32x4d():
+    """
+    Constructs a semi-weakly supervised ResNeXt-50 32x4 model pre-trained on 1B weakly
+    supervised image dataset and finetuned on ImageNet.
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="swsl_resnext50_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        cardinality=32,
+        base_width=4,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def swsl_resnext101_32x4d():
+    """
+    Constructs a semi-weakly supervised ResNeXt-101 32x4 model pre-trained on 1B weakly
+    supervised image dataset and finetuned on ImageNet.
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="swsl_resnext101_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=4,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def swsl_resnext101_32x8d():
+    """
+    Constructs a semi-weakly supervised ResNeXt-101 32x8 model pre-trained on 1B weakly
+    supervised image dataset and finetuned on ImageNet.
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="swsl_resnext101_32x8d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=8,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def swsl_resnext101_32x16d():
+    """
+    Constructs a semi-weakly supervised ResNeXt-101 32x16 model pre-trained on 1B
+    weakly supervised image dataset and finetuned on ImageNet.
+    `"Billion-scale Semi-Supervised Learning for Image Classification"
+    <https://arxiv.org/abs/1905.00546>`_
+    Weights from https://github.com/facebookresearch/semi-supervised-ImageNet1K-models/
+    """
+    cfg = ResNetConfig(
+        name="swsl_resnext101_32x16d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        cardinality=32,
+        base_width=16,
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ecaresnet26t():
+    """
+    Constructs an ECA-ResNeXt-26-T model.
+    This is technically a 28 layer ResNet, like a 'D' bag-of-tricks model but with
+    tiered 24, 32, 64 channels in the deep stem and ECA attn.
+    """
+    cfg = ResNetConfig(
+        name="ecaresnet26t",
+        url="",
+        block="bottleneck",
+        input_size=(256, 256),
+        nb_blocks=(2, 2, 2, 2),
+        stem_type="deep_tiered",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="eca",
+        test_input_size=(320, 320),
+        pool_size=8,
+        crop_pct=0.95,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ecaresnet50d():
+    """Constructs a ResNet-50-D model with eca."""
+    cfg = ResNetConfig(
+        name="ecaresnet50d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        stem_type="deep",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="eca",
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ecaresnet50t():
+    """
+    Constructs an ECA-ResNet-50-T model.
+    Like a 'D' bag-of-tricks model but with tiered 24, 32, 64 channels in the deep stem
+    and ECA attn.
+    """
+    cfg = ResNetConfig(
+        name="ecaresnet50t",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        stem_type="deep_tiered",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="eca",
+        test_input_size=(320, 320),
+        pool_size=8,
+        crop_pct=0.95,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ecaresnetlight():
+    """Constructs a ResNet-50-D light model with eca."""
+    cfg = ResNetConfig(
+        name="ecaresnetlight",
+        url="",
+        block="bottleneck",
+        nb_blocks=(1, 1, 11, 3),
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="eca",
+        interpolation="bicubic",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ecaresnet101d():
+    """Constructs a ResNet-101-D model with eca."""
+    cfg = ResNetConfig(
+        name="ecaresnet101d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        stem_type="deep",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="eca",
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def ecaresnet269d():
+    """Constructs a ResNet-269-D model with ECA."""
+    cfg = ResNetConfig(
+        name="ecaresnet269d",
+        url="",
+        input_size=(320, 320),
+        block="bottleneck",
+        nb_blocks=(3, 30, 48, 8),
+        stem_type="deep",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="eca",
+        test_input_size=(352, 352),
+        pool_size=10,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs50():
+    """Constructs a ResNet-RS-50 model.
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs50",
+        url="",
+        input_size=(160, 160),
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(224, 224),
+        pool_size=5,
+        crop_pct=0.91,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs101():
+    """Constructs a ResNet-RS-101 model.
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs101",
+        url="",
+        input_size=(192, 192),
+        block="bottleneck",
+        nb_blocks=(3, 4, 23, 3),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(288, 288),
+        pool_size=6,
+        crop_pct=0.94,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs152():
+    """Constructs a ResNet-RS-152 model.
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs152",
+        url="",
+        input_size=(256, 256),
+        block="bottleneck",
+        nb_blocks=(3, 8, 36, 3),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(320, 320),
+        pool_size=8,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs200():
+    """Constructs a ResNet-RS-200 model.
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs200",
+        url="",
+        input_size=(256, 256),
+        block="bottleneck",
+        nb_blocks=(3, 24, 36, 3),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(320, 320),
+        pool_size=8,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs270():
+    """Constructs a ResNet-RS-270 model.
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs270",
+        url="",
+        input_size=(256, 256),
+        block="bottleneck",
+        nb_blocks=(4, 29, 53, 4),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(352, 352),
+        pool_size=8,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs350():
+    """Constructs a ResNet-RS-350 model.
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs350",
+        url="",
+        input_size=(288, 288),
+        block="bottleneck",
+        nb_blocks=(4, 36, 72, 4),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(384, 384),
+        pool_size=9,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def resnetrs420():
+    """Constructs a ResNet-RS-420 model
+    Paper: Revisiting ResNets - https://arxiv.org/abs/2103.07579
+    Pretrained weights from
+    https://github.com/tensorflow/tpu/tree/bee9c4f6/models/official/resnet/resnet_rs
+    """
+    cfg = ResNetConfig(
+        name="resnetrs420",
+        url="",
+        input_size=(320, 320),
+        block="bottleneck",
+        nb_blocks=(4, 44, 87, 4),
+        stem_type="deep",
+        stem_width=32,
+        replace_stem_pool=True,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(416, 416),
+        pool_size=10,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def seresnet50():
+    cfg = ResNetConfig(
+        name="seresnet50",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        attn_layer="se",
+        interpolation="bicubic",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def seresnet152d():
+    cfg = ResNetConfig(
+        name="seresnet152d",
+        url="",
+        input_size=(256, 256),
+        block="bottleneck",
+        nb_blocks=(3, 8, 36, 3),
+        stem_type="deep",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="se",
+        test_input_size=(320, 320),
+        pool_size=8,
+        crop_pct=1.0,
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def seresnext26d_32x4d():
+    """Constructs a SE-ResNeXt-26-D model.`
+    This is technically a 28 layer ResNet, using the 'D' modifier from Gluon /
+    bag-of-tricks for combination of deep stem and avg_pool in downsample.
+    """
+    cfg = ResNetConfig(
+        name="seresnext26d_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(2, 2, 2, 2),
+        cardinality=32,
+        base_width=4,
+        stem_type="deep",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="se",
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def seresnext26t_32x4d():
+    """Constructs a SE-ResNet-26-T model.
+    This is technically a 28 layer ResNet, like a 'D' bag-of-tricks model but with
+    tiered 24, 32, 64 channels in the deep stem.
+    """
+    cfg = ResNetConfig(
+        name="seresnext26t_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(2, 2, 2, 2),
+        cardinality=32,
+        base_width=4,
+        stem_type="deep_tiered",
+        stem_width=32,
+        downsample_mode="avg",
+        attn_layer="se",
+        interpolation="bicubic",
+        first_conv="conv1/0",
+    )
+    return ResNet, cfg
+
+
+@register_model
+def seresnext50_32x4d():
+    cfg = ResNetConfig(
+        name="seresnext50_32x4d",
+        url="",
+        block="bottleneck",
+        nb_blocks=(3, 4, 6, 3),
+        cardinality=32,
+        base_width=4,
+        attn_layer="se",
+        interpolation="bicubic",
     )
     return ResNet, cfg
