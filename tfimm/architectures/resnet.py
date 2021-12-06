@@ -53,7 +53,8 @@ class ResNetConfig(ModelConfig):
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
     aa_layer: Any = None  # TODO: Not implemented
-    attn_layer: str = ""  # For attn_layer = "se", rd_ratio = 0.25
+    attn_layer: str = ""
+    se_ratio: float = 0.0625
     # Regularization
     drop_rate: float = 0.0
     drop_path_rate: float = 0.0
@@ -135,7 +136,10 @@ class BasicBlock(tf.keras.layers.Layer):
             )
         else:
             self.bn2 = self.norm_layer(gamma_initializer=initializer, name="bn2")
-        self.se = self.attn_layer(name="se")
+        if cfg.attn_layer == "se":
+            self.se = self.attn_layer(rd_ratio=cfg.se_ratio, name="se")
+        else:
+            self.se = self.attn_layer(name="se")
         self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.act2 = self.act_layer()
 
@@ -236,7 +240,10 @@ class Bottleneck(tf.keras.layers.Layer):
             )
         else:
             self.bn3 = self.norm_layer(gamma_initializer=initializer, name="bn3")
-        self.se = self.attn_layer(name="se")
+        if cfg.attn_layer == "se":
+            self.se = self.attn_layer(rd_ratio=cfg.se_ratio, name="se")
+        else:
+            self.se = self.attn_layer(name="se")
         self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.act3 = self.act_layer()
 
@@ -506,7 +513,17 @@ class ResNet(tf.keras.Model):
 
         # Stem Pooling
         if cfg.replace_stem_pool:
-            raise NotImplementedError("replace_stem_pool=True not implemented")
+            pad = tf.keras.layers.ZeroPadding2D(padding=1)
+            conv = tf.keras.layers.Conv2D(
+                filters=in_chans,
+                kernel_size=3,
+                strides=2,
+                use_bias=False,
+                name=f"{self.name}/maxpool/0",
+            )
+            bn = self.norm_layer(name=f"{self.name}/maxpool/1")
+            act = self.act_layer()
+            self.maxpool = tf.keras.Sequential([pad, conv, bn, act])
         else:
             if cfg.aa_layer is not None:
                 raise NotImplementedError("aa_layer!=None not implemented.")
@@ -1380,6 +1397,7 @@ def resnetrs50():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(224, 224),
         pool_size=5,
         crop_pct=0.91,
@@ -1407,6 +1425,7 @@ def resnetrs101():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(288, 288),
         pool_size=6,
         crop_pct=0.94,
@@ -1434,6 +1453,7 @@ def resnetrs152():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(320, 320),
         pool_size=8,
         crop_pct=1.0,
@@ -1461,6 +1481,7 @@ def resnetrs200():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(320, 320),
         pool_size=8,
         crop_pct=1.0,
@@ -1488,6 +1509,7 @@ def resnetrs270():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(352, 352),
         pool_size=8,
         crop_pct=1.0,
@@ -1515,6 +1537,7 @@ def resnetrs350():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(384, 384),
         pool_size=9,
         crop_pct=1.0,
@@ -1542,6 +1565,7 @@ def resnetrs420():
         replace_stem_pool=True,
         downsample_mode="avg",
         attn_layer="se",
+        se_ratio=0.25,
         test_input_size=(416, 416),
         pool_size=10,
         crop_pct=1.0,
