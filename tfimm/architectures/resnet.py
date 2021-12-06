@@ -12,7 +12,13 @@ from typing import Any, Optional, Tuple
 
 import tensorflow as tf
 
-from tfimm.layers import ClassifierHead, act_layer_factory, attn_layer_factory, norm_layer_factory, DropPath
+from tfimm.layers import (
+    ClassifierHead,
+    DropPath,
+    act_layer_factory,
+    attn_layer_factory,
+    norm_layer_factory,
+)
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -47,11 +53,10 @@ class ResNetConfig(ModelConfig):
     act_layer: str = "relu"
     norm_layer: str = "batch_norm"
     aa_layer: Any = None  # TODO: Not implemented
-    # For attn_layer = "se", rd_ratio = 0.25
-    attn_layer: str = ""
+    attn_layer: str = ""  # For attn_layer = "se", rd_ratio = 0.25
     # Regularization
     drop_rate: float = 0.0
-    drop_path_rate: float = 0.0  # TODO: Not implemented
+    drop_path_rate: float = 0.0
     # Head
     global_pool: str = "avg"
     # Parameters for inference
@@ -91,6 +96,7 @@ class BasicBlock(tf.keras.layers.Layer):
         self.downsample_layer = downsample_layer
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
+        self.attn_layer = attn_layer_factory(cfg.attn_layer)
 
         # Num channels after first conv
         first_planes = nb_channels // cfg.block_reduce_first
@@ -119,13 +125,17 @@ class BasicBlock(tf.keras.layers.Layer):
             use_bias=False,
             name="conv2",
         )
-        self.bn2 = self.norm_layer(
-            gamma_initializer="zeros" if cfg.zero_init_last_bn else "ones",
-            moving_variance_initializer="zeros" if cfg.zero_init_last_bn else "ones",
-            name="bn2",
-        )
-        self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.se = create_attn(cfg.attn_layer, out_planes)
+        initializer = "zeros" if cfg.zero_init_last_bn else "ones"
+        if cfg.norm_layer == "batch_norm":
+            # Only batch norm layer has moving_variance_initializer parameter
+            self.bn2 = self.norm_layer(
+                gamma_initializer=initializer,
+                moving_variance_initializer=initializer,
+                name="bn2",
+            )
+        else:
+            self.bn2 = self.norm_layer(gamma_initializer=initializer, name="bn2")
+        self.se = self.attn_layer(name="se")
         self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.act2 = self.act_layer()
 
@@ -144,9 +154,7 @@ class BasicBlock(tf.keras.layers.Layer):
         x = self.conv2(x)
         x = self.bn2(x, training=training)
 
-        if self.se is not None:
-            raise NotImplementedError("se!=None not implemented yet...")
-            # x = self.se(x)
+        x = self.se(x)
 
         x = self.drop_path(x, training=training)
 
@@ -218,11 +226,16 @@ class Bottleneck(tf.keras.layers.Layer):
             use_bias=False,
             name="conv3",
         )
-        self.bn3 = self.norm_layer(
-            gamma_initializer="zeros" if cfg.zero_init_last_bn else "ones",
-            moving_variance_initializer="zeros" if cfg.zero_init_last_bn else "ones",
-            name="bn3",
-        )
+        initializer = "zeros" if cfg.zero_init_last_bn else "ones"
+        if cfg.norm_layer == "batch_norm":
+            # Only batch norm layer has moving_variance_initializer parameter
+            self.bn3 = self.norm_layer(
+                gamma_initializer=initializer,
+                moving_variance_initializer=initializer,
+                name="bn3",
+            )
+        else:
+            self.bn3 = self.norm_layer(gamma_initializer=initializer, name="bn3")
         self.se = self.attn_layer(name="se")
         self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.act3 = self.act_layer()
@@ -525,7 +538,7 @@ class ResNet(tf.keras.Model):
     def forward_features(self, x, training=False):
         x = self.pad1(x)
         x = self.conv1(x)
-        x = self.bn1(x, training)
+        x = self.bn1(x, training=training)
         x = self.act1(x)
         x = self.maxpool(x)
 
