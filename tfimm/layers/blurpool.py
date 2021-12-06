@@ -43,7 +43,13 @@ class BlurPool2D(tf.keras.layers.Layer):
         channels = input_shape[-1]
         bk = np.repeat(bk, channels)
         bk = np.reshape(bk, (self.kernel_size, self.kernel_size, channels, 1))
-        self.blur_kernel = tf.constant(value=bk, dtype=self.dtype)
+
+        self.blur_kernel = self.add_weight(
+            name='blur_kernel',
+            shape=(self.kernel_size, self.kernel_size, channels, 1),
+            initializer=tf.keras.initializers.constant(bk),
+            trainable=False
+        )
 
     def call(self, x):
         x = tf.pad(x, paddings=self.paddings, mode="REFLECT")
@@ -54,3 +60,7 @@ class BlurPool2D(tf.keras.layers.Layer):
             padding="VALID",
         )
         return x
+
+    def cast_inputs(self, inputs):
+        # Casts to float16, the policy's lowest-precision dtype
+        return self._mixed_precision_policy.cast_to_lowest(inputs)
