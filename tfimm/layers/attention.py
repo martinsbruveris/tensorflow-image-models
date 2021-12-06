@@ -10,7 +10,7 @@ from .factory import act_layer_factory, norm_layer_factory
 
 
 def make_divisible(
-    v: int, divisor: int, min_value: Optional[int] = None, round_limit: float = .9
+    v: int, divisor: int, min_value: Optional[int] = None, round_limit: float = 0.9
 ) -> int:
     min_value = min_value or divisor
     new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
@@ -34,9 +34,10 @@ class SEModule(tf.keras.layers.Layer):
         * global max pooling can be added to the squeeze aggregation
         * customizable activation, normalization, and gate layer
     """
+
     def __init__(
         self,
-        rd_ratio=1. / 16,
+        rd_ratio=1.0 / 16,
         rd_channels=None,
         rd_divisor=8,
         act_layer="relu",
@@ -59,7 +60,7 @@ class SEModule(tf.keras.layers.Layer):
     def build(self, input_shape):
         channels = input_shape[-1]
         rd_channels = self.rd_channels or make_divisible(
-            channels * self.rd_ratio, self.rd_divisor, round_limit=0.
+            channels * self.rd_ratio, self.rd_divisor, round_limit=0.0
         )
         self.fc1 = tf.keras.layers.Conv2D(
             filters=rd_channels,
