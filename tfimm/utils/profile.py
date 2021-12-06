@@ -154,7 +154,7 @@ def find_max_batch_size(
             lower_limit = batch_size
 
             if batch_size >= max_batch_size:
-                continue_search = False  # See comment about hard cap below
+                continue_search = False
             elif upper_limit is None:
                 next_batch_size = 2 * batch_size
                 next_batch_size = min(next_batch_size, max_batch_size)
