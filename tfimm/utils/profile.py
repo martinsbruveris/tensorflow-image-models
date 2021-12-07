@@ -128,10 +128,10 @@ def find_max_batch_size(
     lower_limit = 0
 
     # Find hard batch size cap depending on model input size. The whole batch should
-    # be <2 GB of memory.
+    # be <0.5 GB of memory.
     cfg = registry.model_config(model_name)
     img_size = 4 * cfg.input_size[0] * cfg.input_size[1] * cfg.in_chans
-    max_memory = 2 * 10**9
+    max_memory = 5 * 10**8
     # We want max batch size to be a power of 2
     max_batch_size = 2 ** math.floor(math.log2(max_memory / img_size))
 
@@ -165,7 +165,11 @@ def find_max_batch_size(
             else:
                 next_batch_size = (upper_limit + batch_size) // 2
 
-        except (tf.errors.ResourceExhaustedError, tf.errors.UnknownError):
+        except (
+            tf.errors.InternalError,
+            tf.errors.ResourceExhaustedError,
+            tf.errors.UnknownError,
+        ):
             success = False
             upper_limit = batch_size
             if _below_resolution(
