@@ -45,10 +45,10 @@ class BlurPool2D(tf.keras.layers.Layer):
         bk = np.reshape(bk, (self.kernel_size, self.kernel_size, channels, 1))
 
         self.blur_kernel = self.add_weight(
-            name='blur_kernel',
+            name="blur_kernel",
             shape=(self.kernel_size, self.kernel_size, channels, 1),
             initializer=tf.keras.initializers.constant(bk),
-            trainable=False
+            trainable=False,
         )
 
     def call(self, x):
