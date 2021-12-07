@@ -23,6 +23,22 @@ def test_create_model(model_name: str):
     model(model.dummy_inputs)
 
 
+@pytest.mark.skip()
+@pytest.mark.parametrize("model_name", list_models(exclude_filters=EXCLUDE_FILTERS))
+def test_mixed_precision(model_name: str):
+    """
+    Test if we can run a forward pass with mixed precision.
+
+    These tests are very slow on CPUs, so we skip them by default.
+    """
+    tf.keras.backend.clear_session()
+    tf.keras.mixed_precision.set_global_policy("mixed_float16")
+    model = create_model(model_name)
+    img = tf.ones((1, *model.cfg.input_size, model.cfg.in_chans), dtype="float16")
+    res = model(img)
+    assert res.dtype == "float16"
+
+
 @pytest.mark.parametrize(
     "model_name",
     list_models(
