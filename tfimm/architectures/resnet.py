@@ -1376,8 +1376,7 @@ def ecaresnet269d():
 
 @register_model
 def resnetblur50():
-    """Constructs a ResNet-50 model with blur anti-aliasing
-    """
+    """Constructs a ResNet-50 model with blur anti-aliasing"""
     cfg = ResNetConfig(
         name="resnetblur50",
         url="",
