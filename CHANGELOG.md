@@ -1,9 +1,11 @@
 # Change Log
 
-## Unpublished
+## v0.1.3 - 2021-12-07
 
 - Added CaiT models
 - Added MLP-Mixer, ResMLP and gMLP models
+- Added ResNet models
+- Fixed bug with Swin Transformer and mixed precision
 
 ## v0.1.2 - 2021-11-25
 
