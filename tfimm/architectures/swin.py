@@ -186,7 +186,7 @@ class WindowAttention(tf.keras.layers.Layer):
 
         nw = mask.get_shape()[0]  # tf.shape(mask)[0]
         mask = tf.expand_dims(tf.expand_dims(mask, axis=1), axis=0)
-        mask = tf.cast(mask, tf.float32)
+        mask = tf.cast(mask, attn.dtype)
         attn = tf.reshape(attn, shape=(-1, nw, nb_heads, n, n)) + mask
         attn = tf.reshape(attn, shape=(-1, nb_heads, n, n))
         attn = tf.nn.softmax(attn, axis=-1)
