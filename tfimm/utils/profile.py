@@ -136,7 +136,7 @@ def find_max_batch_size(
     max_batch_size = 2 ** math.floor(math.log2(max_memory / img_size))
 
     continue_search = True
-    next_batch_size = start_batch_size
+    next_batch_size = min(start_batch_size, max_batch_size)
     img_per_sec = 0.0
     while continue_search:
         batch_size = next_batch_size
