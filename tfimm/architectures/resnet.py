@@ -3,7 +3,30 @@ TensorFlow implementation of ResNets
 
 Based on timm/models/resnet.py by Ross Wightman.
 
+It includes the following models:
+- Resnets from the PyTorch model hub
+- ResNets trained by Ross Wightman
+- Models pretrained on weakly-supervised data, finetuned on ImageNet
+  Paper: Exploring the Limits of Weakly Supervised Pretraining
+  Link: https://arxiv.org/abs/1805.00932
+- Models pretrained in semi-supervised way on YFCC100M, finetuned on ImageNet
+  Paper: Billion-scale Semi-Supervised Learning for Image Classification
+  Link: https://arxiv.org/abs/1905.00546
+- ResNets with ECA layers
+  Paper: ECA-Net: Efficient Channel Attention for Deep Convolutional Neural Networks
+  Link: https://arxiv.org/pdf/1910.03151.pdf
+- ResNets with anti-aliasing layers
+  Paper: Making Convolutional Networks Shift-Invariant Again
+  Link: https://arxiv.org/pdf/1904.11486.pdf
+- Models from the "Revisiting ResNets" paper
+  Paper: Revisiting ResNets
+  Link: https://arxiv.org/abs/2103.07579
+- ResNets with a squeeze-and-excitation layer
+  Paper: Squeeze-and-Excitation Networks
+  Link: https://arxiv.org/abs/1709.01507
+
 Copyright 2021 Martins Bruveris
+Copyright 2021 Ross Wightman
 """
 
 import math
@@ -365,87 +388,75 @@ def make_stage(
 
 @keras_serializable
 class ResNet(tf.keras.Model):
-    """ResNet / ResNeXt / SE-ResNeXt / SE-Net
+    """
+    ResNet / ResNeXt / SE-ResNeXt / SE-Net
 
-    This class implements all variants of ResNet, ResNeXt, SE-ResNeXt, and SENet that
-      * have > 1 stride in the 3x3 conv layer of bottleneck
-      * have conv-bn-act ordering
-
-    This ResNet impl supports a number of stem and downsample options based on the v1c,
-    v1d, v1e, and v1s variants included in the MXNet Gluon ResNetV1b model. The C and D
-    variants are also discussed in the 'Bag of Tricks' paper:
-    https://arxiv.org/pdf/1812.01187. The B variant is equivalent to torchvision
-    default.
-
-    ResNet variants (the same modifications can be used in SE/ResNeXt models as well):
-      * normal, b - 7x7 stem, stem_width = 64, same as torchvision ResNet, NVIDIA ResNet
-          'v1.5', Gluon v1b
-      * c - 3 layer deep 3x3 stem, stem_width = 32 (32, 32, 64)
-      * d - 3 layer deep 3x3 stem, stem_width = 32 (32, 32, 64), average pool in
-          downsample
-      * e - 3 layer deep 3x3 stem, stem_width = 64 (64, 64, 128), average pool in
-          downsample
-      * s - 3 layer deep 3x3 stem, stem_width = 64 (64, 64, 128)
-      * t - 3 layer deep 3x3 stem, stem width = 32 (24, 48, 64), average pool in
-          downsample
-      * tn - 3 layer deep 3x3 stem, stem width = 32 (24, 32, 64), average pool in
-          downsample
-
-    ResNeXt
-      * normal - 7x7 stem, stem_width = 64, standard cardinality and base widths
-      * same c,d, e, s variants as ResNet can be enabled
-
-    SE-ResNeXt
-      * normal - 7x7 stem, stem_width = 64
-      * same c, d, e, s variants as ResNet can be enabled
-
-    SENet-154 - 3 layer deep 3x3 stem (same as v1c-v1s), stem_width = 64,
-        cardinality=64, reduction by 2 on width of first bottleneck convolution, 3x3
-        downsample convs after first block
+    This class implements various ResNet versions.
 
     Parameters
     ----------
-    block : Block
-        Class for the residual block. Options are BasicBlockGl, BottleneckGl.
-    nb_blocks : list of int
-        Numbers of blocks in each stage
     nb_classes : int, default 1000
         Number of classification classes.
     in_chans : int, default 3
         Number of input (color) channels.
+    input_size: Tuple[int, int], default (224, 224)
+        Input image size
+    block : str
+        Which residual block to use. One of {"basic_block", "bottleneck"}
+    nb_blocks : Tuple of int
+        Numbers of blocks in each stage
+    nb_channels: Tuple of int, default (64, 128, 256, 512)
+        Number of channels in each stage
     cardinality : int, default 1
         Number of convolution groups for 3x3 conv in Bottleneck.
     base_width : int, default 64
-        Factor determining bottleneck channels. `planes * base_width / 64 * cardinality`
+        Factor determining bottleneck channels, via formula
+            `channels * base_width / 64 * cardinality`
+    downsample_mode: str, default "conv"
+        How to downsample in the skip connection between stages. One of {"conv", "avg"}
+    zero_init_last_bn: bool, default True
+        Should last BN layer in each residual block be zero-initialized
     stem_width : int, default 64
         Number of channels in stem convolutions
-    stem_type : str, default ''
+    stem_type : str, default ""
         The type of stem:
-          * '', default - a single 7x7 conv with a width of stem_width
-          * 'deep' - three 3x3 convolution layers of widths stem_width, stem_width,
+          - "", default - a single 7x7 conv with a width of stem_width
+          - "deep" - three 3x3 convolution layers of widths stem_width, stem_width,
               stem_width * 2
-          * 'deep_tiered' - three 3x3 conv layers of widths stem_width//4 * 3,
+          - "deep_tiered" - three 3x3 conv layers of widths stem_width // 4 * 3,
               stem_width, stem_width * 2
+    replace_stem_pool: bool, default False
+        Replace maxpooling in stem by conv+bn+act layers
     block_reduce_first: int, default 1
         Reduction factor for first convolution output width of residual blocks,
-        1 for all archs except senets, where 2
+        1 for all archs at the moment (it is to for a SE-Net in timm that is not
+        implemented here).
     down_kernel_size: int, default 1
-        Kernel size of residual block downsampling path, 1x1 for most archs, 3x3 for
-        senets
-    avg_down : bool, default False
-        Whether to use average pooling for projection skip connection between
-        stages/downsample.
-    act_layer : nn.Module, activation layer
-    norm_layer : nn.Module, normalization layer
-    aa_layer : nn.Module, anti-aliasing layer
+        Kernel size of residual block downsampling path, 1x1 for all archs (it is 3x3
+        for a SE-Net in timm that is not implemented here)
+    act_layer : str, default "relu"
+        Activation layer, see `act_layer_factory` for allowed values
+    norm_layer : str, default "batch_norm"
+        Normalization layer, see `norm_layer_factory` for allowed values
+    aa_layer : str, default ""
+        Anti-aliasing layer. Can be "" (no AA-layer) or "blur_pool".
+    attn_layer: str, default ""
+        Attention layer, see `attn_layer_factory` for allowed values.
+    se_ratio: float, default 1. / 16 = 0.0625
+        Reduction ratio in SE blocks. Ignored, if attn_layer != "se".
     drop_rate : float, default 0.
-        Dropout probability before classifier, for training
-    global_pool : str, default 'avg'
-        Global pooling type. One of 'avg', 'max'
+        Dropout probability before classifier, for training.
+    drop_path_rate: float, default 0.
+        Dropout probability for DropPath layers, for training.
+    global_pool : str, default "avg"
+        Global pooling type. One of "avg", "max"
     """
 
     cfg_class = ResNetConfig
 
+    # The blur_kernel parameter in BlurPool2D layers is non-trainable and the value
+    # is set during layer construction. The pycharm weights are not stored, hence we
+    # cannot load them
     keys_to_ignore_on_load_missing = ["blur_kernel"]
 
     def __init__(self, cfg: ResNetConfig, *args, **kwargs):
@@ -965,7 +976,7 @@ def tv_resnext50_32x4d():
 
 @register_model
 def ig_resnext101_32x8d():
-    """Constructs a ResNeXt-101 32x8 model pre-trained on weakly-supervised data
+    """Constructs a ResNeXt-101 32x8 model pretrained on weakly-supervised data
     and finetuned on ImageNet from Figure 5 in
     `"Exploring the Limits of Weakly Supervised Pretraining"
     <https://arxiv.org/abs/1805.00932>`_
@@ -984,7 +995,7 @@ def ig_resnext101_32x8d():
 
 @register_model
 def ig_resnext101_32x16d():
-    """Constructs a ResNeXt-101 32x16 model pre-trained on weakly-supervised data
+    """Constructs a ResNeXt-101 32x16 model pretrained on weakly-supervised data
     and finetuned on ImageNet from Figure 5 in
     `"Exploring the Limits of Weakly Supervised Pretraining"
     <https://arxiv.org/abs/1805.00932>`_
@@ -1003,7 +1014,7 @@ def ig_resnext101_32x16d():
 
 @register_model
 def ig_resnext101_32x32d():
-    """Constructs a ResNeXt-101 32x32 model pre-trained on weakly-supervised data
+    """Constructs a ResNeXt-101 32x32 model pretrained on weakly-supervised data
     and finetuned on ImageNet from Figure 5 in
     `"Exploring the Limits of Weakly Supervised Pretraining"
     <https://arxiv.org/abs/1805.00932>`_
@@ -1022,7 +1033,7 @@ def ig_resnext101_32x32d():
 
 @register_model
 def ig_resnext101_32x48d():
-    """Constructs a ResNeXt-101 32x48 model pre-trained on weakly-supervised data
+    """Constructs a ResNeXt-101 32x48 model pretrained on weakly-supervised data
     and finetuned on ImageNet from Figure 5 in
     `"Exploring the Limits of Weakly Supervised Pretraining"
     <https://arxiv.org/abs/1805.00932>`_
