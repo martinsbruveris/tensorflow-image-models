@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.1.4 - 2021-12-08
+
+- Fixed bug with dropout in Classifier layer
+
 ## v0.1.3 - 2021-12-07
 
 - Added CaiT models
