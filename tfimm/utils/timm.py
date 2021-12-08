@@ -220,8 +220,6 @@ def load_pytorch_weights_in_tf2_model(
             f"the PyTorch model.\n"
         )
 
-    return tf_model
-
 
 def load_timm_weights(model: tf.keras.Model, model_name: str):
     """Loads weights from timm in TF model."""
@@ -238,5 +236,16 @@ def load_timm_weights(model: tf.keras.Model, model_name: str):
 
     pt_model = timm.create_model(model_name, pretrained=True)
     pt_state_dict = pt_model.state_dict()
-    model = load_pytorch_weights_in_tf2_model(model, pt_state_dict)
-    return model
+    load_pytorch_weights_in_tf2_model(model, pt_state_dict)
+
+
+def load_pth_url_weights(model: tf.keras.Model, url: str):
+    """Loads weights from a PyTorch .pth file specified by URL."""
+    try:
+        from torch.hub import load_state_dict_from_url
+    except ImportError:
+        logging.error("To load weights from pth weights, torch needs to be installed.")
+        raise
+
+    pt_state_dict = load_state_dict_from_url(url, progress=False, map_location="cpu")
+    load_pytorch_weights_in_tf2_model(model, pt_state_dict)

@@ -5,7 +5,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
-from tfimm.utils import load_timm_weights
+from tfimm.utils import load_timm_weights, load_pth_url_weights
 
 
 # TODO: Implement in_chans, to work with both timm as well as saved models
@@ -40,13 +40,20 @@ def create_model(
     if model_path:
         loaded_model = tf.keras.models.load_model(model_path)
     elif pretrained is True:
-        raise NotImplementedError(
-            "Automatic loading of pretrained weights only implemented from timm."
-        )
+        if not cfg.url:
+            raise ValueError("To load pretrained weights, URL must be specified.")
+        if cfg.url.endswith(".pth"):
+            loaded_model = cls(cfg)
+            loaded_model(loaded_model.dummy_inputs)
+            load_pth_url_weights(loaded_model, cfg.url)
+        else:
+            raise NotImplementedError(
+                "Automatic loading of pretrained weights only implemented from timm."
+            )
     elif pretrained == "timm":
         loaded_model = cls(cfg)
         loaded_model(loaded_model.dummy_inputs)
-        loaded_model = load_timm_weights(loaded_model, model_name)
+        load_timm_weights(loaded_model, model_name)
     else:
         loaded_model = None
 
