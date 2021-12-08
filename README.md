@@ -13,7 +13,7 @@ weights, obtained by porting architectures from
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
 vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer models 
-(MLP-Mixer, ResMLP, gMLP and ConvMixer) and ResNets.
+(MLP-Mixer, ResMLP, gMLP and ConvMixer) and various ResNet flavours (ResNet, ResNeXt, ECA-ResNet, SE-ResNet).
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
@@ -148,9 +148,20 @@ The following architectures are currently available:
     Convolutions. [\[arXiv:2102.12122\]](https://arxiv.org/abs/2102.12122)
   - PVTv2: Improved Baselines with Pyramid Vision Transformer 
     [\[arXiv:2106.13797\]](https://arxiv.org/abs/2106.13797)
-- ResNet (work in progress, most available weights are from `timm`)
+- ResNet, ResNeXt, ECA-ResNet, SE-ResNet and friends
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)
+  - Exploring the Limits of Weakly Supervised Pretraining. 
+    [\[arXiv:1805.00932\]](https://arxiv.org/abs/1805.00932)
+  - Billion-scale Semi-Supervised Learning for Image Classification. 
+    [\[arXiv:1905.00546\]](https://arxiv.org/abs/1905.00546)
+  - ECA-Net: Efficient Channel Attention for Deep Convolutional Neural Networks. 
+    [\[arXiv1910.03151\]](https://arxiv.org/pdf/1910.03151.pdf)
+  - Revisiting ResNets. [\[arXiv:2103.07579\]](https://arxiv.org/abs/2103.07579)
+  - Making Convolutional Networks Shift-Invariant Again. (anti-aliasing layer)
+    [\[arXiv:1904.11486\]](https://arxiv.org/pdf/1904.11486.pdf)
+  - Squeeze-and-Excitation Networks. 
+    [\[arXiv:1709.01507\]](https://arxiv.org/abs/1709.01507)
 
 ## Profiling
 

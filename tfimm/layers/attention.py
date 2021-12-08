@@ -146,7 +146,7 @@ def attn_layer_factory(attn_layer: str):
     if attn_layer == "":
         return lambda **kwargs: tf.keras.layers.Activation("linear")
     # Lightweight attention modules (channel and/or coarse spatial).
-    # Typically added to existing network architecture blocks in addition to existing
+    # Typically, added to existing network architecture blocks in addition to existing
     # convolutions.
     elif attn_layer == "eca":
         return lambda **kwargs: EcaModule(**kwargs)
