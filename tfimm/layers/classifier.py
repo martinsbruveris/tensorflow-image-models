@@ -38,7 +38,7 @@ class ClassifierHead(tf.keras.layers.Layer):
             raise NotImplementedError(f"pool_type={pool_type} not implemented.")
 
         if drop_rate > 0.0:
-            self.drop = tf.keras.layers.Dropout(drop_rate=drop_rate)
+            self.drop = tf.keras.layers.Dropout(rate=drop_rate)
         else:
             self.drop = None
 
