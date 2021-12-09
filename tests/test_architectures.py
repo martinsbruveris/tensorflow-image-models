@@ -56,7 +56,7 @@ def test_load_timm_model(model_name: str):
     pt_model.eval()
 
     tf_model = create_model(model_name, pretrained=False)
-    tf_model = load_pytorch_weights_in_tf2_model(tf_model, pt_model.state_dict())
+    load_pytorch_weights_in_tf2_model(tf_model, pt_model.state_dict())
 
     rng = np.random.default_rng(2021)
     img = rng.random(
