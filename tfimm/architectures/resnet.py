@@ -148,14 +148,16 @@ class BasicBlock(tf.keras.layers.Layer):
         x = self.bn1(x, training=training)
         x = self.act1(x)
         if self.aa is not None:
-            x = self.aa(x)
+            # noinspection PyCallingNonCallable
+            x = self.aa(x, training=training)
 
         x = self.pad2(x)
         x = self.conv2(x)
         x = self.bn2(x, training=training)
 
-        x = self.se(x)
+        x = self.se(x, training=training)
 
+        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
 
         if self.downsample_layer is not None:
@@ -252,13 +254,15 @@ class Bottleneck(tf.keras.layers.Layer):
         x = self.bn2(x, training=training)
         x = self.act2(x)
         if self.aa is not None:
-            x = self.aa(x)
+            # noinspection PyCallingNonCallable
+            x = self.aa(x, training=training)
 
         x = self.conv3(x)
         x = self.bn3(x, training=training)
 
-        x = self.se(x)
+        x = self.se(x, training=training)
 
+        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
 
         if self.downsample_layer is not None:

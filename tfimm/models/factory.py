@@ -84,7 +84,7 @@ def create_model(
     return model
 
 
-def create_preprocessing(model_name: str, dtype: str = "float32") -> Callable:
+def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callable:
     """
     Creates a function to preprocess images for a particular model.
 
@@ -98,6 +98,7 @@ def create_preprocessing(model_name: str, dtype: str = "float32") -> Callable:
         raise ValueError(f"Unknown model: {model_name}.")
 
     cfg = model_config(model_name)
+    dtype = dtype or tf.keras.backend.floatx()
 
     def _preprocess(img: tf.Tensor) -> tf.Tensor:
         img = tf.cast(img, dtype=dtype) / 255.0
