@@ -74,3 +74,26 @@ def test_load_timm_model(model_name: str):
 
     # The tests are flaky sometimes, so we use a quite high tolerance
     assert (np.max(np.abs(tf_res - pt_res))) / (np.max(np.abs(pt_res)) + 1e-6) < 1e-3
+
+
+@pytest.mark.parametrize(
+    "model_name",
+    list_models(
+        module="vit",  # Not all modules have feature extraction implemented yet
+        exclude_filters=EXCLUDE_FILTERS,
+    ),
+)
+@pytest.mark.timeout(60)
+def test_feature_extraction(model_name: str):
+    model = create_model(model_name, pretrained=False)
+
+    inputs = model.dummy_inputs
+    x1, features = model(inputs, return_features=True)
+    x2 = model(inputs, return_features=False)
+
+    # Check that return value doesn't change if we also want features
+    x1, x2 = x1.numpy(), x2.numpy()
+    assert np.max(np.abs(x1 - x2)) < 1e-6
+
+    # Check that features dict contains exactly the expected keys
+    assert set(features.keys()) == set(model.feature_names)

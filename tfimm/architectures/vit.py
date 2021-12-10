@@ -7,7 +7,7 @@ Based on transformers/models/vit by HuggingFace
 Copyright 2021 Martins Bruveris
 """
 from dataclasses import dataclass, field
-from typing import Callable, Dict, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 
@@ -226,6 +226,14 @@ class ViT(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
+    @property
+    def feature_names(self) -> List[str]:
+        return (
+            ["patch_embedding"]
+            + [f"block_{j}" for j in range(self.cfg.depth)]
+            + ["features", "logits"]
+        )
+
     def transform_pos_embed(self, target_cfg: ViTConfig):
         return self.interpolate_pos_embed(target_cfg.input_size)
 
@@ -265,10 +273,12 @@ class ViT(tf.keras.Model):
         )
         return tgt_pos_embed
 
-    def forward_features(self, x, training=False):
+    def forward_features(self, x, training=False, return_features=False):
+        features = {}
         batch_size = tf.shape(x)[0]
         input_size = tf.shape(x)[1:3]
 
+        # noinspection PyCallingNonCallable
         x = self.patch_embed(x)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
         if not self.cfg.distilled:
@@ -281,29 +291,39 @@ class ViT(tf.keras.Model):
         else:
             x = x + self.interpolate_pos_embed(input_size)
         x = self.pos_drop(x, training=training)
+        features["patch_embedding"] = x
 
-        for block in self.blocks:
+        for j, block in enumerate(self.blocks):
+            # noinspection PyCallingNonCallable
             x = block(x, training=training)
+            features[f"block_{j}"] = x
         x = self.norm(x, training=training)
 
         if self.cfg.distilled:
             # Here we diverge from timm and return both outputs as one tensor. That way
             # all models always have one output by default
-            return x[:, :2]
+            x = x[:, :2]
         elif self.cfg.representation_size:
-            return self.pre_logits(x[:, 0])
+            x = self.pre_logits(x[:, 0])
         else:
-            return x[:, 0]
+            x = x[:, 0]
+        features["features"] = x
+        return (x, features) if return_features else x
 
-    def call(self, x, training=False):
-        x = self.forward_features(x, training)
+    def call(self, x, training=False, return_features=False):
+        features = {}
+        x = self.forward_features(x, training, return_features)
+        if return_features:
+            x, features = x
         if not self.cfg.distilled:
             x = self.head(x)
         else:
             y = self.head(x[:, 0])
             y_dist = self.head_dist(x[:, 1])
             x = tf.stack((y, y_dist), axis=1)
-        return x
+        if return_features:
+            features["logits"] = x
+        return (x, features) if return_features else x
 
 
 @register_model
