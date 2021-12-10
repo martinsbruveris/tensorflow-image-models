@@ -19,7 +19,7 @@ def main(model, output_dir):
 
     for model_name in model_names:
         print(f"Model {model_name}: ", end="")
-        model = tfimm.create_model(model_name)
+        model = tfimm.create_model(model_name, pretrained="timm")
         output_path = output_dir / model_name
         model.save(output_path)
         print("saved.")
