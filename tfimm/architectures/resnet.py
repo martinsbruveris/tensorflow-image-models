@@ -578,7 +578,7 @@ class ResNet(tf.keras.Model):
 
     def call(self, x, training=False, return_features=False):
         features = {}
-        x = self.forward_features(x, training=training)
+        x = self.forward_features(x, training, return_features)
         if return_features:
             x, features = x
         # noinspection PyCallingNonCallable
