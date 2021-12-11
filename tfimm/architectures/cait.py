@@ -12,7 +12,7 @@ Copyright 2021 Ross Wightman
 Copyright 2015-present, Facebook, Inc.
 """
 from dataclasses import dataclass
-from typing import Tuple
+from typing import List, Tuple
 
 import tensorflow as tf
 
@@ -325,6 +325,16 @@ class CaiT(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
+    @property
+    def feature_names(self) -> List[str]:
+        return (
+            ["patch_embedding"]
+            + [f"block_{j}" for j in range(self.cfg.nb_blocks)]
+            + ["features_cls_token"]
+            + [f"block_cls_token_{j}" for j in range(2)]
+            + ["features_all", "features", "logits"]
+        )
+
     def build(self, input_shape):
         self.cls_token = self.add_weight(
             shape=(1, 1, self.cfg.embed_dim),
@@ -339,27 +349,43 @@ class CaiT(tf.keras.Model):
             name="pos_embed",
         )
 
-    def forward_features(self, x, training=False):
+    def forward_features(self, x, training=False, return_features=False):
+        features = {}
+        # noinspection PyCallingNonCallable
         x = self.patch_embed(x)
         x = x + self.pos_embed
         x = self.pos_drop(x, training=training)
-        for block in self.blocks:
+        features["patch_embedding"] = x
+
+        for j, block in enumerate(self.blocks):
+            # noinspection PyCallingNonCallable
             x = block(x, training=training)
+            features[f"block_{j}"] = x
 
         batch_size = tf.shape(x)[0]
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
         x = tf.concat((cls_token, x), axis=1)
+        features["features_cls_token"] = x
 
-        for block in self.block_token_only:
+        for j, block in enumerate(self.block_token_only):
+            # noinspection PyCallingNonCallable
             x = block(x, training=training)
+            features[f"block_cls_token_{j}"] = x
 
         x = self.norm(x, training=training)
-        return x[:, 0]
+        features["features_all"] = x
+        x = x[:, 0]
+        features["features"] = x
+        return (x, features) if return_features else x
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_features=False):
+        features = {}
         x = self.forward_features(x, training=training)
+        if return_features:
+            x, features = x
         x = self.head(x)
-        return x
+        features["logits"] = x
+        return (x, features) if return_features else x
 
 
 @register_model

@@ -8,7 +8,7 @@ Copyright 2021 Martins Bruveris
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import tensorflow as tf
 
@@ -551,24 +551,40 @@ class ResNet(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
-    def forward_features(self, x, training=False):
+    @property
+    def feature_names(self) -> List[str]:
+        return (
+            ["stem"]
+            + [f"block_{j}" for j in range(sum(self.cfg.nb_blocks))]
+            + ["features", "logits"]
+        )
+
+    def forward_features(self, x, training=False, return_features=False):
+        features = {}
         x = self.pad1(x)
         x = self.conv1(x)
         x = self.bn1(x, training=training)
         x = self.act1(x)
         x = self.maxpool(x)
+        features["stem"] = x
 
-        for block in self.blocks:
+        for j, block in enumerate(self.blocks):
             # noinspection PyCallingNonCallable
             x = block(x, training=training)
+            features[f"block_{j}"] = x
+        features["features"] = x
 
-        return x
+        return (x, features) if return_features else x
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_features=False):
+        features = {}
         x = self.forward_features(x, training=training)
+        if return_features:
+            x, features = x
         # noinspection PyCallingNonCallable
         x = self.head(x, training=training)
-        return x
+        features["logits"] = x
+        return (x, features) if return_features else x
 
 
 @register_model

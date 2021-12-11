@@ -144,8 +144,17 @@ class Block(tf.keras.layers.Layer):
         )
 
     def call(self, x, training=False):
-        x = x + self.attn(self.norm1(x, training=training), training=training)
-        x = x + self.mlp(self.norm2(x, training=training), training=training)
+        shortcut = x
+        x = self.norm1(x, training=training)
+        # noinspection PyCallingNonCallable
+        x = self.attn(x, training=training)
+        x = x + shortcut
+
+        shortcut = x
+        x = self.norm2(x, training=training)
+        # noinspection PyCallingNonCallable
+        x = self.mlp(x, training=training)
+        x = x + shortcut
         return x
 
 
@@ -231,7 +240,7 @@ class ViT(tf.keras.Model):
         return (
             ["patch_embedding"]
             + [f"block_{j}" for j in range(self.cfg.depth)]
-            + ["features", "logits"]
+            + ["features_all", "features", "logits"]
         )
 
     def transform_pos_embed(self, target_cfg: ViTConfig):
@@ -298,6 +307,7 @@ class ViT(tf.keras.Model):
             x = block(x, training=training)
             features[f"block_{j}"] = x
         x = self.norm(x, training=training)
+        features["features_all"] = x
 
         if self.cfg.distilled:
             # Here we diverge from timm and return both outputs as one tensor. That way
@@ -321,8 +331,7 @@ class ViT(tf.keras.Model):
             y = self.head(x[:, 0])
             y_dist = self.head_dist(x[:, 1])
             x = tf.stack((y, y_dist), axis=1)
-        if return_features:
-            features["logits"] = x
+        features["logits"] = x
         return (x, features) if return_features else x
 
 
