@@ -12,7 +12,7 @@ Copyright: 2021 Martins Bruveris
 Copyright: 2021 Rishigami
 """
 from dataclasses import dataclass
-from typing import Tuple
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -301,6 +301,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
         x_windows = tf.reshape(x_windows, shape=(-1, window_size ** 2, c))
 
         # W-MSA/SW-MSA
+        # noinspection PyCallingNonCallable
         attn_windows = self.attn([x_windows, self.attn_mask])
 
         # Merge windows
@@ -312,13 +313,16 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
         x = tf.reshape(x, shape=[-1, h * w, c])
 
         # Residual connection
+        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         # MLP
         shortcut = x
         x = self.norm2(x, training=training)
+        # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
+        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -394,11 +398,16 @@ class SwinTransformerStage(tf.keras.layers.Layer):
         else:
             self.downsample = tf.keras.layers.Activation("linear")
 
-    def call(self, x, training=False):
-        for block in self.blocks:
+    def call(self, x, training=False, return_features=False):
+        features = {}
+        for j, block in enumerate(self.blocks):
+            # noinspection PyCallingNonCallable
             x = block(x, training=training)
+            features[f"block_{j}"] = x
+
         x = self.downsample(x, training=training)
-        return x
+        features["features"] = x
+        return (x, features) if return_features else x
 
 
 @keras_serializable
@@ -463,22 +472,52 @@ class SwinTransformer(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
-    def forward_features(self, x, training=False):
+    @property
+    def feature_names(self) -> List[str]:
+        names = ["patch_embedding"]
+        k = 0
+        for j in range(len(self.cfg.nb_blocks)):
+            for _ in range(self.cfg.nb_blocks[j]):
+                names.append(f"block_{k}")
+                k += 1
+            names.append(f"stage_{j}")
+        names += ["features_all", "features", "logits"]
+        return names
+
+    def forward_features(self, x, training=False, return_features=False):
+        features = {}
+        # noinspection PyCallingNonCallable
         x = self.patch_embed(x, training=training)
         if self.cfg.ape:
             x = x + self.absolute_pos_embed
         x = self.drop(x, training=training)
+        features["patch_embedding"] = x
 
-        for stage in self.stages:
-            x = stage(x, training=training)
+        block_idx = 0
+        for stage_idx, stage in enumerate(self.stages):
+            # noinspection PyCallingNonCallable
+            x = stage(x, training=training, return_features=return_features)
+            if return_features:
+                x, stage_features = x
+                for k in range(self.cfg.nb_blocks[stage_idx]):
+                    features[f"block_{block_idx}"] = stage_features[f"block_{k}"]
+                    block_idx += 1
+                features[f"stage_{stage_idx}"] = stage_features["features"]
+
         x = self.norm(x, training=training)
+        features["features_all"] = x
         x = self.pool(x)
-        return x
+        features["features"] = x
+        return (x, features) if return_features else x
 
-    def call(self, x, training=False):
-        x = self.forward_features(x, training=training)
+    def call(self, x, training=False, return_features=False):
+        features = {}
+        x = self.forward_features(x, training, return_features)
+        if return_features:
+            x, features = x
         x = self.head(x)
-        return x
+        features["logits"] = x
+        return (x, features) if return_features else x
 
 
 @register_model
