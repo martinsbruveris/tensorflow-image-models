@@ -1,3 +1,4 @@
+import os
 from copy import deepcopy
 from typing import Callable, Optional, Union
 
@@ -5,7 +6,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
-from tfimm.utils import load_pth_url_weights, load_timm_weights
+from tfimm.utils import get_dir, load_timm_weights, load_pth_url_weights
 
 
 # TODO: Implement in_chans, to work with both timm as well as saved models
@@ -40,16 +41,20 @@ def create_model(
     if model_path:
         loaded_model = tf.keras.models.load_model(model_path)
     elif pretrained is True:
-        if not cfg.url:
-            raise ValueError("To load pretrained weights, URL must be specified.")
         if cfg.url.endswith(".pth"):
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
             load_pth_url_weights(loaded_model, cfg.url)
-        else:
+        elif cfg.url:
             raise NotImplementedError(
-                "Automatic loading of pretrained weights only implemented from timm."
+                "Download of weights only implemented for PyTorch models."
             )
+        else:
+            # Load model from cache
+            model_path = os.path.join(get_dir(), model_name)
+            if not os.path.exists(model_path):
+                raise RuntimeError(f"Cannot load model from {model_path}.")
+            loaded_model = tf.keras.models.load_model(model_path)
     elif pretrained == "timm":
         loaded_model = cls(cfg)
         loaded_model(loaded_model.dummy_inputs)
@@ -174,3 +179,14 @@ def _get_layer_name(name):
     name = name.split("/", 1)[-1]  # Remove prefix, e.g., "res_net"
     name = name.rsplit("/", 1)[0]  # Remove last part, e.g., "kernel"
     return name
+
+
+def _get_model_path(url: str) -> str:
+    """
+    Function determines, where to look for a pretrained model. The following order
+    is used:
+    - Location provided by `url`
+    """
+    return ""
+
+
