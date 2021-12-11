@@ -11,7 +11,7 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 
-from tfimm.layers import MLP, PatchEmbeddings, norm_layer_factory
+from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import (
     IMAGENET_DEFAULT_MEAN,
@@ -37,8 +37,11 @@ class ViTConfig(ModelConfig):
     qkv_bias: bool = True
     representation_size: Optional[int] = None
     distilled: bool = False
+    # Regularization
     drop_rate: float = 0.0
+    drop_path_rate: float = 0.0
     attn_drop_rate: float = 0.0
+    # Other parameters
     norm_layer: str = "layer_norm"
     act_layer: str = "gelu"
     # Parameters for inference
@@ -134,6 +137,7 @@ class Block(tf.keras.layers.Layer):
 
         self.norm1 = self.norm_layer(name="norm1")
         self.attn = MultiHeadAttention(cfg, name="attn")
+        self.drop_path = DropPath(drop_prob=cfg.drop_path_rate)
         self.norm2 = self.norm_layer(name="norm2")
         self.mlp = MLP(
             hidden_dim=int(cfg.embed_dim * cfg.mlp_ratio),
@@ -148,12 +152,16 @@ class Block(tf.keras.layers.Layer):
         x = self.norm1(x, training=training)
         # noinspection PyCallingNonCallable
         x = self.attn(x, training=training)
+        # noinspection PyCallingNonCallable
+        x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
         # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
+        # noinspection PyCallingNonCallable
+        x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
 
@@ -198,8 +206,6 @@ class ViT(tf.keras.Model):
         )
         self.pos_drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
 
-        # Note: We did not implement stochastic depth, since none of the pretrained
-        # timm models use it
         self.blocks = [Block(cfg, name=f"blocks/{j}") for j in range(cfg.nb_blocks)]
         self.norm = self.norm_layer(name="norm")
 
