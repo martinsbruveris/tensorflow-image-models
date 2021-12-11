@@ -31,7 +31,7 @@ class ViTConfig(ModelConfig):
     input_size: Tuple[int, int] = (224, 224)
     patch_size: int = 16
     embed_dim: int = 768
-    depth: int = 12
+    nb_blocks: int = 12
     nb_heads: int = 12
     mlp_ratio: float = 4.0
     qkv_bias: bool = True
@@ -59,7 +59,7 @@ class ViTConfig(ModelConfig):
         input_size: input image size
         patch_size: Patch size; Image size must be multiple of patch size
         embed_dim: Embedding dimension
-        depth: Depth of transformer (number of encoder blocks)
+        nb_blocks: Depth of transformer (number of encoder blocks)
         nb_heads: Number of self-attention heads
         mlp_ratio: ratio of mlp hidden dim to embedding dim
         qkv_bias: enable bias for qkv if True
@@ -200,7 +200,7 @@ class ViT(tf.keras.Model):
 
         # Note: We did not implement stochastic depth, since none of the pretrained
         # timm models use it
-        self.blocks = [Block(cfg, name=f"blocks/{j}") for j in range(cfg.depth)]
+        self.blocks = [Block(cfg, name=f"blocks/{j}") for j in range(cfg.nb_blocks)]
         self.norm = self.norm_layer(name="norm")
 
         # Some models have a representation layer on top of cls token
@@ -239,7 +239,7 @@ class ViT(tf.keras.Model):
     def feature_names(self) -> List[str]:
         return (
             ["patch_embedding"]
-            + [f"block_{j}" for j in range(self.cfg.depth)]
+            + [f"block_{j}" for j in range(self.cfg.nb_blocks)]
             + ["features_all", "features", "logits"]
         )
 
@@ -343,7 +343,7 @@ def vit_tiny_patch16_224():
         url="",
         patch_size=16,
         embed_dim=192,
-        depth=12,
+        nb_blocks=12,
         nb_heads=3,
     )
     return ViT, cfg
@@ -358,7 +358,7 @@ def vit_tiny_patch16_384():
         input_size=(384, 384),
         patch_size=16,
         embed_dim=192,
-        depth=12,
+        nb_blocks=12,
         nb_heads=3,
         crop_pct=1.0,
     )
@@ -373,7 +373,7 @@ def vit_small_patch32_224():
         url="",
         patch_size=32,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
     )
     return ViT, cfg
@@ -388,7 +388,7 @@ def vit_small_patch32_384():
         input_size=(384, 384),
         patch_size=32,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
         crop_pct=1.0,
     )
@@ -403,7 +403,7 @@ def vit_small_patch16_224():
         url="",
         patch_size=16,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
     )
     return ViT, cfg
@@ -418,7 +418,7 @@ def vit_small_patch16_384():
         input_size=(384, 384),
         patch_size=16,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
         crop_pct=1.0,
     )
@@ -437,7 +437,7 @@ def vit_base_patch32_224():
         url="",
         patch_size=32,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -456,7 +456,7 @@ def vit_base_patch32_384():
         input_size=(384, 384),
         patch_size=32,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         crop_pct=1.0,
     )
@@ -475,7 +475,7 @@ def vit_base_patch16_224():
         url="",
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -494,7 +494,7 @@ def vit_base_patch16_384():
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         crop_pct=1.0,
     )
@@ -513,7 +513,7 @@ def vit_base_patch8_224():
         url="",
         patch_size=8,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -530,7 +530,7 @@ def vit_large_patch32_224():
         url="",
         patch_size=32,
         embed_dim=1024,
-        depth=24,
+        nb_blocks=24,
         nb_heads=16,
     )
     return ViT, cfg
@@ -549,7 +549,7 @@ def vit_large_patch32_384():
         input_size=(384, 384),
         patch_size=32,
         embed_dim=1024,
-        depth=24,
+        nb_blocks=24,
         nb_heads=16,
         crop_pct=1.0,
     )
@@ -568,7 +568,7 @@ def vit_large_patch16_224():
         url="",
         patch_size=16,
         embed_dim=1024,
-        depth=24,
+        nb_blocks=24,
         nb_heads=16,
     )
     return ViT, cfg
@@ -587,7 +587,7 @@ def vit_large_patch16_384():
         input_size=(384, 384),
         patch_size=16,
         embed_dim=1024,
-        depth=24,
+        nb_blocks=24,
         nb_heads=16,
         crop_pct=1.0,
     )
@@ -605,7 +605,7 @@ def vit_base_patch32_sam_224():
         url="",
         patch_size=32,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -622,7 +622,7 @@ def vit_base_patch16_sam_224():
         url="",
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -641,7 +641,7 @@ def vit_tiny_patch16_224_in21k():
         nb_classes=21843,
         patch_size=16,
         embed_dim=192,
-        depth=12,
+        nb_blocks=12,
         nb_heads=3,
     )
     return ViT, cfg
@@ -660,7 +660,7 @@ def vit_small_patch32_224_in21k():
         nb_classes=21843,
         patch_size=32,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
     )
     return ViT, cfg
@@ -679,7 +679,7 @@ def vit_small_patch16_224_in21k():
         nb_classes=21843,
         patch_size=16,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
     )
     return ViT, cfg
@@ -699,7 +699,7 @@ def vit_base_patch32_224_in21k():
         nb_classes=21843,
         patch_size=32,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -719,7 +719,7 @@ def vit_base_patch16_224_in21k():
         nb_classes=21843,
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -738,7 +738,7 @@ def vit_base_patch8_224_in21k():
         nb_classes=21843,
         patch_size=8,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
     )
     return ViT, cfg
@@ -759,7 +759,7 @@ def vit_large_patch32_224_in21k():
         nb_classes=21843,
         patch_size=32,
         embed_dim=1024,
-        depth=24,
+        nb_blocks=24,
         nb_heads=16,
         representation_size=1024,
     )
@@ -780,7 +780,7 @@ def vit_large_patch16_224_in21k():
         nb_classes=21843,
         patch_size=16,
         embed_dim=1024,
-        depth=24,
+        nb_blocks=24,
         nb_heads=16,
     )
     return ViT, cfg
@@ -801,7 +801,7 @@ def vit_huge_patch14_224_in21k():
         nb_classes=21843,
         patch_size=14,
         embed_dim=1280,
-        depth=32,
+        nb_blocks=32,
         nb_heads=16,
         representation_size=1280,
     )
@@ -819,7 +819,7 @@ def deit_tiny_patch16_224():
         url="",
         patch_size=16,
         embed_dim=192,
-        depth=12,
+        nb_blocks=12,
         nb_heads=3,
         mean=IMAGENET_DEFAULT_MEAN,
         std=IMAGENET_DEFAULT_STD,
@@ -838,7 +838,7 @@ def deit_small_patch16_224():
         url="",
         patch_size=16,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
         mean=IMAGENET_DEFAULT_MEAN,
         std=IMAGENET_DEFAULT_STD,
@@ -857,7 +857,7 @@ def deit_base_patch16_224():
         url="",
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         mean=IMAGENET_DEFAULT_MEAN,
         std=IMAGENET_DEFAULT_STD,
@@ -877,7 +877,7 @@ def deit_base_patch16_384():
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         crop_pct=1.0,
         mean=IMAGENET_DEFAULT_MEAN,
@@ -897,7 +897,7 @@ def deit_tiny_distilled_patch16_224():
         url="",
         patch_size=16,
         embed_dim=192,
-        depth=12,
+        nb_blocks=12,
         nb_heads=3,
         distilled=True,
         mean=IMAGENET_DEFAULT_MEAN,
@@ -918,7 +918,7 @@ def deit_small_distilled_patch16_224():
         url="",
         patch_size=16,
         embed_dim=384,
-        depth=12,
+        nb_blocks=12,
         nb_heads=6,
         distilled=True,
         mean=IMAGENET_DEFAULT_MEAN,
@@ -939,7 +939,7 @@ def deit_base_distilled_patch16_224():
         url="",
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         distilled=True,
         mean=IMAGENET_DEFAULT_MEAN,
@@ -961,7 +961,7 @@ def deit_base_distilled_patch16_384():
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         distilled=True,
         crop_pct=1.0,
@@ -985,7 +985,7 @@ def vit_base_patch16_224_miil_in21k():
         input_size=(224, 224),
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         qkv_bias=False,
         crop_pct=0.875,
@@ -1009,7 +1009,7 @@ def vit_base_patch16_224_miil():
         input_size=(224, 224),
         patch_size=16,
         embed_dim=768,
-        depth=12,
+        nb_blocks=12,
         nb_heads=12,
         qkv_bias=False,
         crop_pct=0.875,
