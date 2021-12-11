@@ -270,15 +270,19 @@ class LayerScaleBlock(tf.keras.layers.Layer):
     def call(self, x, training=False):
         shortcut = x
         x = self.norm1(x, training=training)
+        # noinspection PyCallingNonCallable
         x = self.attn(x, training=training)
         x = self.gamma_1 * x
+        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
+        # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
         x = self.gamma_2 * x
+        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
