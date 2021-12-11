@@ -179,14 +179,3 @@ def _get_layer_name(name):
     name = name.split("/", 1)[-1]  # Remove prefix, e.g., "res_net"
     name = name.rsplit("/", 1)[0]  # Remove last part, e.g., "kernel"
     return name
-
-
-def _get_model_path(url: str) -> str:
-    """
-    Function determines, where to look for a pretrained model. The following order
-    is used:
-    - Location provided by `url`
-    """
-    return ""
-
-
