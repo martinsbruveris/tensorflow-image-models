@@ -6,7 +6,7 @@ Based on timm/models/convmixer.py by Ross Wightman.
 Copyright 2021 Martins Bruveris
 """
 from dataclasses import dataclass
-from typing import Tuple
+from typing import List, Tuple
 
 import tensorflow as tf
 
@@ -108,18 +108,36 @@ class ConvMixer(tf.keras.Model):
     def dummy_inputs(self) -> tf.Tensor:
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
 
-    def forward_features(self, x, training=False):
+    @property
+    def feature_names(self) -> List[str]:
+        return (
+            ["stem"]
+            + [f"block_{j}" for j in range(self.cfg.depth)]
+            + ["features_all", "features", "logits"]
+        )
+
+    def forward_features(self, x, training=False, return_features=False):
+        features = {}
         x = self.stem(x, training=training)
-        for block in self.blocks:
+        features["stem"] = x
+        for j, block in enumerate(self.blocks):
+            # noinspection PyCallingNonCallable
             x = block(x, training=training)
+            features[f"block_{j}"] = x
+        features["features_all"] = x
         x = self.pool(x)
         x = self.flatten(x)
-        return x
+        features["features"] = x
+        return (x, features) if return_features else x
 
-    def call(self, x, training=False):
-        x = self.forward_features(x, training=training)
+    def call(self, x, training=False, return_features=False):
+        features = {}
+        x = self.forward_features(x, training, return_features)
+        if return_features:
+            x, features = x
         x = self.head(x)
-        return x
+        features["logits"] = x
+        return (x, features) if return_features else x
 
 
 @register_model
