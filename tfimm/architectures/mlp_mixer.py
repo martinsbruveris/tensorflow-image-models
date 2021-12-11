@@ -303,7 +303,7 @@ class MLPMixer(tf.keras.Model):
         features = {}
         x = self.forward_features(x, training, return_features)
         if return_features:
-            x, features = features
+            x, features = x
         x = self.head(x)
         features["logits"] = x
         return (x, features) if return_features else x
