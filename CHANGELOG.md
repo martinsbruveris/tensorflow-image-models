@@ -1,5 +1,12 @@
 # Change Log
 
+## Unpublished
+
+- Added option for models to return intermediate features via `return_features` 
+  parameter
+- Added `DropPath` regularization to `vit` module (stochastic depth)
+- Added ability to load saved models from a local cache
+
 ## v0.1.4 - 2021-12-08
 
 - Fixed bug with dropout in Classifier layer
