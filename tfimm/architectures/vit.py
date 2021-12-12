@@ -94,7 +94,7 @@ class ViTConfig(ModelConfig):
         return self.grid_size[0] * self.grid_size[1]
 
 
-class MultiHeadAttention(tf.keras.layers.Layer):
+class ViTMultiHeadAttention(tf.keras.layers.Layer):
     def __init__(self, cfg: ViTConfig, **kwargs):
         super().__init__(**kwargs)
         head_dim = cfg.embed_dim // cfg.nb_heads
@@ -136,7 +136,7 @@ class Block(tf.keras.layers.Layer):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
         self.norm1 = self.norm_layer(name="norm1")
-        self.attn = MultiHeadAttention(cfg, name="attn")
+        self.attn = ViTMultiHeadAttention(cfg, name="attn")
         self.drop_path = DropPath(drop_prob=cfg.drop_path_rate)
         self.norm2 = self.norm_layer(name="norm2")
         self.mlp = MLP(
