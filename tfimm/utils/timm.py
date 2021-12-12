@@ -197,6 +197,11 @@ def load_pytorch_weights_in_tf2_model(
     logger.info(f"Loaded {tf_loaded_numel:,} parameters in the TF 2.0 model.")
 
     unexpected_keys = list(all_pytorch_weights)
+    # PyTorch BN layers track number of batches, but TF does not, so these weights
+    # will always be left over.
+    unexpected_keys = [
+        key for key in unexpected_keys if "num_batches_tracked" not in key
+    ]
 
     if len(unexpected_keys) > 0:
         logger.warning(

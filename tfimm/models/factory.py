@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
-from tfimm.utils import get_dir, load_timm_weights, load_pth_url_weights
+from tfimm.utils import get_dir, load_pth_url_weights, load_timm_weights
 
 
 # TODO: Implement in_chans, to work with both timm as well as saved models
