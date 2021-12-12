@@ -1,6 +1,6 @@
 # Change Log
 
-## Unpublished
+## v0.1.5 - 2021-12-12
 
 - Added option for models to return intermediate features via `return_features` 
   parameter
