@@ -25,53 +25,6 @@ can be downloaded automatically via `tensorflow-datasets`.
 
 ## To do before 0.1.0
 
-Development setup
-
-- [x] (must) Create git repo and upload to GitHub
-- [x] (must) pyproj.toml + python environment
-- [x] (must) Black formatting
-- [x] (must) Fix Flake8 warnings
-- [x] (must) Fix isort warnings
-- [x] (must) Makefile with style checks
-
-Testing
- 
-- [x] (must) Add first tests
-- [x] (must) Test creation of each model
-- [x] (optional) Run unit tests on GitHub CI
-
-ResNet models
-
-| Name           | Total | Converted | Documented |
-|----------------|:-----:|:---------:|------------|
-| ecaresnet      |   6   |           |            |
-| ig_resnext     |   4   |           |            |
-| resnet         |  14   |     ✅    |            |
-| resnet_blur    |   1   |           |            |
-| resnetrs       |   7   |           |            |
-| resnext        |   3   |           |            |
-| seresne{x}t    |   5   |           |            |
-| ssl_resne{x}t  |   6   |           |            |
-| swsl_resne{x}t |   6   |           |            |
-| tv_resne{x}t   |   5   |           |            |
-| wide_resnet    |   2   |           |            |
-
-Vision Transformer models
-
-| Name           | Total | Converted | Documented |
-|----------------|:-----:|:---------:|------------|
-| vit            |  14   |    ✅     |            |
-| vit_in21k      |   8   |    ✅     |            |
-| vit_sam        |   2   |    ✅     |            |
-| deit           |   8   |    ✅     |            |
-| vit_miil       |   2   |    ✅     |            |
-
-Codebase
-
-- [ ] (optional) Refactor resnet.py code
-- [ ] (optional) Refactor utils/timm.py file
-- [ ] (optional) Remove num_batches_tracked variables warning from conversion
-
 Evaluation
 
 - [ ] (must) Evaluate model on ImageNet
@@ -82,8 +35,6 @@ Evaluation
 - [ ] (optional) Evaluate model on ImageNet-R
 - [ ] (optional) Evaluate model on ImageNet-C
 - [ ] (must) Profiling single image inference time on CPU
-- [ ] (must) Profiling max batch size and batch inference time on GPU
-      See tf.errors.ResourceExhaustedError for OOM errors
 - [ ] (optional) Profiling #params, FLOPS
 - [ ] (optional) Profiling memory consumption on CPU
 
@@ -97,15 +48,12 @@ Finetuning
 - [ ] (optional) Fine-tune model on MNIST (and variants)
 - [ ] (optional) Evaluate model on MNIST (and variants)
 
-Release
-
-- [ ] (must) Complete README file
-- [ ] (must) Add licence file + licence headers to python files
-- [ ] (must) Publish package on PyPi
-- [ ] (optional) Host converted models on Google Drive + download functionality
-
 Future
 
 - [ ] (optional) Add pretrained [DINO models](https://github.com/facebookresearch/dino)
 - [ ] (optional) Add [T2T-ViT models](https://github.com/yitu-opensource/T2T-ViT)
 - [ ] (optional) Check compatibility with [tf-explain](https://github.com/sicara/tf-explain)
+
+- [ ] Pretrained models: https://github.com/microsoft/simmim
+- [ ] Pretrained models: https://github.com/bytedance/ibot
+- [ ] Pretrained models: https://github.com/facebookresearch/moco-v3
