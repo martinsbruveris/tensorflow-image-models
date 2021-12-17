@@ -23,9 +23,10 @@ def create_model(
 
     Args:
         model_name: Name of model to instantiate
-        pretrained: If True, load pretrained weights from URL in config. If "timm",
-            load pretrained weights from timm library and convert to Tensorflow.
-            Requires timm and torch to be installed. If False, no weights are loaded.
+        pretrained: If `pretrained="timm"`, load pretrained weights from timm library and
+            convert to Tensorflow. Requires timm and torch to be installed. If
+            `pretrained` casts to True as bool, load pretrained weights from URL in
+            config or the model cache. If `False`, no weights are loaded.
         model_path: Path of model weights to load after model is initialized
         in_chans: Number of input channels for model
         nb_classes: Number of classes for classifier. If set to 0, no classifier is
@@ -40,7 +41,11 @@ def create_model(
 
     if model_path:
         loaded_model = tf.keras.models.load_model(model_path)
-    elif pretrained is True:
+    elif pretrained == "timm":
+        loaded_model = cls(cfg)
+        loaded_model(loaded_model.dummy_inputs)
+        load_timm_weights(loaded_model, model_name)
+    elif pretrained:
         if cfg.url.endswith(".pth"):
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
@@ -55,10 +60,6 @@ def create_model(
             if not os.path.exists(model_path):
                 raise RuntimeError(f"Cannot load model from {model_path}.")
             loaded_model = tf.keras.models.load_model(model_path)
-    elif pretrained == "timm":
-        loaded_model = cls(cfg)
-        loaded_model(loaded_model.dummy_inputs)
-        load_timm_weights(loaded_model, model_name)
     else:
         loaded_model = None
 
