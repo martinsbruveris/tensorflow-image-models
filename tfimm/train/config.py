@@ -3,6 +3,7 @@ import ast
 import dataclasses
 import logging
 import sys
+from pathlib import Path
 
 import yaml
 
@@ -168,6 +169,8 @@ def flat_to_deep(cfg):
 def dump_config(cfg, filename):
     """Converts a config to nested dictionaries and saves them in yaml format."""
     cfg = to_dict_format(cfg)
+    # Create directory for `filename` if it doesn't exist
+    Path(filename).parents[0].mkdir(parents=True, exist_ok=True)
     with open(filename, "w") as yaml_file:
         yaml.dump(cfg, yaml_file, default_flow_style=False)
 
