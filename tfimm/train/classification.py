@@ -1,4 +1,7 @@
+import shutil
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -22,6 +25,11 @@ class ClassificationConfig:
     weight_decay: float = 0.0
     lr: float = 0.01  # Learning rate
     mixed_precision: bool = False
+    # When saving the model we may want to use a different dtype for model inputs. E.g.,
+    # for images, `uint8` is a natural choice. In particular if the saved model is
+    # deployed via TF serving, `uint8` input reduces the network payload, even though
+    # the first thing the model does is cast everything to `float32`.
+    save_input_dtype: str = "float32"
 
 
 @cfg_serializable
@@ -39,7 +47,6 @@ class ClassificationProblem(ProblemBase):
         model, preprocess = get_class(cfg.model_class)(cfg=cfg.model)()
         self.model = model
         self.preprocess = preprocess
-        self._ckpt_variables = {"model": self.model}
 
         # Training metrics
         self.avg_ce_loss = tf.keras.metrics.Mean(dtype=tf.float32)
@@ -52,10 +59,16 @@ class ClassificationProblem(ProblemBase):
         # TODO: Add learning rate warmup...
         self.optimizer = tf.optimizers.SGD(self.cfg.lr, momentum=0.9)
 
-    @property
-    def ckpt_variables(self):
+    def ckpt_variables(self, model_only: bool = False):
         """Return dictionary with all variables that need to be added to checkpoint."""
-        return self._ckpt_variables
+        variables = {"model": self.model}
+        if not model_only:
+            variables["avg_ce_loss"] = self.avg_ce_loss
+            variables["avg_reg_loss"] = self.avg_reg_loss
+            variables["avg_loss"] = self.avg_loss
+            variables["avg_acc"] = self.avg_acc
+            variables["optimizer"] = self.optimizer
+        return variables
 
     def start_epoch(self):
         """Called at the beginning of an epoch. Used to reset moving averages."""
@@ -152,11 +165,10 @@ class ClassificationProblem(ProblemBase):
                 # The logit for class 0 is assumed to be 0.0.
                 _logits = _logits[..., 0]
                 _logits = tf.stack([tf.zeros_like(_logits), _logits], axis=-1)
-            else:
-                # Normalize logits to have sum=0. While not necessary to compute
-                # accuracy, this becomes important if we want to compare decision
-                # thresholds across epochs and training runs.
-                _logits = _logits - tf.reduce_mean(_logits, axis=-1, keepdims=True)
+            # Normalize logits to have sum=0. While not necessary to compute
+            # accuracy, this becomes important if we want to compare decision
+            # thresholds across epochs and training runs.
+            _logits = _logits - tf.reduce_mean(_logits, axis=-1, keepdims=True)
             return _logits
 
         labels, logits = [], []
@@ -181,3 +193,50 @@ class ClassificationProblem(ProblemBase):
 
         logs = {"val/acc": acc}
         return logs["val/acc"], logs
+
+    def save_model(self, save_dir):
+        """Save models ready for inference."""
+        save_dir = Path(save_dir)
+
+        # We need to set policy to float32 for saving, otherwise we save models that
+        # perform inference with float16, which is extremely slow on CPUs
+        old_policy = tf.keras.mixed_precision.global_policy()
+        tf.keras.mixed_precision.set_global_policy("float32")
+        # After changing the policy, we need to create a new model using the policy
+        model_factory = get_class(self.cfg.model_class)(cfg=self.cfg.model)
+        save_model, save_preprocess = model_factory()
+        save_model.set_weights(self.model.get_weights())
+
+        # Now build the full inference model including preprocessing and logit layer
+        inputs = tf.keras.layers.Input(
+            shape=model_factory.tf_input_shape,
+            batch_size=None,
+            dtype=self.cfg.save_input_dtype,
+            name="input",
+        )
+        img = tf.cast(inputs, tf.float32)
+        img = save_preprocess(img)
+        logits = save_model(img, training=False)
+        if self.cfg.binary_loss:
+            # In the binary case the model can return logits only for class 1.
+            # The logit for class 0 is assumed to be 0.0.
+            logits = logits[..., 0]
+            logits = tf.stack([tf.zeros_like(logits), logits], axis=-1)
+        # Normalize logits to have sum=0.
+        logits = logits - tf.reduce_mean(logits, axis=-1, keepdims=True)
+        # So output layer has the right name
+        logits = tf.keras.layers.Activation("linear", name="logits")(logits)
+        inference_model = tf.keras.Model(inputs, logits)
+
+        model_dir = save_dir / "model"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # If `save_dir` points to a network file system or S3FS, sometimes TF saving
+            # can be very slow. It is faster to save to a temporary directory first and
+            # copying data across.
+            local_dir = Path(tmpdir) / "model"
+            tf.saved_model.save(inference_model, str(local_dir))
+            # TODO: Add support for S3 paths here...
+            shutil.copytree(str(local_dir), str(model_dir), dirs_exist_ok=True)
+
+        # Restore original float policy
+        tf.keras.mixed_precision.set_global_policy(old_policy)

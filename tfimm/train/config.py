@@ -1,12 +1,12 @@
 import argparse
 import ast
 import dataclasses
+import logging
 import sys
 
 import yaml
 
 from .registry import get_cfg_class
-
 
 MISSING = dataclasses.MISSING
 
@@ -16,6 +16,10 @@ def to_dict_format(cfg):
     A configuration is a nested dictionary with potentially dataclasses as values. This
     function converts dataclasses to dictionaries for easier serialization.
     """
+    if dataclasses.is_dataclass(cfg):
+        cfg = dataclasses.asdict(cfg)
+        return to_dict_format(cfg)
+
     res_cfg = {}
     for key, val in cfg.items():
         if isinstance(val, dict):
@@ -91,7 +95,7 @@ def add_default_args(cfg):
                 continue
 
             cls = get_cfg_class(val[1])
-            stem = key[:-len("_class")]  # Remove suffix
+            stem = key[: -len("_class")]  # Remove suffix
             fields = dataclasses.fields(cls)
             # Fields with missing default value will be assigned value MISSING
             params = {field.name: (field.type, field.default) for field in fields}
@@ -226,7 +230,7 @@ def get_arg_parser(cfg):
     parser = argparse.ArgumentParser(
         description="Auto-initialized argument parser",
         argument_default=argparse.SUPPRESS,
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
     for arg, (tp, val) in cfg.items():
@@ -308,3 +312,14 @@ def parse_args(cfg, args=None):
 
     cfg = to_cls_format(cfg)
     return cfg
+
+
+def pprint(cfg, indent=2):
+    """Nicely prints nested config."""
+    cfg = to_dict_format(cfg)
+    for key, val in cfg.items():
+        if isinstance(val, dict):
+            logging.info(" " * indent + str(key) + ":")
+            pprint(val, indent + 2)
+        else:
+            logging.info(" " * indent + str(key) + "=" + str(val))
