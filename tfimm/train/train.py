@@ -1,4 +1,5 @@
 import logging
+import os
 import tempfile
 from dataclasses import dataclass
 from typing import Any
@@ -125,7 +126,7 @@ def run(cfg):
     if cfg.log_wandb:
         wandb.init(
             dir=tempfile.gettempdir(),
-            config=cfg,
+            config=config.deep_to_flat(config.to_dict_format(cfg)),
             entity=cfg.entity,
             project=cfg.project_name,
             name=cfg.experiment_name,
@@ -135,8 +136,9 @@ def run(cfg):
     # In case we are using W&B sweep we need to adjust project name etc. to make them
     # specific for each run in the sweep.
     if cfg.sweep:
-        # TODO: Address save dir
-        # exp.cfg.TRAINER.exp_dir += f"/{wandb.run.id}/"
+        ckpt_dir = getattr(cfg.trainer, "ckpt_dir", "")
+        if ckpt_dir:
+            setattr(cfg.trainer, "ckpt_dir", os.path.join(ckpt_dir, wandb.run.id))
         wandb.run.name = wandb.run.name + f"{wandb.run.id}"
         wandb.run.save()
 
