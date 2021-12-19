@@ -37,6 +37,7 @@ pyyaml = { version = "*", optional = true }
 tensorflow-datasets = { version="*", optional = true }
 timm = { version = "*", optional = true }
 tqdm = { version = "*", optional = true }
+wandb = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }
@@ -50,7 +51,7 @@ pytest-xdist = "*"
 # Dependencies to load pretrained models from timm; will install PyTorch
 timm = ["pyyaml", "timm"]
 # Dependencies to train and evaluate models
-train = ["tensorflow-datasets", "tqdm"]
+train = ["pyyaml", "tensorflow-datasets", "tqdm", "wandb"]
 
 [tool.pytest.ini_options]
 timeout = 60  # We need tests to be not too slow, because of GitHub limits
