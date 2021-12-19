@@ -220,7 +220,7 @@ class SingleGPUTrainer:
         status = (
             "Val: "
             + f"Epoch {int(self.epoch.numpy())} : "
-            + f"duration={duration:.1f}, "
+            + f"duration={duration:.1f}s, "
             + f"Metric={metric:.4f}"
         )
         if self.cfg.verbose:
