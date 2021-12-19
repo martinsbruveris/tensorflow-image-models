@@ -260,6 +260,7 @@ def parse_args(cfg, args=None):
         args = sys.argv[1:]
 
     # First we convert all dataclasses, etc. to nested dictionaries
+    cfg_class = type(cfg) if dataclasses.is_dataclass(cfg) else None
     cfg = to_dict_format(cfg)
 
     # Read config file and apply settings.
@@ -311,6 +312,9 @@ def parse_args(cfg, args=None):
         cfg = flat_to_deep(cfg)
 
     cfg = to_cls_format(cfg)
+    # If the original config was a dataclass, we need to restore the original type
+    if cfg_class:
+        cfg = cfg_class(**cfg)
     return cfg
 
 
