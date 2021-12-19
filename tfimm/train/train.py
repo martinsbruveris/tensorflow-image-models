@@ -2,6 +2,7 @@ import logging
 import os
 import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 try:
@@ -11,56 +12,12 @@ except ImportError:
     logging.info("Could not import `wand`. Logging to W&B not possible.")
 
 import tfimm.train.config as config
-from tfimm.models.factory import create_model, create_preprocessing
-from tfimm.models.registry import model_config
 from tfimm.train.classification import ClassificationConfig
 from tfimm.train.datasets import TFDSConfig
-from tfimm.train.registry import cfg_serializable, get_class
+from tfimm.train.model import ModelConfig
+from tfimm.train.registry import get_class
 from tfimm.train.trainer import TrainerConfig
-
-
-@dataclass
-class ModelConfig:
-    model_name: str
-    pretrained: str
-    input_size: tuple
-    in_chans: int
-    nb_classes: int
-    drop_rate: float = 0.0
-
-
-@cfg_serializable
-class ModelFactory:
-    cfg_class = ModelConfig
-
-    def __init__(self, cfg: ModelConfig):
-        self.cfg = cfg
-
-    def __call__(self):
-        model = create_model(
-            self.cfg.model_name,
-            pretrained=self.cfg.pretrained,
-            input_size=self.cfg.input_size,
-            in_chans=self.cfg.in_chans,
-            nb_classes=self.cfg.nb_classes,
-            drop_rate=self.cfg.drop_rate,
-        )
-        preprocessing = create_preprocessing(self.cfg.model_name)
-        return model, preprocessing
-
-    @property
-    def tf_input_shape(self):
-        """
-        Returns the input shape to be used for keras.Input layers. Some models, e.g.,
-        ResNets, can operate on arbitrary sized inputs, others, e.g., transformers,
-        need fixed-sized inputs.
-        """
-        cfg = model_config(self.cfg.model_name)
-        if getattr(cfg, "fixed_input_size", False):
-            input_shape = *self.cfg.input_size, self.cfg.in_chans
-        else:
-            input_shape = (None, None, self.cfg.in_chans)
-        return input_shape
+from tfimm.train.utils import setup_logging
 
 
 @dataclass
@@ -81,39 +38,14 @@ class ExperimentConfig:
     experiment_name: str = "default"  # Experiment name in W&B
     project_name: str = "default"  # Project name in W&B
     entity: str = "default"  # Entity in W&B
+    # If this run is part of a W&B hyperparameter sweep, we need to add suffixes to
+    # the run names and checkpoint directories, because otherwise all runs in the sweep
+    # will have the same name and the checkpoints will overwrite each other.
     sweep: bool = False
 
-    """
-    Args:
-        experiment_name: Experiment name; used in W&B
-        project_name: Project name; used in W&B
-        sweep: Is this run part of a W&B hyper-parameter sweep. If True, we are adding
-            a suffix to the name and save directory, because all runs in the sweep
-            will have the same name.
-    """
 
-
-def setup_logging(logging_level):
-    """
-    Creates a logger that logs to stdout. Sets this logger as the global default.
-    Logging format is
-        2020-12-05 21:44:09,908: Message.
-
-    Returns:
-        Doesn't return anything. Modifies global logger.
-    """
-    logging.basicConfig(level=logging_level)
-    fmt = logging.Formatter("%(asctime)s: %(message)s", datefmt="%y-%b-%d %H:%M:%S")
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    # We want to change the format of the root logger, which is the first one
-    # in the logger.handlers list. A bit hacky, but there we go.
-    root = logger.handlers[0]
-    root.setFormatter(fmt)
-
-
-def run(cfg):
-    """Runs experiment defined by config"""
+def run(cfg: ExperimentConfig):
+    """Runs experiment defined by `cfg`."""
 
     # Configure logging level
     setup_logging(cfg.logging_level)
@@ -121,6 +53,11 @@ def run(cfg):
     # Print config to stdout
     logging.info("Running with arguments")
     config.pprint(cfg)
+
+    # Save config to file
+    ckpt_dir = getattr(cfg.trainer, "ckpt_dir", "")
+    if ckpt_dir:
+        config.dump_config(cfg, Path(ckpt_dir) / "config.yaml")
 
     # Prepare W&B
     if cfg.log_wandb:
@@ -175,7 +112,7 @@ def main():
                 model_name="resnet18",
                 pretrained="",
                 input_size=(64, 64),
-                in_chans=3,
+                nb_channels=3,
                 nb_classes=10,
             ),
             model_class="ModelFactory",

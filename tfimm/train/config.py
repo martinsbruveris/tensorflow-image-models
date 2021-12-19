@@ -6,7 +6,7 @@ import sys
 
 import yaml
 
-from .registry import get_cfg_class
+from tfimm.train.registry import get_cfg_class
 
 MISSING = dataclasses.MISSING
 
