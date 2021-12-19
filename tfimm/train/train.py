@@ -12,11 +12,7 @@ except ImportError:
     logging.info("Could not import `wand`. Logging to W&B not possible.")
 
 import tfimm.train.config as config
-from tfimm.train.classification import ClassificationConfig
-from tfimm.train.datasets import TFDSConfig
-from tfimm.train.model import ModelConfig
 from tfimm.train.registry import get_class
-from tfimm.train.trainer import TrainerConfig
 from tfimm.train.utils import setup_logging
 
 
@@ -44,8 +40,11 @@ class ExperimentConfig:
     sweep: bool = False
 
 
-def run(cfg: ExperimentConfig):
+def run(cfg: ExperimentConfig, parse_args: bool = False):
     """Runs experiment defined by `cfg`."""
+    # Parse command line arguments, if requested.
+    if parse_args:
+        cfg = config.parse_args(cfg)
 
     # Configure logging level
     setup_logging(cfg.logging_level)
@@ -95,60 +94,3 @@ def run(cfg: ExperimentConfig):
     )
 
     trainer.train()
-
-
-def main():
-    cfg = ExperimentConfig(
-        trainer=TrainerConfig(
-            nb_epochs=3,
-            nb_samples_per_epoch=640,
-            display_loss_every_it=5,
-            ckpt_dir="tmp/exp_2",
-            init_ckpt="tmp/exp_1/ckpt-3",
-        ),
-        trainer_class="SingleGPUTrainer",
-        problem=ClassificationConfig(
-            model=ModelConfig(
-                model_name="resnet18",
-                pretrained="",
-                input_size=(64, 64),
-                nb_channels=3,
-                nb_classes=10,
-            ),
-            model_class="ModelFactory",
-            binary_loss=False,
-            weight_decay=0.01,
-            lr=0.01,
-            mixed_precision=False,
-        ),
-        problem_class="ClassificationProblem",
-        train_dataset=TFDSConfig(
-            dataset_name="cifar10",
-            split="train",
-            input_size=(64, 64),
-            batch_size=32,
-            repeat=True,
-            shuffle=True,
-            nb_samples=-1,
-            dtype="float32",
-        ),
-        train_dataset_class="TFDSWrapper",
-        val_dataset=TFDSConfig(
-            dataset_name="cifar10",
-            split="test",
-            input_size=(64, 64),
-            batch_size=32,
-            repeat=False,
-            shuffle=False,
-            nb_samples=320,
-            dtype="float32",
-        ),
-        val_dataset_class="TFDSWrapper",
-        log_wandb=False,
-    )
-
-    run(cfg)
-
-
-if __name__ == "__main__":
-    main()
