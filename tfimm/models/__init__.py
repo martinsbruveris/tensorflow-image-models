@@ -1,5 +1,5 @@
 from .config import ModelConfig  # noqa: F401
-from .factory import create_model, create_preprocessing, transfer_weigths  # noqa: F401
+from .factory import create_model, create_preprocessing, transfer_weights  # noqa: F401
 from .registry import (  # noqa: F401
     is_model,
     is_model_in_modules,

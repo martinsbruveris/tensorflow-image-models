@@ -85,7 +85,7 @@ def create_model(
 
     # Now we need to transfer weights from loaded_model to model
     if loaded_model is not None:
-        transfer_weigths(loaded_model, model)
+        transfer_weights(loaded_model, model)
 
     return model
 
@@ -114,7 +114,7 @@ def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callab
     return _preprocess
 
 
-def transfer_weigths(src_model: tf.keras.Model, dst_model: tf.keras.Model):
+def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     """Transfers weights from src_model to dst_model, with special treatment of first
     convolution and classification layers."""
     keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
