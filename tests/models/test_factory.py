@@ -5,7 +5,7 @@ import pytest
 import tensorflow as tf
 
 from tfimm import list_models
-from tfimm.models.factory import create_model, create_preprocessing, transfer_weigths
+from tfimm.models.factory import create_model, create_preprocessing, transfer_weights
 
 MODEL_LIST = [
     "convmixer_768_32",  # convmixer.py
@@ -27,7 +27,7 @@ def test_transfer_weights(model_name, nb_classes):
     model_2 = create_model(model_name, nb_classes=nb_classes)
 
     # Transfer weights from one to another
-    transfer_weigths(model_1, model_2)
+    transfer_weights(model_1, model_2)
 
     img = np.random.rand(1, *model_1.cfg.input_size, model_1.cfg.in_chans)
     y_1 = model_1.forward_features(img).numpy()
