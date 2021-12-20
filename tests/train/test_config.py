@@ -1,6 +1,7 @@
 import dataclasses
+from typing import Any
 
-from tfimm.train.config import parse_args
+from tfimm.train import config
 from tfimm.train.registry import cfg_serializable
 
 
@@ -24,13 +25,25 @@ class SimpleClass:
     cfg_class = SimpleConfig
 
 
+@dataclasses.dataclass
+class OuterConfig:
+    n: Any
+    n_class: str
+
+
 def test_parse_simple_class():
     cfg = SimpleConfig(i=0, f=0.0, b=False, s="", t=tuple())
     cmdline_args = [
-        "--i=2", "--f=2.5", "--b=t", "--s=d", "--t=(1, 1)", "--sd=", "--td=()"
+        "--i=2",
+        "--f=2.5",
+        "--b=t",
+        "--s=d",
+        "--t=(1, 1)",
+        "--sd=",
+        "--td=()",
     ]
     expected = SimpleConfig(i=2, f=2.5, b=True, s="d", t=(1, 1), sd="", td=tuple())
-    cfg = parse_args(cfg, cmdline_args)
+    cfg = config.parse_args(cfg, cmdline_args)
     assert cfg == expected
 
 
@@ -41,7 +54,7 @@ def test_parse_nested():
         "n": SimpleConfig(i=2, f=2.5, b=False, s="d", t=(1, 1)),
         "n_class": "SimpleClass",
     }
-    cfg = parse_args(cfg, cmdline_args)
+    cfg = config.parse_args(cfg, cmdline_args)
     assert cfg == expected
 
 
@@ -53,5 +66,29 @@ def test_parse_unknown():
         "n": SimpleConfig(i=2, f=2.5, b=False, s="d", t=(1, 1)),
         "n_class": "SimpleClass",
     }
-    cfg = parse_args(cfg, cmdline_args)
+    cfg = config.parse_args(cfg, cmdline_args)
     assert cfg == expected
+
+
+def test_parse_nested_2():
+    cfg = OuterConfig(n=None, n_class="")
+    cmdline_args = ["--n_class=SimpleClass"]
+    cmdline_args += ["--n.i=2", "--n.f=2.5", "--n.b=f", "--n.s=d", "--n.t=(1, 1)"]
+    expected = OuterConfig(
+        n=SimpleConfig(i=2, f=2.5, b=False, s="d", t=(1, 1)), n_class="SimpleClass"
+    )
+    cfg = config.parse_args(cfg, cmdline_args)
+    assert cfg == expected
+
+
+def test_flat_to_deep():
+    nested_cfg = {
+        "problem": {"nb_classes": 10},
+        "problem_class": "ClassificationProblem",
+    }
+    flat_cfg = {
+        "problem.nb_classes": 10,
+        "problem_class": "ClassificationProblem",
+    }
+    assert flat_cfg == config.deep_to_flat(nested_cfg)
+    assert nested_cfg == config.flat_to_deep(flat_cfg)

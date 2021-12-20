@@ -76,6 +76,36 @@ def to_arg_format(cfg):
     return res_cfg
 
 
+def check_format(cfg):
+    """
+    We apply the following checks to configurations in dictionary format:
+     - For fields ending in `_class`, map empty strings and None to MISSING.
+     - Nesting is only allowed, if the `_class` field is present, i.e., if `cfg[key]`
+       is a dictionary, then `cfg[key + "_class"]` has to exist.
+     - If the keys `xyz` and `xyz_class` both exist, then `xyz` has to be a dictionary.
+       Values None and MISSING are mapped to the empty dictionary. An exception is
+       raised for any other values.
+    """
+    res_cfg = {}
+    for key, val in cfg.items():
+        if key.endswith("_class"):
+            if not isinstance(val, str) and val not in {None, MISSING}:
+                raise ValueError(f"Value for key {key} should be a string.")
+            res_cfg[key] = MISSING if val in {"", None} else val
+        elif isinstance(val, dict):
+            if key + "_class" not in cfg:
+                raise ValueError(f"Nesting only allowed if key `{key}_class` exists.")
+            res_cfg[key] = check_format(val)
+        else:
+            if key + "_class" in cfg:
+                if val not in {None, MISSING}:
+                    raise ValueError(f"Value for key {key} has to be a dict.")
+                res_cfg[key] = {}
+            else:
+                res_cfg[key] = val
+    return res_cfg
+
+
 def add_default_args(cfg):
     """
     When `cfg` is a config in dictionary format with values of the form (type, value),
@@ -201,6 +231,7 @@ def apply_cfg_file(cfg, args):
 
     # And now back to nested ones
     cfg = flat_to_deep(cfg)
+    cfg = check_format(cfg)
 
     return cfg
 
@@ -265,6 +296,7 @@ def parse_args(cfg, args=None):
     # First we convert all dataclasses, etc. to nested dictionaries
     cfg_class = type(cfg) if dataclasses.is_dataclass(cfg) else None
     cfg = to_dict_format(cfg)
+    cfg = check_format(cfg)
 
     # Read config file and apply settings.
     if "cfg_file" in cfg:
@@ -313,6 +345,7 @@ def parse_args(cfg, args=None):
         # We convert back to nested dictionaries, because adding default arguments
         # wants to work with nested dictionaries.
         cfg = flat_to_deep(cfg)
+        cfg = check_format(cfg)
 
     cfg = to_cls_format(cfg)
     # If the original config was a dataclass, we need to restore the original type
