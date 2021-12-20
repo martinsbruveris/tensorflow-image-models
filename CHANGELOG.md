@@ -1,5 +1,10 @@
 # Change Log
 
+## Unpublished
+
+- Added first version of training framework (`tfimm/train`). Still work in progress. 
+  Possibly buggy.
+
 ## v0.1.5 - 2021-12-12
 
 - Added option for models to return intermediate features via `return_features` 
