@@ -8,7 +8,8 @@ from tfimm.train import (
 )
 
 
-def main():
+def main_with_python_config():
+    """Start experiment with a config defined by python code."""
     cfg = ExperimentConfig(
         trainer=TrainerConfig(
             nb_epochs=3,
@@ -57,8 +58,15 @@ def main():
         log_wandb=False,
     )
 
-    run(cfg)
+    run(cfg, parse_args=False)
+
+
+def main_with_cfg_file():
+    """Start experiment with a config defined by a config file."""
+    cfg = {"cfg_file": "tfimm/train/examples/config.yaml"}
+    run(cfg, parse_args=False)
 
 
 if __name__ == "__main__":
-    main()
+    main_with_python_config()
+    main_with_cfg_file()

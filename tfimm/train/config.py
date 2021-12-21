@@ -9,8 +9,6 @@ import yaml
 
 from tfimm.train.registry import get_cfg_class
 
-MISSING = dataclasses.MISSING
-
 
 def to_dict_format(cfg):
     """
@@ -43,9 +41,12 @@ def to_cls_format(cfg):
             # First recurse into dictionary before converting to class
             val = to_cls_format(val)
 
-            # Now convert to correct class
-            cls = get_cfg_class(cfg[f"{key}_class"])
-            res_cfg[key] = cls(**val)
+            cls = cfg[f"{key}_class"]
+            if cls:  # Now convert to correct class, if class is set
+                cls = get_cfg_class(cls)
+                res_cfg[key] = cls(**val)
+            else:
+                res_cfg[key] = None
         else:
             res_cfg[key] = val
     return res_cfg
@@ -71,7 +72,7 @@ def to_arg_format(cfg):
         if isinstance(val, dict):
             res_cfg[key] = to_arg_format(val)
         else:
-            tp = type(val) if val not in {None, MISSING} else str
+            tp = type(val) if val not in {None, dataclasses.MISSING} else str
             res_cfg[key] = (tp, val)
     return res_cfg
 
@@ -79,26 +80,32 @@ def to_arg_format(cfg):
 def check_format(cfg):
     """
     We apply the following checks to configurations in dictionary format:
-     - For fields ending in `_class`, map empty strings and None to MISSING.
+     - For fields ending in `_class`, map None to empty string.
+     - If the `xyz_class` field is present, nesting has to happen and we add the `xyz`
+       field and initialize it with an empty dictionary.
      - Nesting is only allowed, if the `_class` field is present, i.e., if `cfg[key]`
        is a dictionary, then `cfg[key + "_class"]` has to exist.
      - If the keys `xyz` and `xyz_class` both exist, then `xyz` has to be a dictionary.
-       Values None and MISSING are mapped to the empty dictionary. An exception is
-       raised for any other values.
+       None is mapped to the empty dictionary. An exception is raised for any other
+       values.
     """
     res_cfg = {}
     for key, val in cfg.items():
         if key.endswith("_class"):
-            if not isinstance(val, str) and val not in {None, MISSING}:
+            if not isinstance(val, str) and val is not None:
                 raise ValueError(f"Value for key {key} should be a string.")
-            res_cfg[key] = MISSING if val in {"", None} else val
+            res_cfg[key] = "" if val is None else val
+
+            stem = key[: -len("_class")]  # Remove suffix
+            if stem not in cfg:
+                res_cfg[stem] = {}
         elif isinstance(val, dict):
             if key + "_class" not in cfg:
                 raise ValueError(f"Nesting only allowed if key `{key}_class` exists.")
             res_cfg[key] = check_format(val)
         else:
             if key + "_class" in cfg:
-                if val not in {None, MISSING}:
+                if val is not None:
                     raise ValueError(f"Value for key {key} has to be a dict.")
                 res_cfg[key] = {}
             else:
@@ -122,7 +129,7 @@ def add_default_args(cfg):
             res_cfg[key] = add_default_args(val)
         elif key.endswith("_class"):
             res_cfg[key] = val  # We need to copy the field itself
-            if val[1] is MISSING:  # The class has not yet been specified, do nothing.
+            if val[1] == "":  # The class has not yet been specified, do nothing.
                 continue
 
             cls = get_cfg_class(val[1])
@@ -137,8 +144,11 @@ def add_default_args(cfg):
                     )
                 # If some fields are already set in the config, we use those values,
                 # i.e., whatever is in the config has higher priority over default
-                # values
-                params.update(cfg[stem])
+                # values. We are calling params.update(), because we don't want to
+                # introduce new keys to params.
+                for sub_key, sub_val in cfg[stem].items():
+                    if sub_key in params:
+                        params[sub_key] = sub_val
             # Recursively resolve subclasses
             res_cfg[stem] = add_default_args(params)
         else:
@@ -202,7 +212,7 @@ def dump_config(cfg, filename):
     # Create directory for `filename` if it doesn't exist
     Path(filename).parents[0].mkdir(parents=True, exist_ok=True)
     with open(filename, "w") as yaml_file:
-        yaml.dump(cfg, yaml_file, default_flow_style=False)
+        yaml.dump(cfg, yaml_file, default_flow_style=False, sort_keys=False)
 
 
 def apply_cfg_file(cfg, args):
@@ -218,7 +228,7 @@ def apply_cfg_file(cfg, args):
     cfg_file = namespace.cfg_file
 
     # No config file is present
-    if cfg_file is MISSING:
+    if not cfg_file:
         return cfg
 
     with open(cfg_file, "r") as f:
@@ -269,7 +279,7 @@ def get_arg_parser(cfg):
 
     for arg, (tp, val) in cfg.items():
         kwargs = {"dest": arg, "help": arg}
-        if val is not MISSING:
+        if val is not dataclasses.MISSING:
             kwargs["default"] = val
         if tp is bool:
             kwargs["type"] = str2bool
@@ -282,9 +292,12 @@ def get_arg_parser(cfg):
     return parser
 
 
-def parse_args(cfg, args=None):
+def parse_args(cfg, cfg_class=None, args=None):
     """
     Main function to parse command line arguments. Returns updated config.
+
+    If `cfg_class` is given, we will convert the parsed config to `cfg_class` after
+    parsing is finished.
 
     If `args=None`, we use the passed command line arguments (sys.argv[1:]). If we
     don't want to parse them, we should set `args=[]`. In this case we will read only
@@ -294,7 +307,8 @@ def parse_args(cfg, args=None):
         args = sys.argv[1:]
 
     # First we convert all dataclasses, etc. to nested dictionaries
-    cfg_class = type(cfg) if dataclasses.is_dataclass(cfg) else None
+    if cfg_class is None:
+        cfg_class = type(cfg) if dataclasses.is_dataclass(cfg) else None
     cfg = to_dict_format(cfg)
     cfg = check_format(cfg)
 
@@ -304,7 +318,7 @@ def parse_args(cfg, args=None):
 
     nb_unparsed = len(args)
     unparsed = None
-    continue_parsing = True
+    continue_parsing = nb_unparsed > 0
     while continue_parsing:
         # We do the check at the top, so we do one extra round of parsing to add
         # default args to classes that were potentially specified during the last

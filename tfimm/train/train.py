@@ -3,7 +3,7 @@ import os
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 try:
     import wandb
@@ -38,13 +38,22 @@ class ExperimentConfig:
     # the run names and checkpoint directories, because otherwise all runs in the sweep
     # will have the same name and the checkpoints will overwrite each other.
     sweep: bool = False
+    # Configuration file
+    cfg_file: str = ""
 
 
-def run(cfg: ExperimentConfig, parse_args: bool = False):
-    """Runs experiment defined by `cfg`."""
-    # Parse command line arguments, if requested.
-    if parse_args:
-        cfg = config.parse_args(cfg)
+def run(cfg: Union[ExperimentConfig, dict], parse_args: bool = True):
+    """
+    Runs experiment defined by `cfg`.
+
+    If `parse_args=True`, we will parse command line arguments. We will always parse
+    the cfg_file.
+    """
+    # If we want to parse command line args, we provide None to `parse_args`, which
+    # will default to using argv[1:]. By providing the empty list it will not look
+    # for other arguments to parse.
+    args = None if parse_args else []
+    cfg = config.parse_args(cfg, cfg_class=ExperimentConfig, args=args)
 
     # Configure logging level
     setup_logging(cfg.logging_level)
@@ -78,14 +87,13 @@ def run(cfg: ExperimentConfig, parse_args: bool = False):
         wandb.run.name = wandb.run.name + f"{wandb.run.id}"
         wandb.run.save()
 
-    # Construct datasets
+    # Construct constituent objects
     train_ds = get_class(cfg.train_dataset_class)(cfg=cfg.train_dataset)
-    val_ds = None
-    if cfg.val_dataset_class:
-        val_ds = get_class(cfg.val_dataset_class)(cfg=cfg.val_dataset)
-
+    val_ds = (
+        get_class(cfg.val_dataset_class)(cfg=cfg.val_dataset)
+        if cfg.val_dataset_class else None
+    )
     problem = get_class(cfg.problem_class)(cfg=cfg.problem)
-
     trainer = get_class(cfg.trainer_class)(
         problem=problem,
         train_ds=train_ds,
@@ -94,4 +102,5 @@ def run(cfg: ExperimentConfig, parse_args: bool = False):
         cfg=cfg.trainer,
     )
 
+    # Do the training!
     trainer.train()
