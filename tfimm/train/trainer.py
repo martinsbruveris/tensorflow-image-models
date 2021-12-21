@@ -106,7 +106,7 @@ class SingleGPUTrainer:
             logging.info("Starting training...")
 
         # Run validation first
-        if self.val_ds and self.cfg.validation_before_training:
+        if self.cfg.validation_before_training:
             self.validation()
 
         # Save checkpoint before starting training
@@ -151,8 +151,7 @@ class SingleGPUTrainer:
 
                 # Run validation
                 if (
-                    self.val_ds
-                    and it > 0
+                    it > 0
                     and self.cfg.validation_every_it > 0
                     and it % self.cfg.validation_every_it == 0
                 ):
@@ -173,8 +172,7 @@ class SingleGPUTrainer:
 
                 it += 1
 
-            if self.val_ds:
-                self.validation()
+            self.validation()
             # We increase the epoch counter before saving the checkpoint, because when
             # load the checkpoint we want to continue training from the next epoch
             # onwards.
@@ -188,6 +186,8 @@ class SingleGPUTrainer:
     # Validation
     ###
     def validation(self):
+        if self.val_ds is None:
+            return
         if self.cfg.verbose:
             logging.info("Validation...")
 

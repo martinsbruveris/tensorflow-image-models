@@ -25,8 +25,8 @@ class ExperimentConfig:
     # Data
     train_dataset: Any
     train_dataset_class: str
-    val_dataset: Optional[Any] = None
-    val_dataset_class: Optional[str] = None
+    val_dataset_class: str = ""
+    val_dataset: Any = None
     # One of 0, 10, 20, 30, 40, 50: NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL
     logging_level: int = 30
     # W&B parameters
@@ -81,7 +81,7 @@ def run(cfg: ExperimentConfig, parse_args: bool = False):
     # Construct datasets
     train_ds = get_class(cfg.train_dataset_class)(cfg=cfg.train_dataset)
     val_ds = None
-    if cfg.val_dataset and cfg.val_dataset_class:
+    if cfg.val_dataset_class:
         val_ds = get_class(cfg.val_dataset_class)(cfg=cfg.val_dataset)
 
     problem = get_class(cfg.problem_class)(cfg=cfg.problem)
