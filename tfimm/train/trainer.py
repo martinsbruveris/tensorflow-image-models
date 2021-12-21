@@ -186,6 +186,8 @@ class SingleGPUTrainer:
     # Validation
     ###
     def validation(self):
+        if self.val_ds is None:
+            return
         if self.cfg.verbose:
             logging.info("Validation...")
 
