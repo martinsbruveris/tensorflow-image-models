@@ -25,8 +25,8 @@ class ExperimentConfig:
     # Data
     train_dataset: Any
     train_dataset_class: str
-    val_dataset_class: str = ""
     val_dataset: Any = None
+    val_dataset_class: str = ""
     # One of 0, 10, 20, 30, 40, 50: NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL
     logging_level: int = 30
     # W&B parameters
