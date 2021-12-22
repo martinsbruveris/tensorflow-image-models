@@ -91,7 +91,8 @@ def run(cfg: Union[ExperimentConfig, dict], parse_args: bool = True):
     train_ds = get_class(cfg.train_dataset_class)(cfg=cfg.train_dataset)
     val_ds = (
         get_class(cfg.val_dataset_class)(cfg=cfg.val_dataset)
-        if cfg.val_dataset_class else None
+        if cfg.val_dataset_class
+        else None
     )
     problem = get_class(cfg.problem_class)(cfg=cfg.problem)
     trainer = get_class(cfg.trainer_class)(

@@ -125,9 +125,7 @@ def add_default_args(cfg):
     """
     res_cfg = {}
     for key, val in cfg.items():
-        if isinstance(val, dict):
-            res_cfg[key] = add_default_args(val)
-        elif key.endswith("_class"):
+        if key.endswith("_class"):
             res_cfg[key] = val  # We need to copy the field itself
             if val[1] == "":  # The class has not yet been specified, do nothing.
                 continue
@@ -151,7 +149,11 @@ def add_default_args(cfg):
                         params[sub_key] = sub_val
             # Recursively resolve subclasses
             res_cfg[stem] = add_default_args(params)
-        else:
+        elif isinstance(val, dict) and key + "_class" not in cfg:
+            # We need to check for key `xyz` if `xyz_class` is not a key, because
+            # otherwise we don't know whether we process key `xyz` first or `xyz_class`.
+            res_cfg[key] = add_default_args(val)
+        elif key + "_class" not in cfg:
             res_cfg[key] = val
     return res_cfg
 
@@ -292,7 +294,7 @@ def get_arg_parser(cfg):
     return parser
 
 
-def parse_args(cfg, cfg_class=None, args=None):
+def parse_args(cfg, *, cfg_class=None, args=None):
     """
     Main function to parse command line arguments. Returns updated config.
 
