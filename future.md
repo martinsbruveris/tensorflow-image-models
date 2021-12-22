@@ -54,6 +54,9 @@ Future
 - [ ] (optional) Add [T2T-ViT models](https://github.com/yitu-opensource/T2T-ViT)
 - [ ] (optional) Check compatibility with [tf-explain](https://github.com/sicara/tf-explain)
 
+- [ ] PoolFormer github.com/sail-sg/poolformer
 - [ ] Pretrained models: https://github.com/microsoft/simmim
 - [ ] Pretrained models: https://github.com/bytedance/ibot
 - [ ] Pretrained models: https://github.com/facebookresearch/moco-v3
+- [ ] PoolFormer github.com/sail-sg/poolformer
+
