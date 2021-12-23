@@ -15,12 +15,9 @@ if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
 else:
     EXCLUDE_FILTERS = ["cait_m*"]
 
-
-@pytest.mark.parametrize("model_name", list_models(exclude_filters=EXCLUDE_FILTERS))
-def test_create_model(model_name: str):
-    """Test if we can instantiate a model and run a forward pass"""
-    model = create_model(model_name)
-    model(model.dummy_inputs)
+TIMM_ARCHITECTURES = list(
+    set(list_models(exclude_filters=EXCLUDE_FILTERS)) & set(timm.list_models())
+)
 
 
 @pytest.mark.skip()
@@ -39,13 +36,7 @@ def test_mixed_precision(model_name: str):
     assert res.dtype == "float16"
 
 
-@pytest.mark.parametrize(
-    "model_name",
-    list_models(
-        pretrained="timm",
-        exclude_filters=EXCLUDE_FILTERS,
-    ),
-)
+@pytest.mark.parametrize("model_name", TIMM_ARCHITECTURES)
 @pytest.mark.timeout(60)
 def test_load_timm_model(model_name: str):
     """Test if we can load models from timm."""
@@ -79,6 +70,10 @@ def test_load_timm_model(model_name: str):
 @pytest.mark.parametrize("model_name", list_models(exclude_filters=EXCLUDE_FILTERS))
 @pytest.mark.timeout(60)
 def test_feature_extraction(model_name: str):
+    """
+    Tests if we can create a model and run inference with `return_features` set to
+    both `True` and `False.
+    """
     model = create_model(model_name, pretrained=False)
 
     inputs = model.dummy_inputs

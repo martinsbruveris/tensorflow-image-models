@@ -36,7 +36,7 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         # We only apply padding, if we use overlapping patches. For non-overlapping
         # patches we assume image size is divisible by patch size.
         self.pad = tf.keras.layers.ZeroPadding2D(
-            padding=patch_size // 2 if stride != patch_size else 0
+            padding=patch_size // 2 if self.stride != self.patch_size else 0
         )
         self.projection = tf.keras.layers.Conv2D(
             filters=self.embed_dim,
@@ -47,18 +47,18 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         )
         self.norm = self.norm_layer(name="norm")
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_shape=False):
+        """If `return_shape=True`, we return the shape of the image that has
+        been flattened."""
         x = self.pad(x)
         x = self.projection(x)
 
         # Change the 2D spatial dimensions to a single temporal dimension.
-        # shape = (batch_size, num_patches, out_channels=embed_dim)
         batch_size, height, width = tf.unstack(tf.shape(x)[:3])
-        nb_patches = (width // self.stride) * (height // self.stride)
-        x = tf.reshape(tensor=x, shape=(batch_size, nb_patches, -1))
+        x = tf.reshape(tensor=x, shape=(batch_size, height * width, -1))
 
         x = self.norm(x, training=training)
-        return x
+        return (x, height, width) if return_shape else x
 
 
 class MLP(tf.keras.layers.Layer):
