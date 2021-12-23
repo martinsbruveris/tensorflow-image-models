@@ -2,6 +2,7 @@
 
 ## Unpublished
 
+- Added Pyramid Vision Transformer models
 - Added option for models to return intermediate features via `return_features` 
   parameter
 - Added `DropPath` regularization to `vit` module (stochastic depth)
