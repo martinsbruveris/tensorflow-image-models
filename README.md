@@ -8,12 +8,13 @@
 
 ## Introduction
 
-TensorfFlow-Image-Models (`tfimm`) is a collection of image models with pretrained
+TensorFlow-Image-Models (`tfimm`) is a collection of image models with pretrained
 weights, obtained by porting architectures from 
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
 vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer models 
-(MLP-Mixer, ResMLP, gMLP and ConvMixer) and various ResNet flavours (ResNet, ResNeXt, ECA-ResNet, SE-ResNet).
+(MLP-Mixer, ResMLP, gMLP and ConvMixer) and various ResNet flavours (ResNet, ResNeXt, 
+ECA-ResNet, SE-ResNet).
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.

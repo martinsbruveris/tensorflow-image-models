@@ -14,3 +14,8 @@ style:
 # Run tests for the library
 test:
 	poetry run pytest -s -v ./tests/
+
+# Build documentation
+.PHONY: docs  # We want to always execute the recipe here
+docs:
+	cd docs && make html
