@@ -30,6 +30,7 @@ include = [
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
+markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
 tensorflow = "^2.5"
 
@@ -38,6 +39,10 @@ tensorflow-datasets = { version="*", optional = true }
 timm = { version = "*", optional = true }
 tqdm = { version = "*", optional = true }
 wandb = { version = "*", optional = true }
+
+# Documentation
+sphinx = { version = "*", optional = true }
+sphinx-rtd-theme = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 black = { version = "*", allow-prereleases = true }
@@ -48,9 +53,11 @@ pytest-timeout = "*"
 pytest-xdist = "*"
 
 [tool.poetry.extras]
-# Dependencies to load pretrained models from timm; will install PyTorch
+# To compile documentation
+docs = ["sphinx", "sphinx-rtd-theme"]
+# To load pretrained models from timm; will install PyTorch
 timm = ["pyyaml", "timm"]
-# Dependencies to train and evaluate models
+# To train and evaluate models
 train = ["pyyaml", "tensorflow-datasets", "tqdm", "wandb"]
 
 [tool.pytest.ini_options]
