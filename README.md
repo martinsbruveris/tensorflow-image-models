@@ -1,4 +1,4 @@
-# TensorFlow-Image-Models
+# TensorFlow Image Models
 
 ![Test Status](https://github.com/martinsbruveris/tensorflow-image-models/actions/workflows/tests.yml/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/tfimm/badge/?version=latest)](https://tfimm.readthedocs.io/en/latest/?badge=latest)
@@ -14,7 +14,7 @@
 
 ## Introduction
 
-TensorFlow-Image-Models (`tfimm`) is a collection of image models with pretrained
+TensorFlow Image Models (`tfimm`) is a collection of image models with pretrained
 weights, obtained by porting architectures from 
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
