@@ -1,5 +1,11 @@
 # TensorFlow-Image-Models
 
+![Test Status](https://github.com/martinsbruveris/tensorflow-image-models/actions/workflows/tests.yml/badge.svg)
+[![Documentation Status](https://readthedocs.org/projects/tfimm/badge/?version=latest)](https://tfimm.readthedocs.io/en/latest/?badge=latest)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+
+
 - [Introduction](#introduction)
 - [Usage](#usage)
 - [Models](#models)
