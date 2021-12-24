@@ -1,0 +1,62 @@
+trainer:
+  nb_epochs: 3
+  nb_samples_per_epoch: 640
+  validation_before_training: true
+  validation_every_it: -1
+  ckpt_dir: /tmp/exp_cifar10
+  init_ckpt: ''
+  resume_from_ckpt: true
+  ckpt_every_it: -1
+  ckpt_to_keep: 3
+  display_loss_every_it: 5
+  verbose: true
+trainer_class: SingleGPUTrainer
+problem:
+  model:
+    model_name: resnet18
+    pretrained: ''
+    input_size: !!python/tuple
+    - 64
+    - 64
+    nb_channels: 3
+    nb_classes: 10
+    drop_rate: 0.0
+  model_class: ModelFactory
+  binary_loss: false
+  weight_decay: 0.01
+  lr: 0.01
+  mixed_precision: false
+  save_input_dtype: float32
+problem_class: ClassificationProblem
+train_dataset:
+  dataset_name: cifar10
+  split: train
+  input_size: !!python/tuple
+  - 64
+  - 64
+  batch_size: 32
+  repeat: true
+  shuffle: true
+  nb_samples: -1
+  cache: false
+  dtype: float32
+train_dataset_class: TFDSWrapper
+val_dataset:
+  dataset_name: cifar10
+  split: test
+  input_size: !!python/tuple
+  - 64
+  - 64
+  batch_size: 32
+  repeat: false
+  shuffle: false
+  nb_samples: 320
+  cache: false
+  dtype: float32
+val_dataset_class: TFDSWrapper
+logging_level: 30
+log_wandb: false
+experiment_name: default
+project_name: default
+entity: default
+sweep: false
