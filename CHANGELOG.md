@@ -2,6 +2,7 @@
 
 ## Unpublished
 
+- Added Pyramid Vision Transformer models
 - Added first version of training framework (`tfimm/train`). Still work in progress. 
   Possibly buggy.
 

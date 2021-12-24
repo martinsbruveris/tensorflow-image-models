@@ -12,7 +12,7 @@ TensorfFlow-Image-Models (`tfimm`) is a collection of image models with pretrain
 weights, obtained by porting architectures from 
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
-vision transformers (ViT, DeiT, CaiT and Swin Transformers), MLP-Mixer models 
+vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer models 
 (MLP-Mixer, ResMLP, gMLP and ConvMixer) and ResNets.
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
@@ -142,6 +142,12 @@ The following architectures are currently available:
   [\[github\]](https://github.com/tmp-iclr/convmixer)
   - Patches Are All You Need? 
     [\[ICLR 2022 submission\]](https://openreview.net/forum?id=TVHS5Y4dNvM)
+- Pyramid Vision Transformer 
+  [\[github\]](https://github.com/whai362/PVT)
+  - Pyramid Vision Transformer: A Versatile Backbone for Dense Prediction without
+    Convolutions. [\[arXiv:2102.12122\]](https://arxiv.org/abs/2102.12122)
+  - PVTv2: Improved Baselines with Pyramid Vision Transformer 
+    [\[arXiv:2106.13797\]](https://arxiv.org/abs/2106.13797)
 - ResNet (work in progress, most available weights are from `timm`)
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)

@@ -3,6 +3,8 @@ Common layers shared between transformer architectures.
 
 Copyright 2021 Martins Bruveris
 """
+from typing import Optional
+
 import tensorflow as tf
 
 from tfimm.layers.factory import act_layer_factory, norm_layer_factory
@@ -11,34 +13,52 @@ from tfimm.layers.factory import act_layer_factory, norm_layer_factory
 class PatchEmbeddings(tf.keras.layers.Layer):
     """
     Image to Patch Embedding.
+
+    Supports overlapping patches when stride is specified. Used, e.g., in Pyramid
+    Vision Transformer V2.
     """
 
-    def __init__(self, patch_size: int, embed_dim: int, norm_layer: str = "", **kwargs):
+    def __init__(
+        self,
+        patch_size: int,
+        embed_dim: int,
+        stride: Optional[int] = None,
+        norm_layer: str = "",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.patch_size = patch_size
         self.embed_dim = embed_dim
+        # If stride=None we default to non-overlapping patches
+        self.stride = stride or patch_size
         self.norm_layer = norm_layer_factory(norm_layer)
 
+        # We only apply padding, if we use overlapping patches. For non-overlapping
+        # patches we assume image size is divisible by patch size.
+        self.pad = tf.keras.layers.ZeroPadding2D(
+            padding=patch_size // 2 if self.stride != self.patch_size else 0
+        )
         self.projection = tf.keras.layers.Conv2D(
             filters=self.embed_dim,
             kernel_size=self.patch_size,
-            strides=self.patch_size,
+            strides=self.stride,
             use_bias=True,
             name="proj",
         )
         self.norm = self.norm_layer(name="norm")
 
-    def call(self, x, training=False):
-        emb = self.projection(x)
+    def call(self, x, training=False, return_shape=False):
+        """If `return_shape=True`, we return the shape of the image that has
+        been flattened."""
+        x = self.pad(x)
+        x = self.projection(x)
 
         # Change the 2D spatial dimensions to a single temporal dimension.
-        # shape = (batch_size, num_patches, out_channels=embed_dim)
         batch_size, height, width = tf.unstack(tf.shape(x)[:3])
-        num_patches = (width // self.patch_size) * (height // self.patch_size)
-        emb = tf.reshape(tensor=emb, shape=(batch_size, num_patches, -1))
+        x = tf.reshape(tensor=x, shape=(batch_size, height * width, -1))
 
-        emb = self.norm(emb, training=training)
-        return emb
+        x = self.norm(x, training=training)
+        return (x, height, width) if return_shape else x
 
 
 class MLP(tf.keras.layers.Layer):

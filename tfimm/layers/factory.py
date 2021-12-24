@@ -5,7 +5,7 @@ from tfimm.layers.norm import Affine, GroupNormalization
 
 def act_layer_factory(act_layer: str):
     """Returns a function that creates the required activation layer."""
-    if act_layer in {"swish", "relu", "gelu", "sigmoid"}:
+    if act_layer in {"linear", "swish", "relu", "gelu", "sigmoid"}:
         return lambda: tf.keras.layers.Activation(act_layer)
     else:
         raise ValueError(f"Unknown activation: {act_layer}.")
