@@ -13,7 +13,7 @@ MODEL_LIST = [
     "resmlp_12_224",
     "gmlp_ti16_224",
     "pvt_tiny",  # pvt.py
-    "pvt_v2_b0",   # pvt_v2.py
+    "pvt_v2_b0",  # pvt_v2.py
     "resnet18",  # resnet.py
     "swin_tiny_patch4_window7_224",  # swin.py
     "deit_tiny_distilled_patch16_224",  # vit.py

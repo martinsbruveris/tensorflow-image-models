@@ -23,8 +23,8 @@ def create_model(
 
     Args:
         model_name: Name of model to instantiate
-        pretrained: If `pretrained="timm"`, load pretrained weights from timm library and
-            convert to Tensorflow. Requires timm and torch to be installed. If
+        pretrained: If `pretrained="timm"`, load pretrained weights from timm library
+            and convert to Tensorflow. Requires timm and torch to be installed. If
             `pretrained` casts to True as bool, load pretrained weights from URL in
             config or the model cache. If `False`, no weights are loaded.
         model_path: Path of model weights to load after model is initialized

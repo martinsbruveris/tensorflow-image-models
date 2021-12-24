@@ -11,7 +11,13 @@ from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import tensorflow as tf
 
-from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
+from tfimm.layers import (
+    MLP,
+    DropPath,
+    PatchEmbeddings,
+    interpolate_pos_embeddings,
+    norm_layer_factory,
+)
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import (
     IMAGENET_DEFAULT_MEAN,
@@ -80,6 +86,7 @@ class ViTConfig(ModelConfig):
 
     @property
     def nb_tokens(self) -> int:
+        """Number of special tokens"""
         return 2 if self.distilled else 1
 
     @property
@@ -91,6 +98,7 @@ class ViTConfig(ModelConfig):
 
     @property
     def nb_patches(self) -> int:
+        """Number of patches without class and distillation tokens."""
         return self.grid_size[0] * self.grid_size[1]
 
 
@@ -250,51 +258,19 @@ class ViT(tf.keras.Model):
         )
 
     def transform_pos_embed(self, target_cfg: ViTConfig):
-        return self.interpolate_pos_embed(target_cfg.input_size)
-
-    def interpolate_pos_embed(self, input_size: Tuple[int, int]):
-        """
-        This method allows to interpolate the pre-trained position encodings, to be
-        able to use the model on higher resolution images.
-
-        Args:
-            input_size: Input size to which position embeddings should be adapted
-
-        Returns:
-            Position embeddings (including class tokens) appropriate to input_size
-        """
-        cfg = self.cfg
-
-        if input_size == cfg.input_size:
-            return self.pos_embed  # No interpolation needed
-
-        src_pos_embed = self.pos_embed[:, cfg.nb_tokens :]
-        src_pos_embed = tf.reshape(
-            src_pos_embed, shape=(1, *cfg.grid_size, cfg.embed_dim)
+        return interpolate_pos_embeddings(
+            pos_embed=self.pos_embed,
+            src_grid_size=self.cfg.grid_size,
+            tgt_grid_size=target_cfg.grid_size,
+            nb_tokens=self.cfg.nb_tokens,
         )
-        tgt_grid_size = (
-            input_size[0] // cfg.patch_size,
-            input_size[1] // cfg.patch_size,
-        )
-        tgt_pos_embed = tf.image.resize(
-            images=src_pos_embed,
-            size=tgt_grid_size,
-            method="bicubic",
-        )
-        tgt_pos_embed = tf.cast(tgt_pos_embed, dtype=src_pos_embed.dtype)
-        tgt_pos_embed = tf.reshape(tgt_pos_embed, shape=(1, -1, cfg.embed_dim))
-        tgt_pos_embed = tf.concat(
-            (self.pos_embed[:, : cfg.nb_tokens], tgt_pos_embed), axis=1
-        )
-        return tgt_pos_embed
 
     def forward_features(self, x, training=False, return_features=False):
         features = {}
         batch_size = tf.shape(x)[0]
-        input_size = tf.shape(x)[1:3]
 
         # noinspection PyCallingNonCallable
-        x = self.patch_embed(x)
+        x, grid_size = self.patch_embed(x, return_shape=True)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
         if not self.cfg.distilled:
             x = tf.concat((cls_token, x), axis=1)
@@ -304,7 +280,13 @@ class ViT(tf.keras.Model):
         if not self.cfg.interpolate_input:
             x = x + self.pos_embed
         else:
-            x = x + self.interpolate_pos_embed(input_size)
+            pos_embed = interpolate_pos_embeddings(
+                self.pos_embed,
+                src_grid_size=self.cfg.grid_size,
+                tgt_grid_size=grid_size,
+                nb_tokens=self.cfg.nb_tokens,
+            )
+            x = x + pos_embed
         x = self.pos_drop(x, training=training)
         features["patch_embedding"] = x
 
