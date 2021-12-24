@@ -15,8 +15,8 @@ import numpy as np
 import tensorflow as tf
 
 from tfimm.layers import (
-    DropPath,
     MLP,
+    DropPath,
     PatchEmbeddings,
     act_layer_factory,
     norm_layer_factory,
@@ -330,7 +330,7 @@ class PyramidVisionTransformer(tf.keras.Model):
         nb_stages = len(self.cfg.nb_blocks)
         k = 0
         for j in range(nb_stages):
-            x, height, width = self.patch_embed[j](
+            x, (height, width) = self.patch_embed[j](
                 x, training=training, return_shape=True
             )
             features[f"patch_embedding_{j}"] = x
