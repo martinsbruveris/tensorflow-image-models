@@ -6,8 +6,8 @@ Based on transformers/models/vit by HuggingFace
 
 Copyright 2021 Martins Bruveris
 """
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
 
 import tensorflow as tf
 
@@ -59,7 +59,6 @@ class ViTConfig(ModelConfig):
     first_conv: str = "patch_embed/proj"
     # DeiT models have two classifier heads, one for distillation
     classifier: Union[str, Tuple[str, str]] = "head"
-    transform_weights: Dict[str, Callable] = field(default_factory=dict)
 
     """
     Args:
@@ -82,9 +81,6 @@ class ViTConfig(ModelConfig):
         act_layer: Activation function
     """
 
-    def __post_init__(self):
-        self.transform_weights["pos_embed"] = ViT.transform_pos_embed
-
     @property
     def nb_tokens(self) -> int:
         """Number of special tokens"""
@@ -101,6 +97,10 @@ class ViTConfig(ModelConfig):
     def nb_patches(self) -> int:
         """Number of patches without class and distillation tokens."""
         return self.grid_size[0] * self.grid_size[1]
+
+    @property
+    def transform_weights(self):
+        return {"pos_embed": CaiT.transform_pos_embed}
 
 
 class ViTMultiHeadAttention(tf.keras.layers.Layer):

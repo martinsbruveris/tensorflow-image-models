@@ -8,9 +8,9 @@ Official implementation (pytorch): https://github.com/whai362/PVT
 
 Copyright: 2021 Martins Bruveris
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Dict, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
@@ -57,7 +57,6 @@ class PyramidVisionTransformerConfig(ModelConfig):
     std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD
     first_conv: str = "patch_embed1/proj"
     classifier: str = "head"
-    transform_weights: Dict[str, Callable] = field(default_factory=dict)
 
     """
     Args:
@@ -77,12 +76,6 @@ class PyramidVisionTransformerConfig(ModelConfig):
         norm_layer: Normalization layer
         act_layer: Activation function
     """
-
-    def __post_init__(self):
-        for j in range(len(self.nb_blocks)):
-            self.transform_weights[f"pos_embed{j+1}"] = partial(
-                PyramidVisionTransformer.transform_pos_embed, stage=j
-            )
 
     @property
     def nb_tokens(self) -> Tuple:
@@ -104,6 +97,14 @@ class PyramidVisionTransformerConfig(ModelConfig):
     def nb_patches(self) -> Tuple:
         """Number of patches without class token."""
         return tuple(grid_size[0] * grid_size[1] for grid_size in self.grid_size)
+
+    @property
+    def transform_weights(self):
+        return {
+            f"pos_embed{j+1}": partial(
+                PyramidVisionTransformer.transform_pos_embed, stage=j
+            ) for j in range(len(self.nb_blocks))
+        }
 
 
 class SpatialReductionAttention(tf.keras.layers.Layer):

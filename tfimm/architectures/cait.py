@@ -11,8 +11,8 @@ Copyright 2021 Martins Bruveris
 Copyright 2021 Ross Wightman
 Copyright 2015-present, Facebook, Inc.
 """
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Tuple
+from dataclasses import dataclass
+from typing import List, Tuple
 
 import tensorflow as tf
 
@@ -58,7 +58,6 @@ class CaiTConfig(ModelConfig):
     # Weight transfer
     first_conv: str = "patch_embed/proj"
     classifier: str = "head"
-    transform_weights: Dict[str, Callable] = field(default_factory=dict)
 
     """
     Args:
@@ -79,9 +78,6 @@ class CaiTConfig(ModelConfig):
         init_scale: Inital value for layer scale weights
         """
 
-    def __post_init__(self):
-        self.transform_weights["pos_embed"] = CaiT.transform_pos_embed
-
     @property
     def grid_size(self) -> Tuple[int, int]:
         return (
@@ -92,6 +88,10 @@ class CaiTConfig(ModelConfig):
     @property
     def nb_patches(self) -> int:
         return self.grid_size[0] * self.grid_size[1]
+
+    @property
+    def transform_weights(self):
+        return {"pos_embed": CaiT.transform_pos_embed}
 
 
 class ClassAttention(tf.keras.layers.Layer):
