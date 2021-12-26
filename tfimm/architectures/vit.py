@@ -100,7 +100,7 @@ class ViTConfig(ModelConfig):
 
     @property
     def transform_weights(self):
-        return {"pos_embed": CaiT.transform_pos_embed}
+        return {"pos_embed": ViT.transform_pos_embed}
 
 
 class ViTMultiHeadAttention(tf.keras.layers.Layer):
