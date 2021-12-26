@@ -45,8 +45,8 @@ class ViTConfig(ModelConfig):
     distilled: bool = False
     # Regularization
     drop_rate: float = 0.0
-    drop_path_rate: float = 0.0
     attn_drop_rate: float = 0.0
+    drop_path_rate: float = 0.0
     # Other parameters
     norm_layer: str = "layer_norm"
     act_layer: str = "gelu"
@@ -63,22 +63,23 @@ class ViTConfig(ModelConfig):
 
     """
     Args:
-        num_classes: number of classes for classification head
-        in_chans: number of input channels
-        input_size: input image size
+        nb_classes: Number of classes for classification head
+        in_chans: Number of input channels
+        input_size: Input image size
         patch_size: Patch size; Image size must be multiple of patch size
         embed_dim: Embedding dimension
         nb_blocks: Depth of transformer (number of encoder blocks)
         nb_heads: Number of self-attention heads
-        mlp_ratio: ratio of mlp hidden dim to embedding dim
-        qkv_bias: enable bias for qkv if True
-        representation_size: enable and set representation layer (pre-logits) to this
+        mlp_ratio: Ratio of mlp hidden dim to embedding dim
+        qkv_bias: Enable bias for qkv if True
+        representation_size: Enable and set representation layer (pre-logits) to this
             value if set
-        distilled: model includes a distillation token and head as in DeiT models
-        drop_rate: dropout rate
-        attn_drop_rate: attention dropout rate
-        norm_layer: normalization layer
-        act_layer: activation function
+        distilled: Model includes a distillation token and head as in DeiT models
+        drop_rate: Dropout rate
+        attn_drop_rate: Attention dropout rate
+        drop_path_rate: Dropout rate for stochastic depth
+        norm_layer: Normalization layer
+        act_layer: Activation function
     """
 
     def __post_init__(self):
@@ -158,17 +159,13 @@ class Block(tf.keras.layers.Layer):
     def call(self, x, training=False):
         shortcut = x
         x = self.norm1(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.attn(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -269,7 +266,6 @@ class ViT(tf.keras.Model):
         features = {}
         batch_size = tf.shape(x)[0]
 
-        # noinspection PyCallingNonCallable
         x, grid_size = self.patch_embed(x, return_shape=True)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
         if not self.cfg.distilled:
@@ -291,7 +287,6 @@ class ViT(tf.keras.Model):
         features["patch_embedding"] = x
 
         for j, block in enumerate(self.blocks):
-            # noinspection PyCallingNonCallable
             x = block(x, training=training)
             features[f"block_{j}"] = x
         x = self.norm(x, training=training)

@@ -8,10 +8,10 @@ import pytest
 
 from tfimm.models.factory import create_model, transfer_weights
 
+MODEL_LIST = ["vit_tiny_patch16_224", "deit_tiny_patch16_224", "cait_xxs24_224"]
 
-@pytest.mark.parametrize(
-    "model_name", ["vit_tiny_patch16_224", "deit_tiny_patch16_224"]
-)
+
+@pytest.mark.parametrize("model_name", MODEL_LIST)
 def test_transform_pos_embed(model_name):
     """
     We test if we can transfer weights between ViT models with different input sizes,
@@ -26,9 +26,7 @@ def test_transform_pos_embed(model_name):
     dst_model(img)
 
 
-@pytest.mark.parametrize(
-    "model_name", ["vit_tiny_patch16_224", "deit_tiny_patch16_224"]
-)
+@pytest.mark.parametrize("model_name", MODEL_LIST)
 def test_interpolate_input(model_name):
     """
     We test if we can run inference with different input sizes by interpolating
