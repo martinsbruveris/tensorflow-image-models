@@ -24,6 +24,10 @@ FIXED_INPUT_SIZE_MODELS = [
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",
+    # In principle, it is possible to change input resolution for Swin Transformers,
+    # but that is not implemented. We shouldn't transfer attention masks between models
+    # since they are computed during model creation anyway. Left as TBD...
+    "swin_tiny_patch4_window7_224",  # swin.py
 ]
 FLEXIBLE_INPUT_SIZE_MODELS = list(set(MODEL_LIST) - set(FIXED_INPUT_SIZE_MODELS))
 

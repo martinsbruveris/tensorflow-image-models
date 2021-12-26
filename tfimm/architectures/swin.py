@@ -44,7 +44,6 @@ class SwinTransformerConfig(ModelConfig):
     # Other parameters
     norm_layer: str = "layer_norm"
     act_layer: str = "gelu"
-    ape: bool = False  # Absolute position embedding
     patch_norm: bool = True
     # Parameters for inference
     interpolate_input: bool = False
@@ -301,7 +300,6 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
         x_windows = tf.reshape(x_windows, shape=(-1, window_size ** 2, c))
 
         # W-MSA/SW-MSA
-        # noinspection PyCallingNonCallable
         attn_windows = self.attn([x_windows, self.attn_mask])
 
         # Merge windows
@@ -313,16 +311,13 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
         x = tf.reshape(x, shape=[-1, h * w, c])
 
         # Residual connection
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         # MLP
         shortcut = x
         x = self.norm2(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -401,7 +396,6 @@ class SwinTransformerStage(tf.keras.layers.Layer):
     def call(self, x, training=False, return_features=False):
         features = {}
         for j, block in enumerate(self.blocks):
-            # noinspection PyCallingNonCallable
             x = block(x, training=training)
             features[f"block_{j}"] = x
 
@@ -426,12 +420,6 @@ class SwinTransformer(tf.keras.Model):
             norm_layer=cfg.norm_layer,
             name="patch_embed",
         )
-        if cfg.ape:  # Absolute position embedding
-            self.absolute_pos_embed = self.add_weight(
-                name="absolute_pos_embed",
-                shape=(1, cfg.nb_patches, cfg.embed_dim),
-                initializer=tf.initializers.Zeros(),
-            )
         self.drop = tf.keras.layers.Dropout(cfg.drop_rate)
 
         # Stochastic depth
@@ -486,16 +474,12 @@ class SwinTransformer(tf.keras.Model):
 
     def forward_features(self, x, training=False, return_features=False):
         features = {}
-        # noinspection PyCallingNonCallable
         x = self.patch_embed(x, training=training)
-        if self.cfg.ape:
-            x = x + self.absolute_pos_embed
         x = self.drop(x, training=training)
         features["patch_embedding"] = x
 
         block_idx = 0
         for stage_idx, stage in enumerate(self.stages):
-            # noinspection PyCallingNonCallable
             x = stage(x, training=training, return_features=return_features)
             if return_features:
                 x, stage_features = x
