@@ -69,6 +69,7 @@ def test_save_load_model(model_name):
 
 
 @pytest.mark.parametrize("model_name", MODEL_LIST)
+@pytest.mark.timeout(90)
 def test_model_path(model_name):
     """Tests ability to use `model_path` parameter in `create_model`."""
     model = create_model(model_name)

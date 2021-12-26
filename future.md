@@ -50,9 +50,12 @@ Finetuning
 
 To Do
 
-- [ ] Add `interpolate_input` and `fixed_input_size` to all transformer models
+- [x] Add `interpolate_input` and `fixed_input_size` to all transformer models
 - [ ] Add no weight_decay rule for certain layers
 - [ ] Fix weight initialisation
+- [ ] Test that `nb_features` is set correctly for all models
+- [ ] Sort out ViT, DeiT, etc. weight naming + prefixes
+      Add unit test checking that all weights have correct prefix
 
 Future
 
