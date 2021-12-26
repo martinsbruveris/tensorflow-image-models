@@ -48,6 +48,15 @@ Finetuning
 - [ ] (optional) Fine-tune model on MNIST (and variants)
 - [ ] (optional) Evaluate model on MNIST (and variants)
 
+To Do
+
+- [x] Add `interpolate_input` and `fixed_input_size` to all transformer models
+- [ ] Add no weight_decay rule for certain layers
+- [ ] Fix weight initialisation
+- [ ] Test that `nb_features` is set correctly for all models
+- [ ] Sort out ViT, DeiT, etc. weight naming + prefixes
+      Add unit test checking that all weights have correct prefix
+
 Future
 
 - [ ] (optional) Add pretrained [DINO models](https://github.com/facebookresearch/dino)
@@ -58,5 +67,7 @@ Future
 - [ ] Pretrained models: https://github.com/microsoft/simmim
 - [ ] Pretrained models: https://github.com/bytedance/ibot
 - [ ] Pretrained models: https://github.com/facebookresearch/moco-v3
-- [ ] PoolFormer github.com/sail-sg/poolformer
+
+- [ ] RepVGG https://github.com/DingXiaoH/RepVGG
+- [ ] FaceX model zoo https://github.com/JDAI-CV/FaceX-Zoo
 

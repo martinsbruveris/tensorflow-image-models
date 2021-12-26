@@ -16,7 +16,13 @@ from typing import List, Tuple
 
 import tensorflow as tf
 
-from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
+from tfimm.layers import (
+    MLP,
+    DropPath,
+    PatchEmbeddings,
+    interpolate_pos_embeddings,
+    norm_layer_factory,
+)
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -42,8 +48,9 @@ class CaiTConfig(ModelConfig):
     # Other parameters
     norm_layer: str = "layer_norm_eps_1e-6"
     act_layer: str = "gelu"
-    init_scale: float = 1e-4  # TODO: Meaning??
+    init_scale: float = 1e-4
     # Parameters for inference
+    interpolate_input: bool = False
     crop_pct: float = 1.0
     interpolation: str = "bicubic"
     mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN
@@ -51,6 +58,25 @@ class CaiTConfig(ModelConfig):
     # Weight transfer
     first_conv: str = "patch_embed/proj"
     classifier: str = "head"
+
+    """
+    Args:
+        nb_classes: Number of classes for classification head
+        in_chans: Number of input channels
+        input_size: Input image size
+        patch_size: Patch size; Image size must be multiple of patch size
+        embed_dim: Embedding dimension
+        nb_blocks: Depth of transformer (number of encoder blocks)
+        nb_heads: Number of self-attention heads
+        mlp_ratio: Ratio of mlp hidden dim to embedding dim
+        qkv_bias: Enable bias for qkv if True
+        drop_rate: Dropout rate
+        attn_drop_rate: Attention dropout rate
+        drop_path_rate: Dropout rate for stochastic depth
+        norm_layer: Normalization layer
+        act_layer: Activation function
+        init_scale: Inital value for layer scale weights
+        """
 
     @property
     def grid_size(self) -> Tuple[int, int]:
@@ -62,6 +88,10 @@ class CaiTConfig(ModelConfig):
     @property
     def nb_patches(self) -> int:
         return self.grid_size[0] * self.grid_size[1]
+
+    @property
+    def transform_weights(self):
+        return {"pos_embed": CaiT.transform_pos_embed}
 
 
 class ClassAttention(tf.keras.layers.Layer):
@@ -270,19 +300,15 @@ class LayerScaleBlock(tf.keras.layers.Layer):
     def call(self, x, training=False):
         shortcut = x
         x = self.norm1(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.attn(x, training=training)
         x = self.gamma_1 * x
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
         x = self.gamma_2 * x
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -325,20 +351,6 @@ class CaiT(tf.keras.Model):
             else tf.keras.layers.Activation("linear")  # Identity layer
         )
 
-    @property
-    def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
-
-    @property
-    def feature_names(self) -> List[str]:
-        return (
-            ["patch_embedding"]
-            + [f"block_{j}" for j in range(self.cfg.nb_blocks)]
-            + ["features_cls_token"]
-            + [f"block_cls_token_{j}" for j in range(2)]
-            + ["features_all", "features", "logits"]
-        )
-
     def build(self, input_shape):
         self.cls_token = self.add_weight(
             shape=(1, 1, self.cfg.embed_dim),
@@ -353,16 +365,45 @@ class CaiT(tf.keras.Model):
             name="pos_embed",
         )
 
+    @property
+    def dummy_inputs(self) -> tf.Tensor:
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
+
+    @property
+    def feature_names(self) -> List[str]:
+        return (
+            ["patch_embedding"]
+            + [f"block_{j}" for j in range(self.cfg.nb_blocks)]
+            + ["features_cls_token"]
+            + [f"block_cls_token_{j}" for j in range(2)]
+            + ["features_all", "features", "logits"]
+        )
+
+    def transform_pos_embed(self, target_cfg: CaiTConfig):
+        return interpolate_pos_embeddings(
+            pos_embed=self.pos_embed,
+            src_grid_size=self.cfg.grid_size,
+            tgt_grid_size=target_cfg.grid_size,
+            nb_tokens=0,  # In CaiT the class token is added only near the end
+        )
+
     def forward_features(self, x, training=False, return_features=False):
         features = {}
-        # noinspection PyCallingNonCallable
-        x = self.patch_embed(x)
-        x = x + self.pos_embed
+        x, grid_size = self.patch_embed(x, return_shape=True)
+        if not self.cfg.interpolate_input:
+            x = x + self.pos_embed
+        else:
+            pos_embed = interpolate_pos_embeddings(
+                self.pos_embed,
+                src_grid_size=self.cfg.grid_size,
+                tgt_grid_size=grid_size,
+                nb_tokens=0,  # In CaiT the class token is added only near the end
+            )
+            x = x + pos_embed
         x = self.pos_drop(x, training=training)
         features["patch_embedding"] = x
 
         for j, block in enumerate(self.blocks):
-            # noinspection PyCallingNonCallable
             x = block(x, training=training)
             features[f"block_{j}"] = x
 
@@ -372,7 +413,6 @@ class CaiT(tf.keras.Model):
         features["features_cls_token"] = x
 
         for j, block in enumerate(self.block_token_only):
-            # noinspection PyCallingNonCallable
             x = block(x, training=training)
             features[f"block_cls_token_{j}"] = x
 

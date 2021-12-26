@@ -9,16 +9,18 @@ Official implementation (pytorch): https://github.com/whai362/PVT
 Copyright: 2021 Martins Bruveris
 """
 from dataclasses import dataclass
+from functools import partial
 from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
 
 from tfimm.layers import (
-    DropPath,
     MLP,
+    DropPath,
     PatchEmbeddings,
     act_layer_factory,
+    interpolate_pos_embeddings,
     norm_layer_factory,
 )
 from tfimm.models import ModelConfig, keras_serializable, register_model
@@ -33,6 +35,7 @@ class PyramidVisionTransformerConfig(ModelConfig):
     nb_classes: int = 1000
     in_chans: int = 3
     input_size: Tuple[int, int] = (224, 224)
+    patch_size: Tuple = (4, 2, 2, 2)
     embed_dim: Tuple = (64, 128, 256, 512)
     nb_blocks: Tuple = (3, 4, 6, 3)
     nb_heads: Tuple = (1, 2, 5, 8)
@@ -41,12 +44,13 @@ class PyramidVisionTransformerConfig(ModelConfig):
     qkv_bias: bool = True
     # Regularization
     drop_rate: float = 0.0
-    drop_path_rate: float = 0.0
     attn_drop_rate: float = 0.0
+    drop_path_rate: float = 0.0
     # Other parameters
     norm_layer: str = "layer_norm_eps_1e-6"
     act_layer: str = "gelu"
     # Parameters for inference
+    interpolate_input: bool = False
     crop_pct: float = 0.9
     interpolation: str = "bicubic"
     mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN
@@ -65,20 +69,48 @@ class PyramidVisionTransformerConfig(ModelConfig):
         nb_heads: Number of self-attention heads per stage
         mlp_ratio: Ratio of mlp hidden dim to embedding dim per stage
         sr_ratio: Spatial reduction ratio
-        linear_sr: Apply linear spatial reduction layer
         qkv_bias: Enable bias for qkv if True
         drop_rate: Dropout rate
-        drop_path_rate: Dropout rate for stochastic depth
         attn_drop_rate: Attention dropout rate
+        drop_path_rate: Dropout rate for stochastic depth
         norm_layer: Normalization layer
         act_layer: Activation function
     """
+
+    @property
+    def nb_tokens(self) -> Tuple:
+        """Number of special tokens. Class token is added during the last stage."""
+        return 0, 0, 0, 1
+
+    @property
+    def grid_size(self) -> Tuple:
+        grid_sizes = []
+        input_size = self.input_size
+        for patch_size in self.patch_size:
+            grid_sizes.append(
+                (input_size[0] // patch_size, input_size[1] // patch_size)
+            )
+            input_size = grid_sizes[-1]
+        return tuple(grid_sizes)
+
+    @property
+    def nb_patches(self) -> Tuple:
+        """Number of patches without class token."""
+        return tuple(grid_size[0] * grid_size[1] for grid_size in self.grid_size)
+
+    @property
+    def transform_weights(self):
+        return {
+            f"pos_embed{j+1}": partial(
+                PyramidVisionTransformer.transform_pos_embed, stage=j
+            )
+            for j in range(len(self.nb_blocks))
+        }
 
 
 class SpatialReductionAttention(tf.keras.layers.Layer):
     def __init__(
         self,
-        input_size: Tuple[int, int],
         embed_dim: int,
         nb_heads: int,
         sr_ratio: int,
@@ -94,7 +126,6 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
             raise ValueError(
                 f"embed_dim={embed_dim} should be divisible by nb_heads={nb_heads}."
             )
-        self.input_size = input_size
         self.nb_heads = nb_heads
         self.sr_ratio = sr_ratio
         head_dim = embed_dim // nb_heads
@@ -120,8 +151,10 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
             self.norm = self.norm_layer(name="norm")
 
     def call(self, x, training=False):
+        x, grid_size = x  # We need to pass information about spatial shape of input
         batch_size, seq_length, embed_dim = tf.unstack(tf.shape(x))
         head_dim = embed_dim // self.nb_heads
+        height, width = tf.unstack(grid_size)
 
         q = self.q(x)  # (B, N, D)
         q = tf.reshape(q, (batch_size, seq_length, self.nb_heads, -1))
@@ -131,7 +164,7 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         # token, `sr_ratio=1`. Note that after adding the class token, the resize
         # operation will fail.
         if self.sr_ratio > 1:
-            x = tf.reshape(x, (batch_size, *self.input_size, embed_dim))  # (B, h, w, D)
+            x = tf.reshape(x, (batch_size, height, width, embed_dim))  # (B, h, w, D)
             x = self.sr(x)  # (B, h', w', D)
             x = tf.reshape(x, (batch_size, -1, embed_dim))  # (B, N', D)
             x = self.norm(x, training=training)
@@ -158,7 +191,6 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
 class Block(tf.keras.layers.Layer):
     def __init__(
         self,
-        input_size: Tuple[int, int],
         embed_dim: int,
         nb_heads: int,
         mlp_ratio: float,
@@ -176,7 +208,6 @@ class Block(tf.keras.layers.Layer):
 
         self.norm1 = self.norm_layer(name="norm1")
         self.attn = SpatialReductionAttention(
-            input_size=input_size,
             embed_dim=embed_dim,
             nb_heads=nb_heads,
             sr_ratio=sr_ratio,
@@ -200,9 +231,11 @@ class Block(tf.keras.layers.Layer):
         )
 
     def call(self, x, training=False):
+        x, grid_size = x
+
         shortcut = x
         x = self.norm1(x, training=training)
-        x = self.attn(x, training=training)
+        x = self.attn((x, grid_size), training=training)
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -242,38 +275,28 @@ class PyramidVisionTransformer(tf.keras.Model):
         self.pos_drop = []
         self.blocks = []
         nb_stages = len(self.cfg.nb_blocks)
-        input_size = self.cfg.input_size
         for j in range(nb_stages):
-            patch_size = 4 if j == 0 else 2
             self.patch_embed.append(
                 PatchEmbeddings(
-                    patch_size=patch_size,
+                    patch_size=self.cfg.patch_size[j],
                     embed_dim=self.cfg.embed_dim[j],
                     norm_layer="layer_norm",
                     name=f"patch_embed{j+1}",
                 )
             )
-            # We need to know the input size to be able to reshape token lists for
-            # convolutional layers in encoder blocks
-            input_size = (input_size[0] // patch_size, input_size[1] // patch_size)
-            nb_patches = input_size[0] * input_size[1]
-            # In the last stage we add the class token
-            nb_patches = nb_patches if j != nb_stages - 1 else nb_patches + 1
-
+            nb_tokens = self.cfg.nb_patches[j] + self.cfg.nb_tokens[j]
             self.pos_embed.append(
                 self.add_weight(
-                    shape=(1, nb_patches, self.cfg.embed_dim[j]),
+                    shape=(1, nb_tokens, self.cfg.embed_dim[j]),
                     initializer="zeros",
                     trainable=True,
                     name=f"pos_embed{j+1}",
                 )
             )
             self.pos_drop.append(tf.keras.layers.Dropout(rate=self.cfg.drop_rate))
-
             for k in range(self.cfg.nb_blocks[j]):
                 self.blocks.append(
                     Block(
-                        input_size=input_size,
                         embed_dim=self.cfg.embed_dim[j],
                         nb_heads=self.cfg.nb_heads[j],
                         mlp_ratio=self.cfg.mlp_ratio[j],
@@ -323,6 +346,16 @@ class PyramidVisionTransformer(tf.keras.Model):
     #     # return {'pos_embed', 'cls_token'} # has pos_embed may be better
     #     return {'cls_token'}
 
+    def transform_pos_embed(
+        self, target_cfg: PyramidVisionTransformerConfig, stage: int
+    ):
+        return interpolate_pos_embeddings(
+            pos_embed=self.pos_embed[stage],
+            src_grid_size=self.cfg.grid_size[stage],
+            tgt_grid_size=target_cfg.grid_size[stage],
+            nb_tokens=self.cfg.nb_tokens[stage],
+        )
+
     def forward_features(self, x, training=False, return_features=False):
         features = {}
         batch_size = tf.shape(x)[0]
@@ -330,26 +363,33 @@ class PyramidVisionTransformer(tf.keras.Model):
         nb_stages = len(self.cfg.nb_blocks)
         k = 0
         for j in range(nb_stages):
-            x, height, width = self.patch_embed[j](
-                x, training=training, return_shape=True
-            )
+            x, grid_size = self.patch_embed[j](x, training=training, return_shape=True)
             features[f"patch_embedding_{j}"] = x
 
             if j == nb_stages - 1:
                 cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
                 x = tf.concat((cls_token, x), axis=1)
-            x = x + self.pos_embed[j]
+            if not self.cfg.interpolate_input:
+                x = x + self.pos_embed[j]
+            else:
+                pos_embed = interpolate_pos_embeddings(
+                    self.pos_embed[j],
+                    src_grid_size=self.cfg.grid_size[j],
+                    tgt_grid_size=grid_size,
+                    nb_tokens=self.cfg.nb_tokens[j],
+                )
+                x = x + pos_embed
             x = self.pos_drop[j](x, training=training)
             features[f"pos_embedding_{j}"] = x
 
             for _ in range(self.cfg.nb_blocks[j]):
-                x = self.blocks[k](x, training=training)
+                x = self.blocks[k]((x, grid_size), training=training)
                 features[f"block_{k}"] = x
                 k += 1
 
             if j != nb_stages - 1:
                 # Reshape to image form, ready for patch embedding
-                x = tf.reshape(x, (batch_size, height, width, -1))
+                x = tf.reshape(x, (batch_size, *grid_size, -1))
             features[f"stage_{j}"] = x
 
         x = self.norm(x, training=training)

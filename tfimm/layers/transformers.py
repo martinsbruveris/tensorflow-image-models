@@ -3,11 +3,48 @@ Common layers shared between transformer architectures.
 
 Copyright 2021 Martins Bruveris
 """
-from typing import Optional
+from typing import Optional, Tuple
 
 import tensorflow as tf
 
 from tfimm.layers.factory import act_layer_factory, norm_layer_factory
+
+
+def interpolate_pos_embeddings(
+    pos_embed: tf.Tensor,
+    src_grid_size: Tuple[int, int],
+    tgt_grid_size: Tuple[int, int],
+    nb_tokens: int = 0,
+) -> tf.Tensor:
+    """
+    This method allows to interpolate the pre-trained position encodings, to be
+    able to use the model on higher resolution images.
+
+    Args:
+        pos_embed: Positional embeddings to interpolate, shape (1, N, D)
+        src_grid_size: Grid size of given embeddings.
+        tgt_grid_size: Input size to which position embeddings should be adapted
+        nb_tokens: How many token should be ignored for interpolation (e.g., class or
+            distillation tokens)
+
+    Returns:
+        Position embeddings (including class tokens) appropriate to input_size
+    """
+    if src_grid_size == tgt_grid_size:
+        return pos_embed  # No interpolation needed
+
+    src_pos_embed = pos_embed[:, nb_tokens:]
+    src_pos_embed = tf.reshape(src_pos_embed, shape=(1, *src_grid_size, -1))
+    tgt_pos_embed = tf.image.resize(
+        images=src_pos_embed,
+        size=tgt_grid_size,
+        method="bicubic",
+    )
+    tgt_pos_embed = tf.cast(tgt_pos_embed, dtype=src_pos_embed.dtype)
+    nb_pos_tokens = tgt_grid_size[0] * tgt_grid_size[1]
+    tgt_pos_embed = tf.reshape(tgt_pos_embed, shape=(1, nb_pos_tokens, -1))
+    tgt_pos_embed = tf.concat((pos_embed[:, :nb_tokens], tgt_pos_embed), axis=1)
+    return tgt_pos_embed
 
 
 class PatchEmbeddings(tf.keras.layers.Layer):
@@ -58,7 +95,7 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         x = tf.reshape(tensor=x, shape=(batch_size, height * width, -1))
 
         x = self.norm(x, training=training)
-        return (x, height, width) if return_shape else x
+        return (x, (height, width)) if return_shape else x
 
 
 class MLP(tf.keras.layers.Layer):

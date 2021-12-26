@@ -118,14 +118,12 @@ class MixerBlock(tf.keras.layers.Layer):
         x = tf.transpose(x, perm=(0, 2, 1))
         x = self.mlp_tokens(x, training=training)
         x = tf.transpose(x, perm=(0, 2, 1))
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
         x = self.mlp_channels(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -181,7 +179,6 @@ class ResBlock(tf.keras.layers.Layer):
         x = self.linear_tokens(x, training=training)
         x = tf.transpose(x, perm=(0, 2, 1))
         x = self.ls1 * x
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -189,7 +186,6 @@ class ResBlock(tf.keras.layers.Layer):
         x = self.norm2(x, training=training)
         x = self.mlp_channels(x, training=training)
         x = self.ls2 * x
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -222,7 +218,6 @@ class SpatialGatingBlock(tf.keras.layers.Layer):
         shortcut = x
         x = self.norm(x, training=training)
         x = self.mlp_channels(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -283,7 +278,6 @@ class MLPMixer(tf.keras.Model):
 
     def forward_features(self, x, training=False, return_features=False):
         features = {}
-        # noinspection PyCallingNonCallable
         x = self.stem(x, training=training)
         features["stem"] = x
 

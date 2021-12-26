@@ -4,8 +4,8 @@ from pprint import pprint
 
 # This needs to be imported, even though we don't use anything from here, so types
 # are correctly registered.
-import tfimm.train.train
-from tfimm.train.config import dump_config, parse_args
+import tfimm.train.train  # noqa: F401
+from tfimm.train.config import parse_args
 
 
 def main():

@@ -6,12 +6,18 @@ Based on transformers/models/vit by HuggingFace
 
 Copyright 2021 Martins Bruveris
 """
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import List, Optional, Tuple, Union
 
 import tensorflow as tf
 
-from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
+from tfimm.layers import (
+    MLP,
+    DropPath,
+    PatchEmbeddings,
+    interpolate_pos_embeddings,
+    norm_layer_factory,
+)
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import (
     IMAGENET_DEFAULT_MEAN,
@@ -39,8 +45,8 @@ class ViTConfig(ModelConfig):
     distilled: bool = False
     # Regularization
     drop_rate: float = 0.0
-    drop_path_rate: float = 0.0
     attn_drop_rate: float = 0.0
+    drop_path_rate: float = 0.0
     # Other parameters
     norm_layer: str = "layer_norm"
     act_layer: str = "gelu"
@@ -53,33 +59,31 @@ class ViTConfig(ModelConfig):
     first_conv: str = "patch_embed/proj"
     # DeiT models have two classifier heads, one for distillation
     classifier: Union[str, Tuple[str, str]] = "head"
-    transform_weights: Dict[str, Callable] = field(default_factory=dict)
 
     """
     Args:
-        num_classes: number of classes for classification head
-        in_chans: number of input channels
-        input_size: input image size
+        nb_classes: Number of classes for classification head
+        in_chans: Number of input channels
+        input_size: Input image size
         patch_size: Patch size; Image size must be multiple of patch size
         embed_dim: Embedding dimension
         nb_blocks: Depth of transformer (number of encoder blocks)
         nb_heads: Number of self-attention heads
-        mlp_ratio: ratio of mlp hidden dim to embedding dim
-        qkv_bias: enable bias for qkv if True
-        representation_size: enable and set representation layer (pre-logits) to this
+        mlp_ratio: Ratio of mlp hidden dim to embedding dim
+        qkv_bias: Enable bias for qkv if True
+        representation_size: Enable and set representation layer (pre-logits) to this
             value if set
-        distilled: model includes a distillation token and head as in DeiT models
-        drop_rate: dropout rate
-        attn_drop_rate: attention dropout rate
-        norm_layer: normalization layer
-        act_layer: activation function
+        distilled: Model includes a distillation token and head as in DeiT models
+        drop_rate: Dropout rate
+        attn_drop_rate: Attention dropout rate
+        drop_path_rate: Dropout rate for stochastic depth
+        norm_layer: Normalization layer
+        act_layer: Activation function
     """
-
-    def __post_init__(self):
-        self.transform_weights["pos_embed"] = ViT.transform_pos_embed
 
     @property
     def nb_tokens(self) -> int:
+        """Number of special tokens"""
         return 2 if self.distilled else 1
 
     @property
@@ -91,7 +95,12 @@ class ViTConfig(ModelConfig):
 
     @property
     def nb_patches(self) -> int:
+        """Number of patches without class and distillation tokens."""
         return self.grid_size[0] * self.grid_size[1]
+
+    @property
+    def transform_weights(self):
+        return {"pos_embed": ViT.transform_pos_embed}
 
 
 class ViTMultiHeadAttention(tf.keras.layers.Layer):
@@ -150,17 +159,13 @@ class Block(tf.keras.layers.Layer):
     def call(self, x, training=False):
         shortcut = x
         x = self.norm1(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.attn(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.mlp(x, training=training)
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -250,51 +255,18 @@ class ViT(tf.keras.Model):
         )
 
     def transform_pos_embed(self, target_cfg: ViTConfig):
-        return self.interpolate_pos_embed(target_cfg.input_size)
-
-    def interpolate_pos_embed(self, input_size: Tuple[int, int]):
-        """
-        This method allows to interpolate the pre-trained position encodings, to be
-        able to use the model on higher resolution images.
-
-        Args:
-            input_size: Input size to which position embeddings should be adapted
-
-        Returns:
-            Position embeddings (including class tokens) appropriate to input_size
-        """
-        cfg = self.cfg
-
-        if input_size == cfg.input_size:
-            return self.pos_embed  # No interpolation needed
-
-        src_pos_embed = self.pos_embed[:, cfg.nb_tokens :]
-        src_pos_embed = tf.reshape(
-            src_pos_embed, shape=(1, *cfg.grid_size, cfg.embed_dim)
+        return interpolate_pos_embeddings(
+            pos_embed=self.pos_embed,
+            src_grid_size=self.cfg.grid_size,
+            tgt_grid_size=target_cfg.grid_size,
+            nb_tokens=self.cfg.nb_tokens,
         )
-        tgt_grid_size = (
-            input_size[0] // cfg.patch_size,
-            input_size[1] // cfg.patch_size,
-        )
-        tgt_pos_embed = tf.image.resize(
-            images=src_pos_embed,
-            size=tgt_grid_size,
-            method="bicubic",
-        )
-        tgt_pos_embed = tf.cast(tgt_pos_embed, dtype=src_pos_embed.dtype)
-        tgt_pos_embed = tf.reshape(tgt_pos_embed, shape=(1, -1, cfg.embed_dim))
-        tgt_pos_embed = tf.concat(
-            (self.pos_embed[:, : cfg.nb_tokens], tgt_pos_embed), axis=1
-        )
-        return tgt_pos_embed
 
     def forward_features(self, x, training=False, return_features=False):
         features = {}
         batch_size = tf.shape(x)[0]
-        input_size = tf.shape(x)[1:3]
 
-        # noinspection PyCallingNonCallable
-        x = self.patch_embed(x)
+        x, grid_size = self.patch_embed(x, return_shape=True)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
         if not self.cfg.distilled:
             x = tf.concat((cls_token, x), axis=1)
@@ -304,12 +276,17 @@ class ViT(tf.keras.Model):
         if not self.cfg.interpolate_input:
             x = x + self.pos_embed
         else:
-            x = x + self.interpolate_pos_embed(input_size)
+            pos_embed = interpolate_pos_embeddings(
+                self.pos_embed,
+                src_grid_size=self.cfg.grid_size,
+                tgt_grid_size=grid_size,
+                nb_tokens=self.cfg.nb_tokens,
+            )
+            x = x + pos_embed
         x = self.pos_drop(x, training=training)
         features["patch_embedding"] = x
 
         for j, block in enumerate(self.blocks):
-            # noinspection PyCallingNonCallable
             x = block(x, training=training)
             features[f"block_{j}"] = x
         x = self.norm(x, training=training)

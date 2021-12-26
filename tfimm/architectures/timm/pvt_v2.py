@@ -12,7 +12,6 @@ from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 from timm.models.registry import register_model
 from timm.models.vision_transformer import _cfg
 
-
 __all__ = ["PyramidVisionTransformerV2"]
 
 
@@ -197,7 +196,8 @@ class Block(nn.Module):
             sr_ratio=sr_ratio,
             linear=linear,
         )
-        # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
+        # NOTE: drop path for stochastic depth, we shall see if this is better than
+        # dropout here
         self.drop_path = DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
