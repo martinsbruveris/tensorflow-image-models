@@ -103,7 +103,8 @@ class PyramidVisionTransformerConfig(ModelConfig):
         return {
             f"pos_embed{j+1}": partial(
                 PyramidVisionTransformer.transform_pos_embed, stage=j
-            ) for j in range(len(self.nb_blocks))
+            )
+            for j in range(len(self.nb_blocks))
         }
 
 

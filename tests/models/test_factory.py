@@ -51,6 +51,7 @@ def test_transfer_weights(model_name, nb_classes):
 
 
 @pytest.mark.parametrize("model_name", MODEL_LIST)
+@pytest.mark.timeout(90)
 def test_save_load_model(model_name):
     """Tests ability to use keras save() and load() functions."""
     model = create_model(model_name)
