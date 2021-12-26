@@ -8,6 +8,7 @@ from tfimm import list_models
 from tfimm.models.factory import create_model, create_preprocessing, transfer_weights
 
 MODEL_LIST = [
+    "cait_xxs24_224",  # cait.py
     "convmixer_768_32",  # convmixer.py
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
@@ -16,9 +17,15 @@ MODEL_LIST = [
     "pvt_v2_b0",  # pvt_v2.py
     "resnet18",  # resnet.py
     "swin_tiny_patch4_window7_224",  # swin.py
-    "deit_tiny_distilled_patch16_224",  # vit.py
+    "deit_tiny_patch16_224",  # vit.py
     "vit_tiny_patch16_224",
 ]
+FIXED_INPUT_SIZE_MODELS = [
+    "mixer_s32_224",  # mlp_mixer.py
+    "resmlp_12_224",
+    "gmlp_ti16_224",
+]
+FLEXIBLE_INPUT_SIZE_MODELS = list(set(MODEL_LIST) - set(FIXED_INPUT_SIZE_MODELS))
 
 
 @pytest.mark.parametrize("model_name", MODEL_LIST)
@@ -82,3 +89,44 @@ def test_preprocessing(model_name, input_shape, dtype):
     img = preprocess(img)
     assert img.shape == input_shape
     assert img.dtype == dtype
+
+
+@pytest.mark.parametrize("model_name", FLEXIBLE_INPUT_SIZE_MODELS)
+def test_change_input_size(model_name):
+    """
+    We test if we can transfer weights between models with different input sizes,
+    which requires interpolation of position embeddings during weight transfer. This
+    should be done via the transfer_weight hook in the config.
+    """
+    src_model = create_model(model_name)
+    dst_model = create_model(model_name, input_size=(256, 256))
+    transfer_weights(src_model, dst_model)
+
+    img = dst_model.dummy_inputs
+    dst_model(img)
+
+
+@pytest.mark.parametrize("model_name", FLEXIBLE_INPUT_SIZE_MODELS)
+def test_change_input_size_inference(model_name):
+    """
+    We test if we can run inference with different input sizes.
+    """
+    model = create_model(model_name)
+    # For transformer models we need specify the `interpolate_input` parameter. Models
+    # that don't have the parameter will ignore it.
+    flexible_model = create_model(model_name, interpolate_input=True)
+    transfer_weights(model, flexible_model)
+
+    # First we test if setting `interpolate_input=True` doesn't change the output for
+    # original input size.
+    rng = np.random.default_rng(2021)
+    img = rng.random(
+        size=(1, *model.cfg.input_size, model.cfg.in_chans), dtype="float32"
+    )
+    res_1 = model(img)
+    res_2 = flexible_model(img)
+    assert (np.max(np.abs(res_1 - res_2))) / (np.max(np.abs(res_1)) + 1e-6) < 1e-6
+
+    # Then we test, if we can run inference on input at different resolution
+    img = rng.random(size=(1, 256, 256, model.cfg.in_chans), dtype="float32")
+    flexible_model(img)

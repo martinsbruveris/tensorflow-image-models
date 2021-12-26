@@ -1,3 +1,4 @@
+import logging
 import os
 from copy import deepcopy
 from typing import Callable, Optional, Union
@@ -66,7 +67,13 @@ def create_model(
     # Update config with kwargs
     cfg = deepcopy(cfg)
     for key, value in kwargs.items():
-        setattr(cfg, key, value)
+        if hasattr(cfg, key):
+            setattr(cfg, key, value)
+        else:
+            logging.warning(
+                f"Config for model {model_name} does not have field `{key}`. "
+                "Ignoring field."
+            )
     if in_chans is not None:
         setattr(cfg, "in_chans", in_chans)
     if nb_classes is not None:
