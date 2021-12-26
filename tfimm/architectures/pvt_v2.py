@@ -81,9 +81,8 @@ class DWConv(tf.keras.layers.Layer):
     Reshape patches into image form, applies convolution and flattens into sequence.
     """
 
-    def __init__(self, input_size: Tuple[int, int], **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.input_size = input_size
         self.dwconv = tf.keras.layers.DepthwiseConv2D(
             kernel_size=3,
             padding="same",
@@ -91,9 +90,10 @@ class DWConv(tf.keras.layers.Layer):
         )
 
     def call(self, x):
+        x, grid_size = x  # We need to pass information about spatial shape of input
         # x.shape = (B, N, D)
         batch_size, _, embed_dim = tf.unstack(tf.shape(x))
-        x = tf.reshape(x, (batch_size, *self.input_size, embed_dim))  # (B, h, w, D)
+        x = tf.reshape(x, (batch_size, *grid_size, embed_dim))  # (B, h, w, D)
         x = self.dwconv(x)
         x = tf.reshape(x, (batch_size, -1, embed_dim))
         return x
@@ -108,7 +108,6 @@ class MLP(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        input_size: Tuple[int, int],
         hidden_dim: int,
         embed_dim: int,
         linear_sr: bool,
@@ -123,15 +122,16 @@ class MLP(tf.keras.layers.Layer):
         self.relu = (
             act_layer_factory("relu")() if linear_sr else act_layer_factory("linear")()
         )
-        self.dwconv = DWConv(input_size=input_size, name="dwconv")
+        self.dwconv = DWConv(name="dwconv")
         self.act = act_layer()
         self.fc2 = tf.keras.layers.Dense(units=embed_dim, name="fc2")
         self.drop = tf.keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
+        x, grid_size = x  # We need to pass information about spatial shape of input
         x = self.fc1(x)
         x = self.relu(x)
-        x = self.dwconv(x)
+        x = self.dwconv((x, grid_size))
         x = self.act(x)
         x = self.drop(x, training=training)
         x = self.fc2(x)
@@ -142,7 +142,6 @@ class MLP(tf.keras.layers.Layer):
 class SpatialReductionAttention(tf.keras.layers.Layer):
     def __init__(
         self,
-        input_size: Tuple[int, int],
         embed_dim: int,
         nb_heads: int,
         sr_ratio: int,
@@ -159,7 +158,6 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
             raise ValueError(
                 f"embed_dim={embed_dim} should be divisible by nb_heads={nb_heads}."
             )
-        self.input_size = input_size
         self.nb_heads = nb_heads
         self.sr_ratio = sr_ratio
         self.linear_sr = linear_sr
@@ -200,6 +198,7 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
             self.norm = tf.keras.layers.Activation("linear")
 
     def call(self, x, training=False):
+        x, grid_size = x
         batch_size, seq_length, embed_dim = tf.unstack(tf.shape(x))
         head_dim = embed_dim // self.nb_heads
 
@@ -208,7 +207,7 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         q = tf.transpose(q, (0, 2, 1, 3))  # (B, H, N, D/H)
 
         # Spatial reduction happens here
-        x = tf.reshape(x, (batch_size, *self.input_size, embed_dim))  # (B, h, w, D)
+        x = tf.reshape(x, (batch_size, *grid_size, embed_dim))  # (B, h, w, D)
         if self.linear_sr:
             x = self.pool(x)
         x = self.sr(x)  # (B, h', w', D)
@@ -239,7 +238,6 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
 class Block(tf.keras.layers.Layer):
     def __init__(
         self,
-        input_size: Tuple[int, int],
         embed_dim: int,
         nb_heads: int,
         mlp_ratio: float,
@@ -258,7 +256,6 @@ class Block(tf.keras.layers.Layer):
 
         self.norm1 = self.norm_layer(name="norm1")
         self.attn = SpatialReductionAttention(
-            input_size=input_size,
             embed_dim=embed_dim,
             nb_heads=nb_heads,
             sr_ratio=sr_ratio,
@@ -275,7 +272,6 @@ class Block(tf.keras.layers.Layer):
         self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.norm2 = self.norm_layer(name="norm2")
         self.mlp = MLP(
-            input_size=input_size,
             hidden_dim=int(embed_dim * mlp_ratio),
             embed_dim=embed_dim,
             linear_sr=linear_sr,
@@ -285,15 +281,17 @@ class Block(tf.keras.layers.Layer):
         )
 
     def call(self, x, training=False):
+        x, grid_size = x
+
         shortcut = x
         x = self.norm1(x, training=training)
-        x = self.attn(x, training=training)
+        x = self.attn((x, grid_size), training=training)
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
         shortcut = x
         x = self.norm2(x, training=training)
-        x = self.mlp(x, training=training)
+        x = self.mlp((x, grid_size), training=training)
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -316,26 +314,19 @@ class PyramidVisionTransformerV2(tf.keras.Model):
         self.blocks = []
         self.norms = []
         nb_stages = len(cfg.nb_blocks)
-        input_size = cfg.input_size
         for j in range(nb_stages):
-            stride = 4 if j == 0 else 2
             self.patch_embed.append(
                 PatchEmbeddings(
                     patch_size=7 if j == 0 else 3,
                     embed_dim=cfg.embed_dim[j],
-                    stride=stride,
+                    stride=4 if j == 0 else 2,
                     norm_layer="layer_norm",
                     name=f"patch_embed{j+1}",
                 )
             )
-            # We need to know the input size to be able to reshape token lists for
-            # convolutional layers in encoder blocks
-            input_size = (input_size[0] // stride, input_size[1] // stride)
-
             for k in range(cfg.nb_blocks[j]):
                 self.blocks.append(
                     Block(
-                        input_size=input_size,
                         embed_dim=cfg.embed_dim[j],
                         nb_heads=cfg.nb_heads[j],
                         mlp_ratio=cfg.mlp_ratio[j],
@@ -393,23 +384,20 @@ class PyramidVisionTransformerV2(tf.keras.Model):
         nb_stages = len(self.cfg.nb_blocks)
         k = 0
         for j in range(nb_stages):
-            x, (height, width) = self.patch_embed[j](
-                x, training=training, return_shape=True
-            )
+            x, grid_size = self.patch_embed[j](x, training=training, return_shape=True)
             features[f"patch_embedding_{j}"] = x
 
             for _ in range(self.cfg.nb_blocks[j]):
-                x = self.blocks[k](x, training=training)
+                x = self.blocks[k]((x, grid_size), training=training)
                 features[f"block_{k}"] = x
                 k += 1
 
             x = self.norms[j](x, training=training)
             # Reshape to image form, ready for patch embedding
-            x = tf.reshape(x, (batch_size, height, width, -1))
+            x = tf.reshape(x, (batch_size, *grid_size, -1))
             features[f"stage_{j}"] = x
 
-        # noinspection PyUnboundLocalVariable
-        x = tf.reshape(x, (batch_size, height * width, -1))
+        x = tf.reshape(x, (batch_size, -1, self.cfg.embed_dim[-1]))
         features["features_all"] = x
         x = tf.reduce_mean(x, axis=1)
         features["features"] = x

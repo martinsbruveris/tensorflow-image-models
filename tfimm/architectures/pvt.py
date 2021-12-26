@@ -361,9 +361,7 @@ class PyramidVisionTransformer(tf.keras.Model):
         nb_stages = len(self.cfg.nb_blocks)
         k = 0
         for j in range(nb_stages):
-            x, grid_size = self.patch_embed[j](
-                x, training=training, return_shape=True
-            )
+            x, grid_size = self.patch_embed[j](x, training=training, return_shape=True)
             features[f"patch_embedding_{j}"] = x
 
             if j == nb_stages - 1:
