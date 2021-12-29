@@ -16,9 +16,12 @@ MODEL_LIST = [
     "pvt_tiny",  # pvt.py
     "pvt_v2_b0",  # pvt_v2.py
     "resnet18",  # resnet.py
+    "resnetv2_50x1_bitm",  # resnetv2.py
     "swin_tiny_patch4_window7_224",  # swin.py
     "deit_tiny_patch16_224",  # vit.py
     "vit_tiny_patch16_224",
+    "vit_tiny_r_s16_p8_224",  # vit_hybrid.py
+    "vit_small_r26_s32_224",
 ]
 FIXED_INPUT_SIZE_MODELS = [
     "mixer_s32_224",  # mlp_mixer.py
