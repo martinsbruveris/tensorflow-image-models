@@ -5,5 +5,5 @@ from dataclasses import dataclass
 class ModelConfig:
     """Shared base class for model configurations."""
 
-    name: str
-    url: str
+    name: str = ""
+    url: str = ""
