@@ -163,12 +163,16 @@ The following architectures are currently available:
   - Billion-scale Semi-Supervised Learning for Image Classification. 
     [\[arXiv:1905.00546\]](https://arxiv.org/abs/1905.00546)
   - ECA-Net: Efficient Channel Attention for Deep Convolutional Neural Networks. 
-    [\[arXiv1910.03151\]](https://arxiv.org/pdf/1910.03151.pdf)
+    [\[arXiv1910.03151\]](https://arxiv.org/abs/1910.03151)
   - Revisiting ResNets. [\[arXiv:2103.07579\]](https://arxiv.org/abs/2103.07579)
   - Making Convolutional Networks Shift-Invariant Again. (anti-aliasing layer)
-    [\[arXiv:1904.11486\]](https://arxiv.org/pdf/1904.11486.pdf)
+    [\[arXiv:1904.11486\]](https://arxiv.org/abs/1904.11486)
   - Squeeze-and-Excitation Networks. 
     [\[arXiv:1709.01507\]](https://arxiv.org/abs/1709.01507)
+  - Big Transfer (BiT): General Visual Representation Learning
+    [\[arXiv:1912.11370\]](https://arxiv.org/abs/1912.11370)
+  - Knowledge distillation: A good teacher is patient and consistent
+    [\[arXiv:2106:05237\]](https://arxiv.org/abs/2106.05237)
 
 ## Profiling
 

@@ -2,6 +2,8 @@
 
 ## Unpublished
 
+- Added hybrid Vision Transformers (`vit_hybrid`).
+- Added `resnetv2` module, which inlcudes Big Transfer (BiT) resnets.
 - Added Pyramid Vision Transformer models
 - Added first version of training framework (`tfimm/train`). Still work in progress. 
   Possibly buggy.
