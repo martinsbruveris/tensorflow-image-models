@@ -171,7 +171,6 @@ class BasicBlock(tf.keras.layers.Layer):
         x = self.bn1(x, training=training)
         x = self.act1(x)
         if self.aa is not None:
-            # noinspection PyCallingNonCallable
             x = self.aa(x, training=training)
 
         x = self.pad2(x)
@@ -180,7 +179,6 @@ class BasicBlock(tf.keras.layers.Layer):
 
         x = self.se(x, training=training)
 
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
 
         if self.downsample_layer is not None:
@@ -277,7 +275,6 @@ class Bottleneck(tf.keras.layers.Layer):
         x = self.bn2(x, training=training)
         x = self.act2(x)
         if self.aa is not None:
-            # noinspection PyCallingNonCallable
             x = self.aa(x, training=training)
 
         x = self.conv3(x)
@@ -285,7 +282,6 @@ class Bottleneck(tf.keras.layers.Layer):
 
         x = self.se(x, training=training)
 
-        # noinspection PyCallingNonCallable
         x = self.drop_path(x, training=training)
 
         if self.downsample_layer is not None:
@@ -580,7 +576,6 @@ class ResNet(tf.keras.Model):
         features["stem"] = x
 
         for j, block in enumerate(self.blocks):
-            # noinspection PyCallingNonCallable
             x = block(x, training=training)
             features[f"block_{j}"] = x
         features["features"] = x
@@ -592,7 +587,6 @@ class ResNet(tf.keras.Model):
         x = self.forward_features(x, training, return_features)
         if return_features:
             x, features = x
-        # noinspection PyCallingNonCallable
         x = self.head(x, training=training)
         features["logits"] = x
         return (x, features) if return_features else x
