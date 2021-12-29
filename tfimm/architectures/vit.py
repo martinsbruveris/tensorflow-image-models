@@ -26,6 +26,8 @@ from tfimm.utils import (
     IMAGENET_INCEPTION_STD,
 )
 
+from .resnetv2 import ResNetV2, ResNetV2Config, ResNetV2Stem
+
 # model_registry will add each entrypoint fn to this
 __all__ = ["ViT", "ViTConfig"]
 
@@ -35,6 +37,8 @@ class ViTConfig(ModelConfig):
     nb_classes: int = 1000
     in_chans: int = 3
     input_size: Tuple[int, int] = (224, 224)
+    patch_layer: str = "patch_embeddings"
+    patch_nb_blocks: tuple = ()
     patch_size: int = 16
     embed_dim: int = 768
     nb_blocks: int = 12
@@ -48,7 +52,7 @@ class ViTConfig(ModelConfig):
     attn_drop_rate: float = 0.0
     drop_path_rate: float = 0.0
     # Other parameters
-    norm_layer: str = "layer_norm"
+    norm_layer: str = "layer_norm_eps_1e-6"
     act_layer: str = "gelu"
     # Parameters for inference
     interpolate_input: bool = False
@@ -65,7 +69,12 @@ class ViTConfig(ModelConfig):
         nb_classes: Number of classes for classification head
         in_chans: Number of input channels
         input_size: Input image size
-        patch_size: Patch size; Image size must be multiple of patch size
+        patch_layer: Layer used to transform image to patches. Possible values are
+            `patch_embeddings` and `hybrid_embeddings`.
+        patch_nb_blocks: When `patch_layer="hybrid_embeddings`, this is the number of
+            residual blocks in each stage. Set to `()` to use only the stem.
+        patch_size: Patch size; Image size must be multiple of patch size. For hybrid
+            embedding layer, this patch size is applied after the convolutional layers.
         embed_dim: Embedding dimension
         nb_blocks: Depth of transformer (number of encoder blocks)
         nb_heads: Number of self-attention heads
@@ -88,10 +97,16 @@ class ViTConfig(ModelConfig):
 
     @property
     def grid_size(self) -> Tuple[int, int]:
-        return (
+        grid_size = (
             self.input_size[0] // self.patch_size,
             self.input_size[1] // self.patch_size,
         )
+        if self.patch_layer == "hybrid_embeddings":
+            # 2 reductions in the stem, 1 reduction in each stage except the first one
+            reductions = 2 + max(len(self.patch_nb_blocks) - 1, 0)
+            stride = 2 ** reductions
+            grid_size = (grid_size[0] // stride, grid_size[1] // stride)
+        return grid_size
 
     @property
     def nb_patches(self) -> int:
@@ -171,6 +186,67 @@ class Block(tf.keras.layers.Layer):
         return x
 
 
+class HybridEmbeddings(tf.keras.layers.Layer):
+    """
+    CNN feature map embedding
+
+    Extract feature map from CNN, flatten, project to embedding dim.
+    """
+
+    def __init__(
+        self,
+        in_chans: int,
+        input_size: tuple,
+        nb_blocks: tuple,
+        patch_size: int,
+        embed_dim: int,
+        drop_path_rate: float,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        if nb_blocks == ():
+            self.backbone = ResNetV2Stem(
+                stem_type="same",
+                stem_width=64,
+                width_factor=1,
+                conv_padding="same",
+                preact=False,
+                act_layer="relu",
+                norm_layer="group_norm",
+                name="backbone",
+            )
+        else:
+            backbone_cfg = ResNetV2Config(
+                nb_classes=0,
+                in_chans=in_chans,
+                input_size=input_size,
+                nb_blocks=nb_blocks,
+                preact=False,
+                stem_type="same",
+                global_pool="",
+                conv_padding="same",
+                drop_path_rate=drop_path_rate,
+            )
+            self.backbone = ResNetV2(backbone_cfg, name="backbone")
+
+        self.projection = tf.keras.layers.Conv2D(
+            filters=embed_dim,
+            kernel_size=patch_size,
+            strides=patch_size,
+            use_bias=True,
+            name="proj",
+        )
+
+    def call(self, x, training=False, return_shape=False):
+        x = self.backbone(x, training=training)
+        x = self.projection(x)
+
+        # Change the 2D spatial dimensions to a single temporal dimension.
+        batch_size, height, width = tf.unstack(tf.shape(x)[:3])
+        x = tf.reshape(tensor=x, shape=(batch_size, height * width, -1))
+        return (x, (height, width)) if return_shape else x
+
+
 @keras_serializable
 class ViT(tf.keras.Model):
     cfg_class = ViTConfig
@@ -181,12 +257,25 @@ class ViT(tf.keras.Model):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.cfg = cfg
 
-        self.patch_embed = PatchEmbeddings(
-            patch_size=cfg.patch_size,
-            embed_dim=cfg.embed_dim,
-            norm_layer="",  # ViT does not use normalization in patch embeddings
-            name="patch_embed",
-        )
+        if cfg.patch_layer == "patch_embeddings":
+            self.patch_embed = PatchEmbeddings(
+                patch_size=cfg.patch_size,
+                embed_dim=cfg.embed_dim,
+                norm_layer="",  # ViT does not use normalization in patch embeddings
+                name="patch_embed",
+            )
+        elif cfg.patch_layer == "hybrid_embeddings":
+            self.patch_embed = HybridEmbeddings(
+                in_chans=cfg.in_chans,
+                input_size=cfg.input_size,
+                nb_blocks=cfg.patch_nb_blocks,
+                patch_size=cfg.patch_size,
+                embed_dim=cfg.embed_dim,
+                drop_path_rate=cfg.drop_path_rate,
+                name="patch_embed",
+            )
+        else:
+            raise ValueError(f"Unknown patch layer: {cfg.patch_layer}.")
         self.cls_token = self.add_weight(
             shape=(1, 1, cfg.embed_dim),
             initializer="zeros",
