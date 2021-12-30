@@ -301,7 +301,6 @@ class ResNetV2Stem(tf.keras.layers.Layer):
         self,
         stem_type: str,
         stem_width: int,
-        width_factor: int,
         conv_padding: str,
         preact: bool,
         act_layer: str,
@@ -311,7 +310,6 @@ class ResNetV2Stem(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         self.preact = preact
 
-        stem_width = make_divisible(stem_width * width_factor)
         self.conv = StdConv2D(
             filters=stem_width,
             kernel_size=7,
@@ -362,8 +360,7 @@ class ResNetV2(tf.keras.Model):
 
         self.stem = ResNetV2Stem(
             stem_type=cfg.stem_type,
-            stem_width=cfg.stem_width,
-            width_factor=cfg.width_factor,
+            stem_width=make_divisible(cfg.stem_width * cfg.width_factor),
             conv_padding=cfg.conv_padding,
             preact=cfg.preact,
             act_layer=cfg.act_layer,
@@ -379,10 +376,11 @@ class ResNetV2(tf.keras.Model):
         nb_stages = len(cfg.nb_blocks)
         block_layer = PreActBottleneck if cfg.preact else Bottleneck
         for j in range(nb_stages):
+            nb_channels = make_divisible(cfg.nb_channels[j] * cfg.width_factor)
             for k in range(cfg.nb_blocks[j]):
                 self.blocks.append(
                     block_layer(
-                        nb_channels=cfg.nb_channels[j],
+                        nb_channels=nb_channels,
                         strides=2 if (j > 0) & (k == 0) else 1,
                         downsample=k == 0,
                         conv_padding=cfg.conv_padding,
