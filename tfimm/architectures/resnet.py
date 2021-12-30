@@ -55,7 +55,7 @@ __all__ = ["ResNet", "ResNetConfig", "BasicBlock"]
 @dataclass
 class ResNetConfig(ModelConfig):
     nb_classes: int = 1000
-    in_chans: int = 3
+    in_channels: int = 3
     input_size: Tuple[int, int] = (224, 224)
     # Residual blocks
     block: str = "basic_block"
@@ -332,7 +332,7 @@ def downsample_conv(cfg: ResNetConfig, out_channels: int, stride: int, name: str
 
 def make_stage(
     idx: int,
-    in_chans: int,
+    in_channels: int,
     cfg: ResNetConfig,
     name: str,
 ):
@@ -356,7 +356,7 @@ def make_stage(
     blocks = []
     for block_idx in range(nb_blocks):
         stride = 1 if idx == 0 or block_idx > 0 else 2
-        if (block_idx == 0) and (stride != 1 or in_chans != out_channels):
+        if (block_idx == 0) and (stride != 1 or in_channels != out_channels):
             downsample_layer = downsample_fn(
                 cfg, out_channels, stride, name=f"{name}/{stage_name}/0"
             )
@@ -377,9 +377,9 @@ def make_stage(
             )
         )
 
-        in_chans = nb_channels
+        in_channels = nb_channels
         total_block_idx += 1
-    return blocks, in_chans
+    return blocks, in_channels
 
 
 @keras_serializable
@@ -393,7 +393,7 @@ class ResNet(tf.keras.Model):
     ----------
     nb_classes : int, default 1000
         Number of classification classes.
-    in_chans : int, default 3
+    in_channels : int, default 3
         Number of input (color) channels.
     input_size: Tuple[int, int], default (224, 224)
         Input image size
@@ -463,7 +463,7 @@ class ResNet(tf.keras.Model):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
         if cfg.stem_type in {"deep", "deep_tiered"}:
-            in_chans = cfg.stem_width * 2
+            in_channels = cfg.stem_width * 2
             if cfg.stem_type == "deep_tiered":
                 stem_chns = (3 * (cfg.stem_width // 4), cfg.stem_width)
             else:
@@ -488,7 +488,7 @@ class ResNet(tf.keras.Model):
             bn1_1 = self.norm_layer(name=f"{self.name}/conv1/4")
             act1_1 = self.act_layer()
             conv1_2 = tf.keras.layers.Conv2D(
-                filters=in_chans,
+                filters=in_channels,
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
@@ -498,12 +498,12 @@ class ResNet(tf.keras.Model):
                 [conv1_0, bn1_0, act1_0, conv1_1, bn1_1, act1_1, conv1_2]
             )
         else:
-            in_chans = 64
+            in_channels = 64
             # In TF "same" padding with strides != 1 is not the same as (3, 3) padding
             # in pytorch, hence the need for an explicit padding layer
             self.pad1 = tf.keras.layers.ZeroPadding2D(padding=3)
             self.conv1 = tf.keras.layers.Conv2D(
-                filters=in_chans,
+                filters=in_channels,
                 kernel_size=7,
                 strides=2,
                 use_bias=False,
@@ -518,7 +518,7 @@ class ResNet(tf.keras.Model):
             # None of the timm models use both.
             pad = tf.keras.layers.ZeroPadding2D(padding=1)
             conv = tf.keras.layers.Conv2D(
-                filters=in_chans,
+                filters=in_channels,
                 kernel_size=3,
                 strides=2,
                 use_bias=False,
@@ -540,8 +540,8 @@ class ResNet(tf.keras.Model):
 
         self.blocks = []
         for idx in range(4):
-            stage_blocks, in_chans = make_stage(
-                idx=idx, in_chans=in_chans, cfg=cfg, name=self.name
+            stage_blocks, in_channels = make_stage(
+                idx=idx, in_channels=in_channels, cfg=cfg, name=self.name
             )
             self.blocks.extend(stage_blocks)
 
@@ -556,7 +556,7 @@ class ResNet(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
     @property
     def feature_names(self) -> List[str]:

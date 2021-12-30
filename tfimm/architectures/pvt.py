@@ -33,7 +33,7 @@ __all__ = ["PyramidVisionTransformer", "PyramidVisionTransformerConfig"]
 @dataclass
 class PyramidVisionTransformerConfig(ModelConfig):
     nb_classes: int = 1000
-    in_chans: int = 3
+    in_channels: int = 3
     input_size: Tuple[int, int] = (224, 224)
     patch_size: Tuple = (4, 2, 2, 2)
     embed_dim: Tuple = (64, 128, 256, 512)
@@ -61,7 +61,7 @@ class PyramidVisionTransformerConfig(ModelConfig):
     """
     Args:
         nb_classes: Number of classes for classification head
-        in_chans: Number of input channels
+        in_channels: Number of input channels
         input_size: Input image size
         patch_size: Patch size
         embed_dim: Embedding dimension per stage
@@ -326,7 +326,7 @@ class PyramidVisionTransformer(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
     @property
     def feature_names(self) -> List[str]:

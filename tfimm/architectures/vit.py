@@ -35,7 +35,7 @@ __all__ = ["ViT", "ViTConfig"]
 @dataclass
 class ViTConfig(ModelConfig):
     nb_classes: int = 1000
-    in_chans: int = 3
+    in_channels: int = 3
     input_size: Tuple[int, int] = (224, 224)
     patch_layer: str = "patch_embeddings"
     patch_nb_blocks: tuple = ()
@@ -67,7 +67,7 @@ class ViTConfig(ModelConfig):
     """
     Args:
         nb_classes: Number of classes for classification head
-        in_chans: Number of input channels
+        in_channels: Number of input channels
         input_size: Input image size
         patch_layer: Layer used to transform image to patches. Possible values are
             `patch_embeddings` and `hybrid_embeddings`.
@@ -195,7 +195,7 @@ class HybridEmbeddings(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        in_chans: int,
+        in_channels: int,
         input_size: tuple,
         nb_blocks: tuple,
         patch_size: int,
@@ -217,7 +217,7 @@ class HybridEmbeddings(tf.keras.layers.Layer):
         else:
             backbone_cfg = ResNetV2Config(
                 nb_classes=0,
-                in_chans=in_chans,
+                in_channels=in_channels,
                 input_size=input_size,
                 nb_blocks=nb_blocks,
                 preact=False,
@@ -265,7 +265,7 @@ class ViT(tf.keras.Model):
             )
         elif cfg.patch_layer == "hybrid_embeddings":
             self.patch_embed = HybridEmbeddings(
-                in_chans=cfg.in_chans,
+                in_channels=cfg.in_channels,
                 input_size=cfg.input_size,
                 nb_blocks=cfg.patch_nb_blocks,
                 patch_size=cfg.patch_size,
@@ -332,7 +332,7 @@ class ViT(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
     @property
     def feature_names(self) -> List[str]:

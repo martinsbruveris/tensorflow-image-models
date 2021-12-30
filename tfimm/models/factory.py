@@ -10,13 +10,13 @@ from tfimm.models.registry import is_model, model_class, model_config
 from tfimm.utils import get_dir, load_pth_url_weights, load_timm_weights
 
 
-# TODO: Implement in_chans, to work with both timm as well as saved models
+# TODO: Implement in_channels, to work with both timm as well as saved models
 def create_model(
     model_name: str,
     pretrained: Union[bool, str] = False,
     model_path: str = "",
     *,
-    in_chans: Optional[int] = None,
+    in_channels: Optional[int] = None,
     nb_classes: Optional[int] = None,
     **kwargs,
 ):
@@ -29,7 +29,7 @@ def create_model(
             `pretrained` casts to True as bool, load pretrained weights from URL in
             config or the model cache. If `False`, no weights are loaded.
         model_path: Path of model weights to load after model is initialized
-        in_chans: Number of input channels for model
+        in_channels: Number of input channels for model
         nb_classes: Number of classes for classifier. If set to 0, no classifier is
             used and last layer is pooling layer.
         **kwargs: other kwargs are model specific
@@ -74,8 +74,8 @@ def create_model(
                 f"Config for model {model_name} does not have field `{key}`. "
                 "Ignoring field."
             )
-    if in_chans is not None:
-        setattr(cfg, "in_chans", in_chans)
+    if in_channels is not None:
+        setattr(cfg, "in_channels", in_channels)
     if nb_classes is not None:
         setattr(cfg, "nb_classes", nb_classes)
 
@@ -84,7 +84,7 @@ def create_model(
         return loaded_model
 
     # Otherwise we build a new model and transfer the weights to it. This is because
-    # some parameter changes (in_chans and nb_classes) require changing the shape of
+    # some parameter changes (in_channels and nb_classes) require changing the shape of
     # some weights or dropping of others. And there might be non-trivial interactions
     # between various parameters, e.g., global_pool can be None only if nb_classes is 0.
     model = cls(cfg)
@@ -148,9 +148,9 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
                 weight_value_tuples.append((dst_weight, src_weights[w_name]))
 
         elif var_name == dst_model.cfg.first_conv:
-            # For the first convolution we need to adapt for the number of in_chans.
-            if src_model.cfg.in_chans != dst_model.cfg.in_chans:
-                raise ValueError("Different number of in_chans not supported yet.")
+            # For the first convolution we need to adapt for the number of in_channels.
+            if src_model.cfg.in_channels != dst_model.cfg.in_channels:
+                raise ValueError("Different number of in_channels not supported yet.")
             weight_value_tuples.append((dst_weight, src_weights[w_name]))
 
         elif var_name in transform_weights:
