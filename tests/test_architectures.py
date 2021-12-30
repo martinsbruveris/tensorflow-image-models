@@ -11,7 +11,15 @@ from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 
 # Exclude models that cause specific test failures
 if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
-    EXCLUDE_FILTERS = ["vit_large_*", "vit_huge_*", "cait_m*", "ig_resnext101_32x48d"]
+    EXCLUDE_FILTERS = [
+        "cait_m*",
+        "ig_resnext101_32x48d",
+        "resnetv2_50x3_*",
+        "resnetv2_101*",
+        "resnetv2_152*",
+        "vit_large_*",
+        "vit_huge_*",
+    ]
 else:
     EXCLUDE_FILTERS = ["cait_m*"]
 
