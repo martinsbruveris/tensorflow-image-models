@@ -47,7 +47,7 @@ __all__ = ["MLPMixer", "MLPMixerConfig"]
 @dataclass
 class MLPMixerConfig(ModelConfig):
     nb_classes: int = 1000
-    in_chans: int = 3
+    in_channels: int = 3
     input_size: Tuple[int, int] = (224, 224)
     patch_size: int = 16
     embed_dim: int = 512
@@ -266,7 +266,7 @@ class MLPMixer(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
     @property
     def feature_names(self) -> List[str]:

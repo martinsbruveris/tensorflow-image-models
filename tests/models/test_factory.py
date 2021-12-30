@@ -45,7 +45,7 @@ def test_transfer_weights(model_name, nb_classes):
     # Transfer weights from one to another
     transfer_weights(model_1, model_2)
 
-    img = np.random.rand(1, *model_1.cfg.input_size, model_1.cfg.in_chans)
+    img = np.random.rand(1, *model_1.cfg.input_size, model_1.cfg.in_channels)
     y_1 = model_1.forward_features(img).numpy()
     y_2 = model_2.forward_features(img).numpy()
 
@@ -64,7 +64,7 @@ def test_save_load_model(model_name):
 
     assert type(model) is type(loaded_model)
 
-    img = np.random.rand(1, *model.cfg.input_size, model.cfg.in_chans)
+    img = np.random.rand(1, *model.cfg.input_size, model.cfg.in_channels)
     y_1 = model(img).numpy()
     y_2 = loaded_model(img).numpy()
 
@@ -82,7 +82,7 @@ def test_model_path(model_name):
 
     assert type(model) is type(loaded_model)
 
-    img = np.random.rand(1, *model.cfg.input_size, model.cfg.in_chans)
+    img = np.random.rand(1, *model.cfg.input_size, model.cfg.in_channels)
     y_1 = model(img).numpy()
     y_2 = loaded_model(img).numpy()
 
@@ -130,12 +130,12 @@ def test_change_input_size_inference(model_name):
     # original input size.
     rng = np.random.default_rng(2021)
     img = rng.random(
-        size=(1, *model.cfg.input_size, model.cfg.in_chans), dtype="float32"
+        size=(1, *model.cfg.input_size, model.cfg.in_channels), dtype="float32"
     )
     res_1 = model(img)
     res_2 = flexible_model(img)
     assert (np.max(np.abs(res_1 - res_2))) / (np.max(np.abs(res_1)) + 1e-6) < 1e-6
 
     # Then we test, if we can run inference on input at different resolution
-    img = rng.random(size=(1, 256, 256, model.cfg.in_chans), dtype="float32")
+    img = rng.random(size=(1, 256, 256, model.cfg.in_channels), dtype="float32")
     flexible_model(img)

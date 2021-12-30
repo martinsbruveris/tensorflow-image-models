@@ -28,7 +28,7 @@ __all__ = ["SwinTransformer", "SwinTransformerConfig"]
 @dataclass
 class SwinTransformerConfig(ModelConfig):
     nb_classes: int = 1000
-    in_chans: int = 3
+    in_channels: int = 3
     input_size: Tuple[int, int] = (224, 224)
     patch_size: int = 4
     embed_dim: int = 96
@@ -458,7 +458,7 @@ class SwinTransformer(tf.keras.Model):
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
-        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_chans))
+        return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
     @property
     def feature_names(self) -> List[str]:

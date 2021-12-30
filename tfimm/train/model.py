@@ -26,7 +26,7 @@ class ModelFactory:
             self.cfg.model_name,
             pretrained=self.cfg.pretrained,
             input_size=self.cfg.input_size,
-            in_chans=self.cfg.nb_channels,
+            in_channels=self.cfg.nb_channels,
             nb_classes=self.cfg.nb_classes,
             drop_rate=self.cfg.drop_rate,
         )

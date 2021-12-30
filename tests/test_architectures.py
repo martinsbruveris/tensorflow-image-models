@@ -39,7 +39,7 @@ def test_mixed_precision(model_name: str):
     tf.keras.backend.clear_session()
     tf.keras.mixed_precision.set_global_policy("mixed_float16")
     model = create_model(model_name)
-    img = tf.ones((1, *model.cfg.input_size, model.cfg.in_chans), dtype="float16")
+    img = tf.ones((1, *model.cfg.input_size, model.cfg.in_channels), dtype="float16")
     res = model(img)
     assert res.dtype == "float16"
 
@@ -59,7 +59,7 @@ def test_load_timm_model(model_name: str):
 
     rng = np.random.default_rng(2021)
     img = rng.random(
-        size=(1, *tf_model.cfg.input_size, tf_model.cfg.in_chans), dtype="float32"
+        size=(1, *tf_model.cfg.input_size, tf_model.cfg.in_channels), dtype="float32"
     )
     tf_res = tf_model(img, training=False).numpy()
 
