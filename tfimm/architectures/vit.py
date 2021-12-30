@@ -208,7 +208,6 @@ class HybridEmbeddings(tf.keras.layers.Layer):
             self.backbone = ResNetV2Stem(
                 stem_type="same",
                 stem_width=64,
-                width_factor=1,
                 conv_padding="same",
                 preact=False,
                 act_layer="relu",

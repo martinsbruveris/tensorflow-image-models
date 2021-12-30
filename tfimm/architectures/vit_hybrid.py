@@ -209,6 +209,7 @@ def vit_base_r50_s16_224_in21k():
         embed_dim=768,
         nb_blocks=12,
         nb_heads=12,
+        representation_size=768,
         crop_pct=0.9,
         first_conv="patch_embed/backbone/stem/conv",
     )
