@@ -79,6 +79,11 @@ def create_model(
     if nb_classes is not None:
         setattr(cfg, "nb_classes", nb_classes)
 
+    # `keras.Model` kwargs need separate treatment. For now we support only `name`.
+    model_kwargs = {}
+    if "name" in kwargs:
+        model_kwargs["name"] = kwargs["name"]
+
     # If we have loaded a model and the model has the correct config, then we are done.
     if loaded_model is not None and loaded_model.cfg == cfg:
         return loaded_model
@@ -87,7 +92,7 @@ def create_model(
     # some parameter changes (in_channels and nb_classes) require changing the shape of
     # some weights or dropping of others. And there might be non-trivial interactions
     # between various parameters, e.g., global_pool can be None only if nb_classes is 0.
-    model = cls(cfg)
+    model = cls(cfg, **model_kwargs)
     model(model.dummy_inputs)  # Call model to build layers
 
     # Now we need to transfer weights from loaded_model to model
