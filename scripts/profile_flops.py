@@ -1,20 +1,17 @@
 """
-Script to test for max batch size possible on a GPU for inference and backpropagation
-and to measure batch inference and backpropagation throughput in img/sec.
+Script to count FLOPS for each model.
 
 Copyright 2021 Martins Bruveris
 """
-import os
 from pathlib import Path
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # noqa: E402
+import click
+import pandas as pd
+import tensorflow as tf
 
-import click  # noqa: E402
-import pandas as pd  # noqa: E402
-
-import tfimm  # noqa: E402
-from tfimm.models import registry  # noqa: E402
-from tfimm.utils.profile import find_max_batch_size  # noqa: E402
+import tfimm
+from tfimm.utils import to_2tuple
+from tfimm.utils.flops import get_flops, get_parameters
 
 
 @click.command()
@@ -24,7 +21,6 @@ from tfimm.utils.profile import find_max_batch_size  # noqa: E402
 @click.option("--exclude-filters", type=str, default="", help="Regex to exclude models")
 @click.option("--input-size", type=int, default=None, help="Model input resolution")
 @click.option("--nb-classes", type=int, default=None, help="Number of classes")
-@click.option("--float-policy", type=str, default="float32", help="mixed precision?")
 @click.option("--ignore-results/--no-ignore-results", default=False)
 def main(
     results_file,
@@ -33,7 +29,6 @@ def main(
     exclude_filters,
     input_size,
     nb_classes,
-    float_policy,
     ignore_results,
 ):
     """
@@ -42,14 +37,10 @@ def main(
     The parameters `name_filter`, `module` and `exclude_filters` are passed directly to
     `tfimm.list_models` to find which models to profile.
 
-    The parameter `--float-policy` can be one of "float32" or "mixed_float16".
-
     If `--ignore-results` is set, we ignore any results already existing in the results
     file and rerun profiling for all models. Otherwise (default) we run profiling only
     on models not already in the results file.
     """
-    assert float_policy in {"float32", "mixed_float16"}
-
     model_names = tfimm.list_models(
         name_filter=name_filter, module=module, exclude_filters=exclude_filters
     )
@@ -60,11 +51,8 @@ def main(
     else:
         results_df = pd.DataFrame(
             columns=[
-                "image_size",
-                "inference_batch_size",
-                "backprop_batch_size",
-                "inference_img_per_sec",
-                "backprop_img_per_sec",
+                "flops",
+                "parameters",
             ]
         )
         results_df.index.name = "model"
@@ -72,25 +60,36 @@ def main(
     model_names = [name for name in model_names if name not in results_df.index]
 
     for model_name in model_names:
-        print(f"Model: {model_name}")
-        cfg = registry.model_config(model_name)
-        results_df.loc[model_name, "image_size"] = cfg.input_size[0]
+        print(f"Model: {model_name}. ", end="")
 
-        for target in ["inference", "backprop"]:
-            batch_size, img_per_sec = find_max_batch_size(
-                model_name,
-                target=target,
-                input_size=input_size,
-                nb_classes=nb_classes,
-                float_policy=float_policy,
-                verbose=True,
+        try:
+            input_size = to_2tuple(input_size) if input_size is not None else input_size
+            model = tfimm.create_model(
+                model_name, input_size=input_size, nb_classes=nb_classes
             )
-            img_per_sec = round(img_per_sec, 2)
-            results_df.loc[model_name, f"{target}_batch_size"] = batch_size
-            results_df.loc[model_name, f"{target}_img_per_sec"] = img_per_sec
-            print(f"{target}: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
+            model = tfimm.create_model(model_name)
+            flops = get_flops(
+                model,
+                input_shape=(*model.cfg.input_size, model.cfg.in_channels),
+                batch_size=1,
+            )
+            parameters = get_parameters(model)
+        except tf.errors.InvalidArgumentError:
+            flops = 0
+            parameters = 0
 
+        print(f"FLOPS: {flops}.")
+        results_df.loc[model_name, "image_size"] = model.cfg.input_size[0]
+        results_df.loc[model_name, "flops"] = flops
+        results_df.loc[model_name, "parameters"] = parameters
         results_df.to_csv(results_file)
+
+    # Some final massaging of results
+    results_df.sort_index(inplace=True)
+    results_df["image_size"] = results_df["image_size"].astype(int)
+    results_df["flops"] = results_df["flops"].astype(int)
+    results_df["parameters"] = results_df["parameters"].astype(int)
+    results_df.to_csv(results_file)
 
 
 if __name__ == "__main__":

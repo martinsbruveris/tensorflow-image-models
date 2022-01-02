@@ -6,6 +6,7 @@ import tensorflow as tf
 
 from tfimm.models import registry
 from tfimm.models.factory import create_model
+from tfimm.utils import to_2tuple
 
 
 def _below_resolution(
@@ -41,7 +42,16 @@ def _time_function(fun, img, nb_batches, verbose):
     return duration
 
 
-def time_model(model_name, target, batch_size, float_policy, nb_batches, verbose=False):
+def time_model(
+    model_name,
+    target,
+    input_size,
+    nb_classes,
+    batch_size,
+    float_policy,
+    nb_batches,
+    verbose=False,
+):
     """
     Time backpropagation speed of model. The loss is simply the mean of all model
     outputs.
@@ -49,6 +59,8 @@ def time_model(model_name, target, batch_size, float_policy, nb_batches, verbose
     Args:
         model_name: Model to be timed, will be created using `create_model`.
         target: One of "inference" or "backprop"
+        input_size: Model input size
+        nb_classes: Number of classes
         batch_size: Batch size to be used for testing.
         float_policy: Can be "float32" or "mixed_float16"
         nb_batches: Backpropagation time is averages over `nb_batches` calls.
@@ -64,7 +76,8 @@ def time_model(model_name, target, batch_size, float_policy, nb_batches, verbose
     tf.keras.mixed_precision.set_global_policy(float_policy)
     dtype = "float32" if float_policy == "float32" else "float16"
 
-    model = create_model(model_name)
+    input_size = to_2tuple(input_size) if input_size is not None else input_size
+    model = create_model(model_name, input_size=input_size, nb_classes=nb_classes)
     img = tf.ones(
         (batch_size, *model.cfg.input_size, model.cfg.in_channels),
         dtype=dtype,
@@ -72,7 +85,7 @@ def time_model(model_name, target, batch_size, float_policy, nb_batches, verbose
 
     if target == "inference":
 
-        @tf.function(experimental_relax_shapes=True)
+        @tf.function(experimental_relax_shapes=True, jit_compile=True)
         def _fun(x):
             return model(x, training=False)
 
@@ -101,6 +114,8 @@ def time_model(model_name, target, batch_size, float_policy, nb_batches, verbose
 def find_max_batch_size(
     model_name: str,
     target: str = "inference",
+    input_size: Optional[int] = None,
+    nb_classes: Optional[int] = None,
     float_policy: str = "float32",
     nb_batches: int = 3,
     start_batch_size: int = 256,
@@ -146,6 +161,8 @@ def find_max_batch_size(
             img_per_sec = time_model(
                 model_name=model_name,
                 target=target,
+                input_size=input_size,
+                nb_classes=nb_classes,
                 batch_size=batch_size,
                 float_policy=float_policy,
                 nb_batches=nb_batches,
@@ -167,6 +184,8 @@ def find_max_batch_size(
 
         except (
             tf.errors.InternalError,
+            # The next one catches creating models with invalid parameters
+            tf.errors.InvalidArgumentError,
             tf.errors.ResourceExhaustedError,
             tf.errors.UnknownError,
         ):
