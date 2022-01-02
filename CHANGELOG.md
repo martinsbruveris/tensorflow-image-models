@@ -1,6 +1,6 @@
 # Change Log
 
-## Unpublished
+## v0.2.0 - 2022-01-02
 
 - Added hybrid Vision Transformers (`vit_hybrid`).
 - Added `resnetv2` module, which inlcudes Big Transfer (BiT) resnets.
