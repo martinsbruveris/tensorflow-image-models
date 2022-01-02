@@ -23,16 +23,26 @@ MODEL_LIST = [
     "vit_tiny_r_s16_p8_224",  # vit_hybrid.py
     "vit_small_r26_s32_224",
 ]
-FIXED_INPUT_SIZE_MODELS = [
+# Models for which we cannot change the input size during model creation. Examples
+# are some MLP models, where the number of patches becomes the number of filters
+# for convolutional kernels.
+FIXED_SIZE_MODELS_CREATION = [
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",
-    # In principle, it is possible to change input resolution for Swin Transformers,
-    # but that is not implemented. We shouldn't transfer attention masks between models
-    # since they are computed during model creation anyway. Left as TBD...
+]
+# Models for which we cannot change the input size during inference.
+FIXED_SIZE_MODELS_INFERENCE = [
+    "mixer_s32_224",  # mlp_mixer.py
+    "resmlp_12_224",
+    "gmlp_ti16_224",
+    # For Swin Transformers the input size influences the attention windows, which are
+    # determined at build time. Hence we can change the input size at creation time,
+    # but not during inference.
     "swin_tiny_patch4_window7_224",  # swin.py
 ]
-FLEXIBLE_INPUT_SIZE_MODELS = list(set(MODEL_LIST) - set(FIXED_INPUT_SIZE_MODELS))
+FLEXIBLE_MODELS_CREATION = list(set(MODEL_LIST) - set(FIXED_SIZE_MODELS_CREATION))
+FLEXIBLE_MODELS_INFERENCE = list(set(MODEL_LIST) - set(FIXED_SIZE_MODELS_INFERENCE))
 
 
 @pytest.mark.parametrize("model_name", MODEL_LIST)
@@ -100,7 +110,7 @@ def test_preprocessing(model_name, input_shape, dtype):
     assert img.dtype == dtype
 
 
-@pytest.mark.parametrize("model_name", FLEXIBLE_INPUT_SIZE_MODELS)
+@pytest.mark.parametrize("model_name", FLEXIBLE_MODELS_CREATION)
 def test_change_input_size(model_name):
     """
     We test if we can transfer weights between models with different input sizes,
@@ -108,14 +118,17 @@ def test_change_input_size(model_name):
     should be done via the transfer_weight hook in the config.
     """
     src_model = create_model(model_name)
-    dst_model = create_model(model_name, input_size=(256, 256))
+    input_size = (
+        (256, 256) if model_name != "swin_tiny_patch4_window7_224" else (448, 448)
+    )
+    dst_model = create_model(model_name, input_size=input_size)
     transfer_weights(src_model, dst_model)
 
     img = dst_model.dummy_inputs
     dst_model(img)
 
 
-@pytest.mark.parametrize("model_name", FLEXIBLE_INPUT_SIZE_MODELS)
+@pytest.mark.parametrize("model_name", FLEXIBLE_MODELS_INFERENCE)
 def test_change_input_size_inference(model_name):
     """
     We test if we can run inference with different input sizes.

@@ -229,6 +229,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             nb_heads=nb_heads,
             name="attn",
         )
+        self.attn_mask = None
         self.drop_path = DropPath(drop_prob=drop_path_rate)
         self.norm2 = self.norm_layer(name="norm2")
         self.mlp = MLP(
@@ -270,7 +271,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
             )
             attn_mask = tf.where(attn_mask != 0, -100.0, attn_mask)
             attn_mask = tf.where(attn_mask == 0, 0.0, attn_mask)
-            # Only the non-trivial attention mask is a Variable, becaue in the PyTorch
+            # Only the non-trivial attention mask is a Variable, because in the PyTorch
             # model, only the non-trivial attention mask exists. The trivial maks
             # is replaced by None and if-statements in the call function.
             self.attn_mask = tf.Variable(
@@ -279,7 +280,9 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
         else:
             # Attention mask is applied additively, so zero-mask has no effect
             # Broadcasting will take care of mapping it to the correct dimensions.
-            self.attn_mask = tf.zeros((1,))
+            self.attn_mask = tf.Variable(
+                initial_value=tf.zeros((1,)), trainable=False, name="attn_mask"
+            )
 
     def call(self, x, training=False):
         window_size = self.window_size
@@ -470,6 +473,15 @@ class SwinTransformer(tf.keras.Model):
                 k += 1
             names.append(f"stage_{j}")
         names += ["features_all", "features", "logits"]
+        return names
+
+    @property
+    def keys_to_ignore_on_load_missing(self) -> List[str]:
+        names = []
+        for j in range(len(self.cfg.nb_blocks)):
+            for k in range(self.cfg.nb_blocks[j]):
+                names.append(f"layers/{j}/blocks/{k}/attn_mask")
+                names.append(f"layers/{j}/blocks/{k}/attn/relative_position_index")
         return names
 
     def forward_features(self, x, training=False, return_features=False):
