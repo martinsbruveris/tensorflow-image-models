@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from copy import deepcopy
 from typing import Callable, Optional, Union
 
@@ -138,6 +139,9 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     # model config
     transform_weights = getattr(src_model.cfg, "transform_weights", dict())
 
+    # Some weights should not be transferred as they are created during building
+    weights_to_ignore = getattr(dst_model, "keys_to_ignore_on_load_missing", [])
+
     src_weights = {_strip_prefix(w.name): w.numpy() for w in src_model.weights}
     weight_value_tuples = []
     for dst_weight in dst_model.weights:
@@ -145,7 +149,11 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
         var_name = _get_layer_name(dst_weight.name)
         w_name = _strip_prefix(dst_weight.name)
 
-        if var_name in dst_classifier:
+        if any(re.search(pat, w_name) is not None for pat in weights_to_ignore):
+            # Weights that don't need to be transferred
+            pass
+
+        elif var_name in dst_classifier:
             if keep_classifier:
                 # We only keep the classifier if the number of classes is the same
                 # Otherwise the classifier is not copied over, i.e., we keep the
