@@ -275,28 +275,9 @@ class ViT(tf.keras.Model):
             )
         else:
             raise ValueError(f"Unknown patch layer: {cfg.patch_layer}.")
-        self.cls_token = self.add_weight(
-            shape=(1, 1, cfg.embed_dim),
-            initializer="zeros",
-            trainable=True,
-            name="cls_token",
-        )
-        self.dist_token = (
-            self.add_weight(
-                shape=(1, 1, cfg.embed_dim),
-                initializer="zeros",
-                trainable=True,
-                name="dist_token",
-            )
-            if cfg.distilled
-            else None
-        )
-        self.pos_embed = self.add_weight(
-            shape=(1, cfg.nb_patches + cfg.nb_tokens, cfg.embed_dim),
-            initializer="zeros",
-            trainable=True,
-            name="pos_embed",
-        )
+        self.cls_token = None
+        self.dist_token = None
+        self.pos_embed = None
         self.pos_drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
 
         self.blocks = [Block(cfg, name=f"blocks/{j}") for j in range(cfg.nb_blocks)]
@@ -329,6 +310,30 @@ class ViT(tf.keras.Model):
             )
         else:
             self.head_dist = None
+
+    def build(self, input_shape):
+        self.cls_token = self.add_weight(
+            shape=(1, 1, self.cfg.embed_dim),
+            initializer="zeros",
+            trainable=True,
+            name="cls_token",
+        )
+        self.dist_token = (
+            self.add_weight(
+                shape=(1, 1, self.cfg.embed_dim),
+                initializer="zeros",
+                trainable=True,
+                name="dist_token",
+            )
+            if self.cfg.distilled
+            else None
+        )
+        self.pos_embed = self.add_weight(
+            shape=(1, self.cfg.nb_patches + self.cfg.nb_tokens, self.cfg.embed_dim),
+            initializer="zeros",
+            trainable=True,
+            name="pos_embed",
+        )
 
     @property
     def dummy_inputs(self) -> tf.Tensor:

@@ -139,3 +139,15 @@ def test_change_input_size_inference(model_name):
     # Then we test, if we can run inference on input at different resolution
     img = rng.random(size=(1, 256, 256, model.cfg.in_channels), dtype="float32")
     flexible_model(img)
+
+
+@pytest.mark.parametrize("model_name", MODEL_LIST)
+def test_variable_prefix(model_name):
+    """
+    We test if all model variables are created under the correct prefix
+    """
+    tf.keras.backend.clear_session()
+    model = create_model(model_name, name="test")
+
+    for var in model.variables:
+        assert var.name.startswith("test/")
