@@ -7,6 +7,7 @@ Copyright 2021 Martins Bruveris
 import os
 from pathlib import Path
 
+# We disable most of TF logging, because OOM errors come with a *lot* of error messages.
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # noqa: E402
 
 import click  # noqa: E402
@@ -91,6 +92,13 @@ def main(
             print(f"{target}: {img_per_sec:.3f}img/sec with {batch_size} batch size.")
 
         results_df.to_csv(results_file)
+
+    # Some final massaging of results
+    results_df.sort_index(inplace=True)
+    results_df["image_size"] = results_df["image_size"].astype(int)
+    results_df["inference_batch_size"] = results_df["inference_batch_size"].astype(int)
+    results_df["backprop_batch_size"] = results_df["backprop_batch_size"].astype(int)
+    results_df.to_csv(results_file)
 
 
 if __name__ == "__main__":

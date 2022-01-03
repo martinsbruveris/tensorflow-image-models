@@ -7,20 +7,19 @@ from tensorflow.python.framework.convert_to_constants import (
 )
 
 
-def get_flops(
-    model: tf.keras.Model, input_shape: tuple, batch_size: Optional[int] = None
-) -> int:
+def get_flops(model: tf.keras.Model, input_shape: tuple) -> int:
     """
     Calculate FLOPS for a `tf.keras.Model`. Ignore operations used in only training
     mode such as Initialization. Use `tf.profiler` of tensorflow v1 api.
+
+    `input_shape` should be the full input, including batch size.
     """
     if not isinstance(model, tf.keras.Model):
         raise KeyError("`model` argument must be `tf.keras.Model` instance.")
-    batch_size = batch_size or 1
 
     try:
         # Convert `tf.keras model` into frozen graph
-        inputs = tf.TensorSpec([batch_size] + list(input_shape), "float32")
+        inputs = tf.TensorSpec(list(input_shape), "float32")
         real_model = tf.function(model).get_concrete_function(inputs)
         frozen_func, _ = convert_variables_to_constants_v2_as_graph(real_model)
 

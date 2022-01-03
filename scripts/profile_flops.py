@@ -61,25 +61,23 @@ def main(
 
     for model_name in model_names:
         print(f"Model: {model_name}. ", end="")
-
         try:
+            tf.keras.backend.clear_session()
             input_size = to_2tuple(input_size) if input_size is not None else input_size
             model = tfimm.create_model(
                 model_name, input_size=input_size, nb_classes=nb_classes
             )
-            model = tfimm.create_model(model_name)
-            flops = get_flops(
-                model,
-                input_shape=(*model.cfg.input_size, model.cfg.in_channels),
-                batch_size=1,
-            )
+            input_shape = (1, *model.cfg.input_size, model.cfg.in_channels)
+            input_size = model.cfg.input_size[0]
+            flops = get_flops(model, input_shape=input_shape)
             parameters = get_parameters(model)
         except tf.errors.InvalidArgumentError:
+            input_size = 0
             flops = 0
             parameters = 0
 
         print(f"FLOPS: {flops}.")
-        results_df.loc[model_name, "image_size"] = model.cfg.input_size[0]
+        results_df.loc[model_name, "image_size"] = input_size
         results_df.loc[model_name, "flops"] = flops
         results_df.loc[model_name, "parameters"] = parameters
         results_df.to_csv(results_file)
