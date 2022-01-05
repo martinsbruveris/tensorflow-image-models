@@ -1,5 +1,3 @@
-from typing import Optional
-
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework.convert_to_constants import (
