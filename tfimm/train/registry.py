@@ -2,6 +2,15 @@ _classes = {}
 _cfg_classes = {}
 
 
+def cfg_class(cls):
+    """
+    Use this decorator for stand-alone configuration classes that we want to serialize.
+    """
+    cls_name = cls.__name__
+    _cfg_classes[cls_name] = cls
+    return cls
+
+
 def cfg_serializable(cls):
     """
     Registers the configuration datatype associated to a class to a global registry.

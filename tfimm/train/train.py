@@ -11,15 +11,17 @@ except ImportError:
     wandb = None
     logging.info("Could not import `wand`. Logging to W&B not possible.")
 
-import tfimm.train.config as config
-from tfimm.train.registry import get_class
-from tfimm.train.utils import setup_logging
+from . import config
+from .registry import get_class
+from .utils import setup_logging
 
 
 @dataclass
 class ExperimentConfig:
     trainer: Any
     trainer_class: str
+    timekeeping: Any
+    timekeeping_class: str
     problem: Any
     problem_class: str
     # Data
@@ -94,11 +96,12 @@ def run(cfg: Union[ExperimentConfig, dict], parse_args: bool = True):
         if cfg.val_dataset_class
         else None
     )
-    problem = get_class(cfg.problem_class)(cfg=cfg.problem)
+    problem = get_class(cfg.problem_class)(cfg=cfg.problem, timekeeping=cfg.timekeeping)
     trainer = get_class(cfg.trainer_class)(
         problem=problem,
         train_ds=train_ds,
         val_ds=val_ds,
+        timekeeping=cfg.timekeeping,
         log_wandb=cfg.log_wandb,
         cfg=cfg.trainer,
     )

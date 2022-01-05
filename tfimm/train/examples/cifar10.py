@@ -3,6 +3,7 @@ from tfimm.train import (
     ExperimentConfig,
     ModelConfig,
     TFDSConfig,
+    Timekeeping,
     TrainerConfig,
     run,
 )
@@ -12,12 +13,16 @@ def main_with_python_config():
     """Start experiment with a config defined by python code."""
     cfg = ExperimentConfig(
         trainer=TrainerConfig(
-            nb_epochs=3,
-            nb_samples_per_epoch=640,
             display_loss_every_it=5,
             ckpt_dir="/tmp/exp_cifar10",
         ),
         trainer_class="SingleGPUTrainer",
+        timekeeping=Timekeeping(
+            nb_epochs=3,
+            batch_size=32,
+            nb_samples_per_epoch=640,
+        ),
+        timekeeping_class="Timekeeping",
         problem=ClassificationConfig(
             model=ModelConfig(
                 model_name="resnet18",

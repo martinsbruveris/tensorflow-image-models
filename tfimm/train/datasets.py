@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import tensorflow as tf
 import tensorflow_datasets as tfds
 
-from tfimm.train.registry import cfg_serializable
+from .registry import cfg_serializable
 
 
 @dataclass

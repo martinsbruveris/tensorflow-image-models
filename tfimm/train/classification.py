@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 import tensorflow as tf
 
-from tfimm.train.interface import ProblemBase
-from tfimm.train.registry import cfg_serializable, get_class
+from .interface import ProblemBase
+from .registry import cfg_serializable, get_class
 
 
 @dataclass
@@ -36,8 +36,9 @@ class ClassificationConfig:
 class ClassificationProblem(ProblemBase):
     cfg_class = ClassificationConfig
 
-    def __init__(self, cfg: ClassificationConfig):
+    def __init__(self, cfg: ClassificationConfig, timekeeping):
         self.cfg = cfg
+        self.timekeeping = timekeeping
 
         # Setting global state before building model
         if cfg.mixed_precision:

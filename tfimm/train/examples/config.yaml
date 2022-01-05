@@ -1,6 +1,4 @@
 trainer:
-  nb_epochs: 3
-  nb_samples_per_epoch: 640
   validation_before_training: true
   validation_every_it: -1
   ckpt_dir: /tmp/exp_cifar10
@@ -11,6 +9,11 @@ trainer:
   display_loss_every_it: 5
   verbose: true
 trainer_class: SingleGPUTrainer
+timekeeping:
+  nb_epochs: 3
+  batch_size: 32
+  nb_samples_per_epoch: 640
+timekeeping_class: Timekeeping
 problem:
   model:
     model_name: resnet18
@@ -60,3 +63,4 @@ experiment_name: default
 project_name: default
 entity: default
 sweep: false
+cfg_file: ''
