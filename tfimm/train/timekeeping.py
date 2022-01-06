@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from .registry import cfg_class
+from .registry import cfg_serializable
 
 
-@cfg_class
+@cfg_serializable
 @dataclass
 class Timekeeping:
     """

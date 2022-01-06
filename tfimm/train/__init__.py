@@ -11,12 +11,7 @@ from .datasets import TFDSConfig, TFDSWrapper  # noqa: F401
 from .interface import ProblemBase  # noqa: F401
 from .model import ModelConfig, ModelFactory  # noqa: F401
 from .optimizer import OptimizerConfig, OptimizerFactory  # noqa: F401
-from .registry import (  # noqa: F401
-    cfg_class,
-    cfg_serializable,
-    get_cfg_class,
-    get_class,
-)
+from .registry import cfg_serializable, get_cfg_class, get_class  # noqa: F401
 from .timekeeping import Timekeeping  # noqa: F401
 from .train import ExperimentConfig, run  # noqa: F401
 from .trainer import SingleGPUTrainer, TrainerConfig  # noqa: F401
