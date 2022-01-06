@@ -7,7 +7,7 @@ from pathlib import Path
 
 import yaml
 
-from tfimm.train.registry import get_cfg_class
+from .registry import get_cfg_class
 
 
 def to_dict_format(cfg):

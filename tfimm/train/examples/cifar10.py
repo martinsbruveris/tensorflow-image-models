@@ -2,7 +2,9 @@ from tfimm.train import (
     ClassificationConfig,
     ExperimentConfig,
     ModelConfig,
+    OptimizerConfig,
     TFDSConfig,
+    Timekeeping,
     TrainerConfig,
     run,
 )
@@ -12,12 +14,16 @@ def main_with_python_config():
     """Start experiment with a config defined by python code."""
     cfg = ExperimentConfig(
         trainer=TrainerConfig(
-            nb_epochs=3,
-            nb_samples_per_epoch=640,
             display_loss_every_it=5,
             ckpt_dir="/tmp/exp_cifar10",
         ),
         trainer_class="SingleGPUTrainer",
+        timekeeping=Timekeeping(
+            nb_epochs=3,
+            batch_size=32,
+            nb_samples_per_epoch=640,
+        ),
+        timekeeping_class="Timekeeping",
         problem=ClassificationConfig(
             model=ModelConfig(
                 model_name="resnet18",
@@ -27,9 +33,16 @@ def main_with_python_config():
                 nb_classes=10,
             ),
             model_class="ModelFactory",
+            optimizer=OptimizerConfig(
+                lr=0.001,
+                optimizer="sgd",
+                lr_schedule="exponential_decay",
+                lr_decay_rate=0.8,
+                lr_decay_frequency=1,
+            ),
+            optimizer_class="OptimizerFactory",
             binary_loss=False,
             weight_decay=0.01,
-            lr=0.01,
             mixed_precision=False,
         ),
         problem_class="ClassificationProblem",

@@ -9,20 +9,13 @@ try:
     import wandb
 except ImportError:
     wandb = None
-    logging.info("Could not import `wand`. Logging to W&B not possible.")
+    logging.info("Could not import `wandb`. Logging to W&B not possible.")
 
-from tfimm.train.registry import cfg_serializable
+from .registry import cfg_serializable
 
 
 @dataclass
 class TrainerConfig:
-    # A new epoch is started when (a) the `train_ds` iterator is exhausted or (b) we
-    # have seen `nb_samples_per_epoch. When `train_ds` is a finite dataset and
-    # `nb_samples_per_epoch > 0`, then both conditions will trigger a new epoch. This
-    # can lead to epochs of uneven length. Use at your own risk.
-    nb_epochs: int
-    nb_samples_per_epoch: int = -1
-
     # Validation
     # If `True`, we perform validation before starting training
     validation_before_training: bool = True
@@ -60,11 +53,20 @@ class TrainerConfig:
 class SingleGPUTrainer:
     cfg_class = TrainerConfig
 
-    def __init__(self, problem, train_ds, val_ds, log_wandb: bool, cfg: TrainerConfig):
+    def __init__(
+        self,
+        problem,
+        train_ds,
+        val_ds,
+        timekeeping,
+        log_wandb: bool,
+        cfg: TrainerConfig,
+    ):
         """Initialize the trainer object"""
         self.problem = problem
         self.train_ds = train_ds
         self.val_ds = val_ds
+        self.timekeeping = timekeeping
         self.log_wandb = log_wandb
         self.cfg = cfg
 
@@ -72,21 +74,9 @@ class SingleGPUTrainer:
         if self.log_wandb and not wandb:
             raise ValueError("Cannot log to W&B as `wandb` could not be imported.")
 
-        # Determine batch size by looking at a sample from the dataset
-        # Note: This solution is a bit hacky and makes implicit assumptions about the
-        # structure of the dataset. We only support datasets that return single
-        # elements, tuples and dictionaries. For tuples and dictionaries we assume
-        # that the first (somewhat ill-defined for dicts) element has the batch size
-        # as the first dimension. Better solutions are welcome.
-        data = next(iter(self.train_ds))
-        if isinstance(data, tuple):
-            data = data[0]
-        elif isinstance(data, dict):
-            data = next(iter(data.values()))
-        self.batch_size = len(data)
-
         # Other training-related ops
         self.epoch = tf.Variable(0)
+        self.batch_size = self.timekeeping.batch_size
 
         # Checkpoint related variables
         self.ckpt = None
@@ -116,7 +106,7 @@ class SingleGPUTrainer:
         first_epoch = int(self.epoch.numpy())
 
         ds_iter = iter(self.train_ds)
-        for epoch_idx in range(first_epoch, self.cfg.nb_epochs):
+        for epoch_idx in range(first_epoch, self.timekeeping.nb_epochs):
             self.problem.start_epoch()
 
             it = 0
@@ -125,8 +115,8 @@ class SingleGPUTrainer:
             while True:
                 # Start a new epoch, if we have seen enough samples
                 if (
-                    self.cfg.nb_samples_per_epoch != -1
-                    and samples_seen >= self.cfg.nb_samples_per_epoch
+                    self.timekeeping.nb_samples_per_epoch != -1
+                    and samples_seen >= self.timekeeping.nb_samples_per_epoch
                 ):
                     break
 

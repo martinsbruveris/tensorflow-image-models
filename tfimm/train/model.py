@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 from tfimm.models import create_model, create_preprocessing, model_config
-from tfimm.train.registry import cfg_serializable
+
+from .registry import cfg_serializable
 
 
 @dataclass

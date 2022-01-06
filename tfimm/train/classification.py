@@ -7,14 +7,16 @@ from typing import Any
 import numpy as np
 import tensorflow as tf
 
-from tfimm.train.interface import ProblemBase
-from tfimm.train.registry import cfg_serializable, get_class
+from .interface import ProblemBase
+from .registry import cfg_serializable, get_class
 
 
 @dataclass
 class ClassificationConfig:
     model: Any
     model_class: str
+    optimizer: Any
+    optimizer_class: str = "OptimizerFactory"
     # We treat binary classification problems as a special case, because for binary
     # problems the model can return just one logit, which is the logit for class 1.
     # The logit for class 0 is implicitly set to 0.0.
@@ -23,7 +25,6 @@ class ClassificationConfig:
     # multiplying them by `weight_decay`. We are ignoring Keras weight regularizers
     # and the automatically generated model losses.
     weight_decay: float = 0.0
-    lr: float = 0.01  # Learning rate
     mixed_precision: bool = False
     # When saving the model we may want to use a different dtype for model inputs. E.g.,
     # for images, `uint8` is a natural choice. In particular if the saved model is
@@ -36,8 +37,9 @@ class ClassificationConfig:
 class ClassificationProblem(ProblemBase):
     cfg_class = ClassificationConfig
 
-    def __init__(self, cfg: ClassificationConfig):
+    def __init__(self, cfg: ClassificationConfig, timekeeping):
         self.cfg = cfg
+        self.timekeeping = timekeeping
 
         # Setting global state before building model
         if cfg.mixed_precision:
@@ -55,9 +57,11 @@ class ClassificationProblem(ProblemBase):
         self.avg_acc = tf.keras.metrics.Accuracy(dtype=tf.float32)
 
         # Optimizer
-        # TODO: Allow optimizer customization and learning rate schedules...
-        # TODO: Add learning rate warmup...
-        self.optimizer = tf.optimizers.SGD(self.cfg.lr, momentum=0.9)
+        self.optimizer = get_class(cfg.optimizer_class)(
+            cfg=cfg.optimizer,
+            timekeeping=timekeeping,
+            mixed_precision=cfg.mixed_precision,
+        )()
 
     def ckpt_variables(self, model_only: bool = False):
         """Return dictionary with all variables that need to be added to checkpoint."""
