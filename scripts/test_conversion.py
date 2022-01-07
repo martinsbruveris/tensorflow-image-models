@@ -2,9 +2,9 @@
 This script is used when converting models from PyTorch to TF.
 """
 import numpy as np
+import tensorflow as tf
 import timm
 import torch
-import tensorflow as tf
 from torch.hub import load_state_dict_from_url  # noqa: F401
 
 import tfimm
