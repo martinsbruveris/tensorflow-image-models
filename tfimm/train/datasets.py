@@ -1,7 +1,12 @@
+import logging
 from dataclasses import dataclass
 
 import tensorflow as tf
-import tensorflow_datasets as tfds
+try:
+    import tensorflow_datasets as tfds
+except ImportError:
+    tfds = None
+    logging.info("Could not import `tensorflow_datasets`.")
 
 from .registry import cfg_serializable
 

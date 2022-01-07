@@ -37,12 +37,7 @@ The package can be installed via `pip`,
 pip install tfimm
 ```
 
-To load pretrained weights, `timm` needs to be installed. This is an optional 
-dependency and can be installed via
-
-```shell
-pip install tfimm[timm]
-```
+To load pretrained weights, `timm` needs to be installed separately.
 
 ### Creating models
 
