@@ -157,7 +157,7 @@ class SingleGPUTrainer:
 
                 # Log metrics
                 if self.log_wandb:
-                    logs.update({"epoch": epoch_idx})
+                    logs.update({"train/epoch": epoch_idx})
                     wandb.log(logs, commit=True)
 
                 it += 1

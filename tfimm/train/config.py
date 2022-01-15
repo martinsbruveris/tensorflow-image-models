@@ -1,5 +1,6 @@
 import argparse
 import ast
+import copy
 import dataclasses
 import logging
 import sys
@@ -142,8 +143,7 @@ def add_default_args(cfg):
                     )
                 # If some fields are already set in the config, we use those values,
                 # i.e., whatever is in the config has higher priority over default
-                # values. We are calling params.update(), because we don't want to
-                # introduce new keys to params.
+                # values.
                 for sub_key, sub_val in cfg[stem].items():
                     if sub_key in params:
                         params[sub_key] = sub_val
@@ -156,6 +156,39 @@ def add_default_args(cfg):
         elif key + "_class" not in cfg:
             res_cfg[key] = val
     return res_cfg
+
+
+def add_cls_default_args(cfg, cls):
+    """
+    Function adds all fields of a config class to a config in argument format.
+    """
+    res_cfg = copy.deepcopy(cfg)
+    if cls is None:
+        return res_cfg
+    fields = dataclasses.fields(cls)
+    params = {field.name: (field.type, field.default) for field in fields}
+    # If some fields are already set in the config, we use those values, i.e., whatever
+    # is in the config has higher priority over default values.
+    for key, val in params.items():
+        if key not in res_cfg:
+            res_cfg[key] = val
+    return res_cfg
+
+
+def add_cfg_file_arg(cfg, cls):
+    """
+    If `cls` has a `cfg_file` field, we add this field to `cfg`.
+    """
+    cfg = copy.deepcopy(cfg)
+    if "cfg_file" in cfg or cls is None:
+        return cfg
+
+    fields = dataclasses.fields(cls)
+    params = {field.name: field.default for field in fields}
+    if "cfg_file" in params:
+        val = params["cfg_file"]
+        cfg["cfg_file"] = val if val != dataclasses.MISSING else ""
+    return cfg
 
 
 def deep_to_flat(cfg):
@@ -315,6 +348,7 @@ def parse_args(cfg, *, cfg_class=None, args=None):
     cfg = check_format(cfg)
 
     # Read config file and apply settings.
+    cfg = add_cfg_file_arg(cfg, cfg_class)
     if "cfg_file" in cfg:
         cfg = apply_cfg_file(cfg, args)
 
@@ -334,6 +368,8 @@ def parse_args(cfg, *, cfg_class=None, args=None):
         # which configurations classes are used. Add those parameters (and defaults)
         # to the config now.
         cfg = add_default_args(cfg)
+        # Also add knowledge about arguments from the outer config class
+        cfg = add_cls_default_args(cfg, cfg_class)
         # Flatten everything in preparation to parsing.
         cfg = deep_to_flat(cfg)
 

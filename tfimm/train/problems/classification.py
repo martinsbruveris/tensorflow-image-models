@@ -7,8 +7,8 @@ from typing import Any
 import numpy as np
 import tensorflow as tf
 
-from .interface import ProblemBase
-from .registry import cfg_serializable, get_class
+from ..interface import ProblemBase
+from ..registry import cfg_serializable, get_class
 
 
 @dataclass

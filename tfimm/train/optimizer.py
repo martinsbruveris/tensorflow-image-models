@@ -162,10 +162,13 @@ class WarmupWrapper(LearningRateSchedule):
         self.target_lr = lr_schedule(warmup_steps)
 
     def __call__(self, step):
-        if step < self.warmup_steps:
-            lr = self.target_lr * (step / self.warmup_steps)
-        else:
-            lr = self.lr_schedule(step)
+        warmup_lr = self.target_lr * tf.cast(step / self.warmup_steps, tf.float32)
+        # We can't use an if/else statement, because the code is compiled in graph mode.
+        lr = tf.cond(
+            step < self.warmup_steps,
+            true_fn=lambda: warmup_lr,
+            false_fn=lambda: self.lr_schedule(step),
+        )
         return lr
 
     def get_config(self):
