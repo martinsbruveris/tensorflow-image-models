@@ -170,6 +170,9 @@ def add_cls_default_args(cfg, cls):
     # If some fields are already set in the config, we use those values, i.e., whatever
     # is in the config has higher priority over default values.
     for key, val in params.items():
+        # We need to ignore nested fields, since those are not parsed directly.
+        if key + "_class" in params:
+            continue
         if key not in res_cfg:
             res_cfg[key] = val
     return res_cfg
@@ -364,20 +367,30 @@ def parse_args(cfg, *, cfg_class=None, args=None):
         # We have to convert to argument format in each iteration, because after calling
         # `parser.parse()` the result is a regular config. We lose type information.
         cfg = to_arg_format(cfg)
+        print("AAA")
+        print(cfg)
         # After having parsed some arguments, we may have gained knowledge about
         # which configurations classes are used. Add those parameters (and defaults)
         # to the config now.
         cfg = add_default_args(cfg)
+        print("BBB")
+        print(cfg)
         # Also add knowledge about arguments from the outer config class
         cfg = add_cls_default_args(cfg, cfg_class)
+        print("CCC")
+        print(cfg)
         # Flatten everything in preparation to parsing.
         cfg = deep_to_flat(cfg)
+        print("DDD")
+        print(cfg)
 
         # Now we can construct a parser and do some parsing
         parser = get_arg_parser(cfg)
         parsed_cfg, unparsed = parser.parse_known_args(args)
         # After this line `parsed_cfg` will be a flat dictionary.
         parsed_cfg = vars(parsed_cfg)
+        print("EEE")
+        print(cfg)
 
         # All named parameters in argparse are optional. We don't want that, so we
         # check whether all have been supplied.
