@@ -16,41 +16,62 @@ from .registry import cfg_serializable
 
 @dataclass
 class TrainerConfig:
+    """
+    Configuration class for :class:`SingleGPUTrainer`.
+
+    Attributes:
+        validation_before_training: If ``True``, we perform validation before the first
+            training step. Particularly useful if continuing to train an already
+            partially trained model.
+        validation_every_it: We always perform validation at the end of each epoch.
+            If `validation_every_it` is set, we also perform validation during the
+            epoch every given number of steps.
+
+        ckpt_dir: Checkpoints and models are only saved if ``ckpt_dir`` is a non-empty
+            string.
+        init_ckpt_dir: If ``init_ckpt_dir`` is set, we load the model state from this
+            checkpoint at the beginning of training. This parameter can be used to
+            manually continue fine-tuning from the end state of a previous training
+            run. This can be either the path to a single checkpoint or a directory.
+            If ``init_ckpt_dir`` is a directory, we will select the latest checkpoint.
+        resume_from_ckpt: This parameter is used to recover from crashed or restarting
+            compute nodes. If ``True``, we try to load the latest checkpoint from
+            ``ckpt_dir`` at the start of training. Note, that this will override any
+            state loaded from `init_ckpt_dir``.
+        ckpt_every_it: We always save a checkpoint at the end of each epoch. If
+            ``ckpt_every_it`` is set, we also save a checkpoint every given number of
+            steps.
+        ckpt_to_keep: This parameter controls how many checkpoints we want to store. In
+            addition to the last ``ckpt_to_keep`` number of checkpoints, we will also
+            keep a checkpoint every 12 hours. The latter is useful for long-running
+            training jobs.
+
+        display_loss_every_it: If ``verbose=True``, we log to the training loss every
+            given number of iterations to ``logging.info``.
+        verbose: If ``True`` we log progress information to `logging.info``. If
+            ``False`` we suppress logging outputs.
+    """
     # Validation
-    # If `True`, we perform validation before starting training
     validation_before_training: bool = True
-    # We always perform validation at the end of each epoch. If `validation_every_it`
-    # is set, we also perform validation during the epoch every given number of steps.
     validation_every_it: int = -1
 
     # Checkpointing
-    # Any saving only happens if `ckpt_dir` is a non-empty string.
     ckpt_dir: str = ""
-    # If `init_ckpt_dir` is set, we load the model state from this checkpoint. This
-    # parameter can be used to manually continue fine-tuning from the end state of a
-    # previous training run. This can be either the path to a single checkpoint or a
-    # directory. If it is a directory, we will select the latest checkpoint.
     init_ckpt: str = ""
-    # This parameter is used to recover from crashes or killed nodes. If
-    # `resmue_from_ckpt=True`, we try to load the latest checkpoint from `ckpt_dir`.
-    # This will override anything loaded from `init_ckpt_dir`.
     resume_from_ckpt: bool = True
-    # We always save a checkpoint at the end of each epoch. If `ckpt_every_it` is set,
-    # we also save a checkpoint every given number of steps.
     ckpt_every_it: int = -1
-    # The parameter `ckpt_to_keep` controls, how many checkpoints we want to store. In
-    # addition to that, we will also keep a checkpoint every 12 hours for long-running
-    # training jobs.
     ckpt_to_keep: int = 3
 
     # Display
     display_loss_every_it: int = 1000
-    # If `verbose=False`, we supress any logging.info outputs.
     verbose: bool = True
 
 
 @cfg_serializable
 class SingleGPUTrainer:
+    """
+    Trainer class for single GPU training.
+    """
     cfg_class = TrainerConfig
 
     def __init__(
