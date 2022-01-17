@@ -13,7 +13,7 @@
 import inspect
 import os
 import sys
-sys.path.insert(0, os.path.abspath(".."))
+sys.path.insert(0, os.path.abspath("../.."))
 
 import tfimm  # noqa: E402, F401
 
