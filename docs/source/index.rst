@@ -14,12 +14,19 @@ Contents
 
 :doc:`content/transformers`
     Configuration and parameters specific to transformers
+:doc:`content/trainer`
+    Trainer class
 
 .. Hidden TOCs
 
 .. toctree::
-   :caption: Contents
    :maxdepth: 2
-   :hidden:
+   :caption: Models
 
    content/transformers
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Training
+
+   content/trainer

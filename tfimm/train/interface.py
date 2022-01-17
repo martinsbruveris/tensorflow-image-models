@@ -27,11 +27,11 @@ class ProblemBase(ABC):
         """
         return {}
 
-    def validation(self, dataset) -> dict:
+    def validation(self, dataset) -> (float, dict):
         """
         Function performs validation on a dataset and returns a dictionary of metrics.
         """
-        return {}
+        return 0.0, {}
 
     def save_model(self, save_dir):
         """

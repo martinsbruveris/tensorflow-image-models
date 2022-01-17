@@ -9,7 +9,7 @@ try:
     import wandb
 except ImportError:
     wandb = None
-    logging.info("Could not import `wand`. Logging to W&B not possible.")
+    logging.info("Could not import `wandb`. Logging to W&B not possible.")
 
 from . import config
 from .registry import get_class

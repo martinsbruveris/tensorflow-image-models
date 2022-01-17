@@ -1,4 +1,5 @@
 from .config import ModelConfig  # noqa: F401
+from .embedding_model import EmbeddingModel  # noqa: F401
 from .factory import create_model, create_preprocessing, transfer_weights  # noqa: F401
 from .registry import (  # noqa: F401
     is_model,

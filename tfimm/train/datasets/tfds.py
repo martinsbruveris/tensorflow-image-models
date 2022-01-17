@@ -2,13 +2,14 @@ import logging
 from dataclasses import dataclass
 
 import tensorflow as tf
+
 try:
     import tensorflow_datasets as tfds
 except ImportError:
     tfds = None
     logging.info("Could not import `tensorflow_datasets`.")
 
-from .registry import cfg_serializable
+from ..registry import cfg_serializable
 
 
 @dataclass
@@ -17,6 +18,7 @@ class TFDSConfig:
     split: str
     input_size: tuple
     batch_size: int
+    include_label: bool = True
     repeat: bool = False
     shuffle: bool = False
     nb_samples: int = None
@@ -63,8 +65,10 @@ class TFDSWrapper:
     def decode_batch(self, img, label):
         if self.cfg.input_size:
             img = tf.image.resize(img, size=self.cfg.input_size)
-
-        return img, label
+        if self.cfg.include_label:
+            return img, label
+        else:
+            return img
 
     def __iter__(self):
         return iter(self.get_ds())
