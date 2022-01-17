@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.2. - 2022-01-17
+
+- Improvements to the training framework.
+
 ## v0.2.1 - 2022-01-07
 
 - Small changes to the training framework.

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tfimm"
-version = "0.2.1"
+version = "0.2.2"
 description = "TensorFlow port of PyTorch Image Models (timm) - image models with pretrained weights"
 authors = ["Martins Bruveris <martins.bruveris@gmail.com>"]
 license = "Apache-2.0"
