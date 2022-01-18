@@ -13,6 +13,7 @@ from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
     EXCLUDE_FILTERS = [
         "cait_m*",
+        "convnext_xlarge_*",
         "ig_resnext101_32x48d",
         "resnetv2_50x3_*",
         "resnetv2_101*",
@@ -75,7 +76,7 @@ def test_load_timm_model(model_name: str):
     assert (np.max(np.abs(tf_res - pt_res))) / (np.max(np.abs(pt_res)) + 1e-6) < 1e-3
 
 
-@pytest.mark.parametrize("model_name", list_models(exclude_filters=EXCLUDE_FILTERS))
+@pytest.mark.parametrize("model_name", list_models(module="convnext", exclude_filters=EXCLUDE_FILTERS))
 @pytest.mark.timeout(60)
 def test_feature_extraction(model_name: str):
     """

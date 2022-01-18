@@ -119,12 +119,15 @@ def load_pytorch_weights_in_tf2_model(
     # Adapt pt state dict. TF "beta" -> PT "bias"
     # But some models have PT weight "beta" (ResMLP affine layer)
     # To fix that we need to change PT name to "bias" first...
+    # Other models have PT weights "gamma" (ConvNeXt layer scale)
     old_keys = []
     new_keys = []
     for key in pt_state_dict.keys():
         new_key = None
         if key.endswith(".beta"):
             new_key = key.replace(".beta", ".bias")
+        elif key.endswith(".gamma"):
+            new_key = key.replace(".gamma", ".weight")
         if new_key:
             old_keys.append(key)
             new_keys.append(new_key)

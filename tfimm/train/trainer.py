@@ -51,6 +51,7 @@ class TrainerConfig:
         verbose: If ``True`` we log progress information to `logging.info``. If
             ``False`` we suppress logging outputs.
     """
+
     # Validation
     validation_before_training: bool = True
     validation_every_it: int = -1
@@ -72,6 +73,7 @@ class SingleGPUTrainer:
     """
     Trainer class for single GPU training.
     """
+
     cfg_class = TrainerConfig
 
     def __init__(
