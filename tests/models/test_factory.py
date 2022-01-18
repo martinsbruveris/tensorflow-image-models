@@ -10,6 +10,7 @@ from tfimm.models.factory import create_model, create_preprocessing, transfer_we
 MODEL_LIST = [
     "cait_xxs24_224",  # cait.py
     "convmixer_768_32",  # convmixer.py
+    "convnext_tiny",  # convnext.py
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",

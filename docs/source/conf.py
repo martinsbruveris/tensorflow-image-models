@@ -50,6 +50,9 @@ exclude_patterns = []
 # Don't show full name for class etc. documentations
 add_module_names = False
 
+# Show typehints in the description, not the function definition
+autodoc_typehints = "description"
+
 
 # Resolve function for the linkcode extension.
 def linkcode_resolve(domain, info):

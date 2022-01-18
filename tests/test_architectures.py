@@ -13,6 +13,7 @@ from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 if "GITHUB_ACTIONS" in os.environ:  # and 'Linux' in platform.system():
     EXCLUDE_FILTERS = [
         "cait_m*",
+        "convnext_xlarge_*",
         "ig_resnext101_32x48d",
         "resnetv2_50x3_*",
         "resnetv2_101*",
