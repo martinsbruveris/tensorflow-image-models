@@ -76,5 +76,4 @@ log_wandb: false
 experiment_name: default
 project_name: default
 entity: default
-sweep: false
 cfg_file: ''

@@ -36,10 +36,6 @@ class ExperimentConfig:
     experiment_name: str = "default"  # Experiment name in W&B
     project_name: str = "default"  # Project name in W&B
     entity: str = "default"  # Entity in W&B
-    # If this run is part of a W&B hyperparameter sweep, we need to add suffixes to
-    # the run names and checkpoint directories, because otherwise all runs in the sweep
-    # will have the same name and the checkpoints will overwrite each other.
-    sweep: bool = False
     # Configuration file
     cfg_file: str = ""
 
@@ -80,9 +76,15 @@ def run(cfg: Union[ExperimentConfig, dict], parse_args: bool = True):
             resume=False,
         )
 
-    # In case we are using W&B sweep we need to adjust project name etc. to make them
-    # specific for each run in the sweep.
-    if cfg.sweep:
+    # When using sweeps, wandb sets the env variable WANDB_RUNQUEUE_ITEM_ID. 
+    # The presence/absence of this variable allows us to detect if this run is 
+    # part of a sweep.
+    sweep = bool(os.environ.get("WANDB_RUNQUEUE_ITEM_ID", False))
+    if sweep:
+         # If this run is part of a W&B hyperparameter sweep, we need to add 
+         # suffixes to the run names and checkpoint directories, because otherwise 
+        # all runs in the sweep will have the same name and the checkpoints will 
+        # overwrite each other.
         ckpt_dir = getattr(cfg.trainer, "ckpt_dir", "")
         if ckpt_dir:
             setattr(cfg.trainer, "ckpt_dir", os.path.join(ckpt_dir, wandb.run.id))
