@@ -393,7 +393,8 @@ def parse_args(cfg, *, cfg_class=None, args=None):
             raise ValueError(
                 "During the last parsing we have not reduced the number of unparsed "
                 "arguments. This suggests that either the user has supplied unknown "
-                "arguments or that a '_class' argument is missing."
+                "arguments or that a '_class' argument is missing.\n"
+                f"The list of unparsed arguments is {unparsed}."
             )
         nb_unparsed = len(unparsed)
 
