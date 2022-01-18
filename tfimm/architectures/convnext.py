@@ -362,7 +362,7 @@ class ConvNeXt(tf.keras.Model):
         """
         Names of features, returned when calling ``call`` with ``return_features=True``.
         """
-        features = self(self.dummy_inputs)
+        _, features = self(self.dummy_inputs, return_features=True)
         return list(features.keys())
 
     def forward_features(
@@ -395,7 +395,7 @@ class ConvNeXt(tf.keras.Model):
             x = stage(x, training=training, return_features=return_features)
             if return_features:
                 x, stage_features = x
-                for key, val in stage_features:
+                for key, val in stage_features.items():
                     features[f"stage_{stage_idx}/{key}"] = val
         return (x, features) if return_features else x
 
