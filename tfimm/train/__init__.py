@@ -17,6 +17,16 @@ from .model import (  # noqa: F401
     SavedModelConfig,
 )
 from .optimizers.optimizer import OptimizerConfig, OptimizerFactory  # noqa: F401
+from .optimizers.lr_schedules import (
+    LrConstConfig,
+    ConstSchedule,
+    LrMultiStepsConfig,
+    MultiStepsSchedule,
+    LrCosineDecayConfig,
+    CosineDecaySchedule,
+    LrExpDecayConfig,
+    ExponentialDecaySchedule,
+)
 from .problems import (  # noqa: F401
     ClassificationConfig,
     ClassificationProblem,
