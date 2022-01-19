@@ -52,7 +52,24 @@ class PatchEmbeddings(tf.keras.layers.Layer):
     Image to Patch Embedding.
 
     Supports overlapping patches when stride is specified. Used, e.g., in Pyramid
-    Vision Transformer V2.
+    Vision Transformer V2 or PoolFormer.
+
+    Parameters:
+        patch_size: Patchifying the image is implemented via a convolutional layer with
+            kernel size equal to ``patch_size``.
+        embed_dim: Number of embedding dimensions.
+        stride: If ``None``, we use non-overlapping patches, i.e.,
+            ``stride=patch_size``. Other values are used e.g., in PVT v2 or PoolFormer.
+        padding: Padding is only applied when overlapping patches are used. In that
+            case we default to ``padding = patch_size // 2``, but other values can be
+            specified via this parameter. For non-overlapping patches, padding is
+            always 0.
+        flatten: If ``True``, we reshape the patchified image from ``(H', W', D)`` into
+            ``(H'*W', D)``.
+        norm_layer: Normalization layer to be applied after the patch projection.
+        kernel_initializer: Initializer for kernel weights
+        bias_initializer: Initializer for bias weights
+        **kwargs: Other arguments are passed to the parent class.
     """
 
     def __init__(
@@ -60,7 +77,11 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         patch_size: int,
         embed_dim: int,
         stride: Optional[int] = None,
+        padding: Optional[int] = None,
+        flatten: bool = True,
         norm_layer: str = "",
+        kernel_initializer: str = "glorot_uniform",
+        bias_initializer: str = "zeros",
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -68,31 +89,56 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         self.embed_dim = embed_dim
         # If stride=None we default to non-overlapping patches
         self.stride = stride or patch_size
+        # Default padding for PVT transformer
+        self.padding = padding or patch_size // 2
+        self.flatten = flatten
         self.norm_layer = norm_layer_factory(norm_layer)
 
         # We only apply padding, if we use overlapping patches. For non-overlapping
         # patches we assume image size is divisible by patch size.
         self.pad = tf.keras.layers.ZeroPadding2D(
-            padding=patch_size // 2 if self.stride != self.patch_size else 0
+            padding=self.padding if self.stride != self.patch_size else 0
         )
         self.projection = tf.keras.layers.Conv2D(
             filters=self.embed_dim,
             kernel_size=self.patch_size,
             strides=self.stride,
             use_bias=True,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
             name="proj",
         )
         self.norm = self.norm_layer(name="norm")
 
     def call(self, x, training=False, return_shape=False):
-        """If `return_shape=True`, we return the shape of the image that has
-        been flattened."""
+        """
+        Forward pass through the layer.
+
+        An image of shape ``(H, W, C)`` will be mapped to patches of shape
+        ``(H', W', D)``, where ``D`` is ``embed_dim``. The output is then optionally
+        flattened to ``(H'*W', D)``.
+
+        Arguments:
+             x: Input to layer
+             training: Training or inference phase?
+             return_shape: If ``True``, we additionally return the spatial shape of
+                the image as well as the tokens.
+
+        Returns:
+            We return the flattened tokens and if ``return_shape=True``, additionally
+            the shape ``(H', W')``.
+
+            This information is used by models that use convolutional layers in addition
+            to attention layers and convolutional layers need to know the original shape
+            of the token list.
+        """
         x = self.pad(x)
         x = self.projection(x)
 
-        # Change the 2D spatial dimensions to a single temporal dimension.
         batch_size, height, width = tf.unstack(tf.shape(x)[:3])
-        x = tf.reshape(tensor=x, shape=(batch_size, height * width, -1))
+        if self.flatten:
+            # Change the 2D spatial dimensions to a single temporal dimension.
+            x = tf.reshape(tensor=x, shape=(batch_size, height * width, -1))
 
         x = self.norm(x, training=training)
         return (x, (height, width)) if return_shape else x

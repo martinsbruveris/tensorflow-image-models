@@ -40,5 +40,11 @@ def norm_layer_factory(norm_layer: str):
     elif norm_layer == "group_norm":
         return GroupNormalization
 
+    elif norm_layer == "group_norm_1grp":
+        # Group normalization with one group. Used by PoolFormer.
+        bn_class = GroupNormalization
+        bn_args = {"nb_groups": 1}
+        return lambda **kwargs: bn_class(**bn_args, **kwargs)
+
     else:
         raise ValueError(f"Unknown normalization layer: {norm_layer}")
