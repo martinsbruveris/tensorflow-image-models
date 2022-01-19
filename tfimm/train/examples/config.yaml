@@ -26,19 +26,18 @@ problem:
     drop_rate: 0.0
   model_class: ModelFactory
   optimizer:
-    lr: 0.001
+    lr_schedule: 
+      lr: 0.001
+      lr_decay_rate: 0.8
+      lr_decay_frequency: 1
+    lr_schedule_class: LRExponentialDecayFactory
     optimizer: sgd
     betas: !!python/tuple
     - 0.9
     - 0.999
     clipnorm: -1.0
     clipvalue: -1.0
-    lr_schedule: exponential_decay
     lr_warmup: -1
-    lr_decay_rate: 0.8
-    lr_decay_frequency: 1
-    lr_boundaries: !!python/tuple []
-    lr_values: !!python/tuple []
   optimizer_class: OptimizerFactory
   binary_loss: false
   weight_decay: 0.01

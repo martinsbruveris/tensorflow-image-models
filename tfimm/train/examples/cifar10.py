@@ -1,6 +1,7 @@
 from tfimm.train import (
     ClassificationConfig,
     ExperimentConfig,
+    LRExpDecayConfig,
     ModelConfig,
     OptimizerConfig,
     TFDSConfig,
@@ -34,11 +35,13 @@ def main_with_python_config():
             ),
             model_class="ModelFactory",
             optimizer=OptimizerConfig(
-                lr=0.001,
                 optimizer="sgd",
-                lr_schedule="exponential_decay",
-                lr_decay_rate=0.8,
-                lr_decay_frequency=1,
+                lr_schedule_class="LRExponentialDecayFactory",
+                lr_schedule=LRExpDecayConfig(
+                    lr=0.001,
+                    lr_decay_rate=0.8,
+                    lr_decay_frequency=1,
+                ),
             ),
             optimizer_class="OptimizerFactory",
             binary_loss=False,
