@@ -8,7 +8,7 @@ from tensorflow.keras.optimizers.schedules import LearningRateSchedule
 from ..registry import cfg_serializable
 
 
-class BaseLrSchedule(ABC):
+class BaseLRSchedule(ABC):
     def __init__(self, cfg: Any, timekeeping: Any):
         self.cfg = cfg
         self.timekeeping = timekeeping
@@ -25,7 +25,7 @@ class LrConstConfig:
 
 
 @cfg_serializable
-class ConstSchedule(BaseLrSchedule):
+class ConstSchedule(BaseLRSchedule):
     cfg_class: LrConstConfig
 
     def __call__(self):
@@ -46,7 +46,7 @@ class LrMultiStepsConfig:
 
 
 @cfg_serializable
-class MultiStepsSchedule(BaseLrSchedule):
+class MultiStepsSchedule(BaseLRSchedule):
     cfg_class: LrMultiStepsConfig
 
     def __call__(self):
@@ -67,7 +67,7 @@ class LrCosineDecayConfig:
 
 
 @cfg_serializable
-class CosineDecaySchedule(BaseLrSchedule):
+class CosineDecaySchedule(BaseLRSchedule):
     cfg_class: LrCosineDecayConfig
 
     def __call__(self):
@@ -88,7 +88,7 @@ class LrExpDecayConfig:
 
 
 @cfg_serializable
-class ExponentialDecaySchedule(BaseLrSchedule):
+class ExponentialDecaySchedule(BaseLRSchedule):
     cfg_class: LrExpDecayConfig
 
     def __call__(self):
