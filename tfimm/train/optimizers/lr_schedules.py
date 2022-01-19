@@ -5,7 +5,7 @@ from typing import Any
 import tensorflow as tf
 from tensorflow.keras.optimizers.schedules import LearningRateSchedule
 
-from ..registry import cfg_serializable, get_class
+from ..registry import cfg_serializable
 
 
 class BaseLrSchedule(ABC):
