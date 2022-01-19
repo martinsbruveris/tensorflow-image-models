@@ -2,13 +2,13 @@ import pytest
 import tensorflow as tf
 
 from tfimm.train import (
+    LrConstConfig,
+    LrCosineDecayConfig,
+    LrExpDecayConfig,
+    LrMultiStepsConfig,
     OptimizerConfig,
     OptimizerFactory,
     Timekeeping,
-    LrConstConfig,
-    LrMultiStepsConfig,
-    LrCosineDecayConfig,
-    LrExpDecayConfig,
 )
 
 

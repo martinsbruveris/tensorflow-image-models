@@ -1,5 +1,5 @@
-from typing import Any
 from dataclasses import dataclass
+from typing import Any
 
 import tensorflow as tf
 from tensorflow.keras.optimizers.schedules import LearningRateSchedule
