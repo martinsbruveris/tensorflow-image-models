@@ -16,7 +16,7 @@ from .model import (  # noqa: F401
     SavedModel,
     SavedModelConfig,
 )
-from .optimizer import OptimizerConfig, OptimizerFactory  # noqa: F401
+from .optimizers.optimizer import OptimizerConfig, OptimizerFactory  # noqa: F401
 from .problems import (  # noqa: F401
     ClassificationConfig,
     ClassificationProblem,
