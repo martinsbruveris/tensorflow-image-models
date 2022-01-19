@@ -19,14 +19,14 @@ class BaseLRSchedule(ABC):
 
 
 @dataclass
-class LrConstConfig:
+class LRConstConfig:
     # Learning rate value
     lr: float
 
 
 @cfg_serializable
 class ConstSchedule(BaseLRSchedule):
-    cfg_class: LrConstConfig
+    cfg_class: LRConstConfig
 
     def __call__(self):
         # We simulate a constant lr using a keras `LearningRateSchedule` so we can
@@ -37,7 +37,7 @@ class ConstSchedule(BaseLRSchedule):
 
 
 @dataclass
-class LrMultiStepsConfig:
+class LRMultiStepsConfig:
     # Used by `multisteps`. At the epochs given by `lr_boundaries` we change the lr to
     # the values given by `lr_values`. Note that we need
     # `len(lr_values) = len(lr_boundaries) + 1`.
@@ -47,7 +47,7 @@ class LrMultiStepsConfig:
 
 @cfg_serializable
 class MultiStepsSchedule(BaseLRSchedule):
-    cfg_class: LrMultiStepsConfig
+    cfg_class: LRMultiStepsConfig
 
     def __call__(self):
         # We convert `lr_boundaries` from epochs to steps.
@@ -60,7 +60,7 @@ class MultiStepsSchedule(BaseLRSchedule):
 
 
 @dataclass
-class LrCosineDecayConfig:
+class LRCosineDecayConfig:
     # Learning rate value
     lr: float
     alpha: float = 0.0
@@ -68,7 +68,7 @@ class LrCosineDecayConfig:
 
 @cfg_serializable
 class CosineDecaySchedule(BaseLRSchedule):
-    cfg_class: LrCosineDecayConfig
+    cfg_class: LRCosineDecayConfig
 
     def __call__(self):
         return tf.keras.optimizers.schedules.CosineDecay(
@@ -77,7 +77,7 @@ class CosineDecaySchedule(BaseLRSchedule):
 
 
 @dataclass
-class LrExpDecayConfig:
+class LRExpDecayConfig:
     # Learning rate value
     lr: float
     # Used by `exponential_decay`. We decay the lr every `lr_decay_frequency` epochs
@@ -89,7 +89,7 @@ class LrExpDecayConfig:
 
 @cfg_serializable
 class ExponentialDecaySchedule(BaseLRSchedule):
-    cfg_class: LrExpDecayConfig
+    cfg_class: LRExpDecayConfig
 
     def __call__(self):
         return tf.keras.optimizers.schedules.ExponentialDecay(

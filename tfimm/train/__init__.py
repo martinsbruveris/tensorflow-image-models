@@ -21,10 +21,10 @@ from .optimizers.schedules import (  # noqa: F401
     ConstSchedule,
     CosineDecaySchedule,
     ExponentialDecaySchedule,
-    LrConstConfig,
-    LrCosineDecayConfig,
-    LrExpDecayConfig,
-    LrMultiStepsConfig,
+    LRConstConfig,
+    LRCosineDecayConfig,
+    LRExpDecayConfig,
+    LRMultiStepsConfig,
     MultiStepsSchedule,
 )
 from .problems import (  # noqa: F401

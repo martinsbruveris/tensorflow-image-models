@@ -2,10 +2,10 @@ import pytest
 import tensorflow as tf
 
 from tfimm.train import (
-    LrConstConfig,
-    LrCosineDecayConfig,
-    LrExpDecayConfig,
-    LrMultiStepsConfig,
+    LRConstConfig,
+    LRCosineDecayConfig,
+    LRExpDecayConfig,
+    LRMultiStepsConfig,
     OptimizerConfig,
     OptimizerFactory,
     Timekeeping,
@@ -21,17 +21,17 @@ def get_schedule(
     lr_values: tuple,
 ):
     if name == "const":
-        return LrConstConfig(lr), "ConstSchedule"
+        return LRConstConfig(lr), "ConstSchedule"
     elif name == "multisteps":
         return (
-            LrMultiStepsConfig(lr_boundaries=lr_boundaries, lr_values=lr_values),
+            LRMultiStepsConfig(lr_boundaries=lr_boundaries, lr_values=lr_values),
             "MultiStepsSchedule",
         )
     elif name == "cosine_decay":
-        return LrCosineDecayConfig(lr=lr), "CosineDecaySchedule"
+        return LRCosineDecayConfig(lr=lr), "CosineDecaySchedule"
     elif name == "exponential_decay":
         return (
-            LrExpDecayConfig(
+            LRExpDecayConfig(
                 lr=lr,
                 lr_decay_rate=lr_decay_rate,
                 lr_decay_frequency=lr_decay_frequency,
