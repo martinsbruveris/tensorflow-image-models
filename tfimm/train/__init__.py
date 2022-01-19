@@ -18,14 +18,14 @@ from .model import (  # noqa: F401
 )
 from .optimizers.optimizer import OptimizerConfig, OptimizerFactory  # noqa: F401
 from .optimizers.schedules import (  # noqa: F401
-    ConstSchedule,
-    CosineDecaySchedule,
-    ExponentialDecaySchedule,
+    LRConstFactory,
+    LRCosineDecayFactory,
+    LRExponentialDecayFactory,
     LRConstConfig,
     LRCosineDecayConfig,
     LRExpDecayConfig,
     LRMultiStepsConfig,
-    MultiStepsSchedule,
+    LRMultiStepsFactory,
 )
 from .problems import (  # noqa: F401
     ClassificationConfig,

@@ -25,7 +25,7 @@ class LRConstConfig:
 
 
 @cfg_serializable
-class ConstSchedule(BaseLRSchedule):
+class LRConstFactory(BaseLRSchedule):
     cfg_class: LRConstConfig
 
     def __call__(self):
@@ -46,7 +46,7 @@ class LRMultiStepsConfig:
 
 
 @cfg_serializable
-class MultiStepsSchedule(BaseLRSchedule):
+class LRMultiStepsFactory(BaseLRSchedule):
     cfg_class: LRMultiStepsConfig
 
     def __call__(self):
@@ -67,7 +67,7 @@ class LRCosineDecayConfig:
 
 
 @cfg_serializable
-class CosineDecaySchedule(BaseLRSchedule):
+class LRCosineDecayFactory(BaseLRSchedule):
     cfg_class: LRCosineDecayConfig
 
     def __call__(self):
@@ -88,7 +88,7 @@ class LRExpDecayConfig:
 
 
 @cfg_serializable
-class ExponentialDecaySchedule(BaseLRSchedule):
+class LRExponentialDecayFactory(BaseLRSchedule):
     cfg_class: LRExpDecayConfig
 
     def __call__(self):

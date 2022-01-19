@@ -21,14 +21,14 @@ def get_schedule(
     lr_values: tuple,
 ):
     if name == "const":
-        return LRConstConfig(lr), "ConstSchedule"
+        return LRConstConfig(lr), "LRConstFactory"
     elif name == "multisteps":
         return (
             LRMultiStepsConfig(lr_boundaries=lr_boundaries, lr_values=lr_values),
-            "MultiStepsSchedule",
+            "LRMultiStepsFactory",
         )
     elif name == "cosine_decay":
-        return LRCosineDecayConfig(lr=lr), "CosineDecaySchedule"
+        return LRCosineDecayConfig(lr=lr), "LRCosineDecayFactory"
     elif name == "exponential_decay":
         return (
             LRExpDecayConfig(
@@ -36,7 +36,7 @@ def get_schedule(
                 lr_decay_rate=lr_decay_rate,
                 lr_decay_frequency=lr_decay_frequency,
             ),
-            "ExponentialDecaySchedule",
+            "LRExponentialDecayFactory",
         )
     else:
         raise NameError(f"Unknown schedule: {name}")
