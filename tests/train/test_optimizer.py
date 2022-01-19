@@ -66,8 +66,8 @@ def test_optimizer(optimizer, lr_schedule, lr_warmup, mixed_precision):
 
     cfg = OptimizerConfig(
         optimizer=optimizer,
-        lr_schedule=schedule_class,
-        lr_schedule_class=schedule,
+        lr_schedule=schedule,
+        lr_schedule_class=schedule_class,
         lr_warmup=lr_warmup,
     )
     optimizer = OptimizerFactory(cfg, timekeeping, mixed_precision)()
