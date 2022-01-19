@@ -14,6 +14,7 @@ MODEL_LIST = [
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",
+    "poolformer_s12",  # poolformer.py
     "pvt_tiny",  # pvt.py
     "pvt_v2_b0",  # pvt_v2.py
     "resnet18",  # resnet.py

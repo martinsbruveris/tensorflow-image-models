@@ -19,8 +19,8 @@ weights, obtained by porting architectures from
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
 vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer models 
-(MLP-Mixer, ResMLP, gMLP and ConvMixer) and various ResNet flavours (ResNet, ResNeXt, 
-ECA-ResNet, SE-ResNet).
+(MLP-Mixer, ResMLP, gMLP, PoolFormer and ConvMixer) and various ResNet flavours (ResNet,
+ResNeXt, ECA-ResNet, SE-ResNet) as well as the recent ConvNeXt.
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
@@ -150,6 +150,13 @@ The following architectures are currently available:
     Convolutions. [\[arXiv:2102.12122\]](https://arxiv.org/abs/2102.12122)
   - PVTv2: Improved Baselines with Pyramid Vision Transformer 
     [\[arXiv:2106.13797\]](https://arxiv.org/abs/2106.13797)
+- ConvNeXt
+  [\[github\]](https://github.com/facebookresearch/ConvNeXt)
+  - A ConvNet for the 2020s. [\[arXiv:2201.03545\]](https://arxiv.org/abs/2201.03545)
+- PoolFormer
+  [\[github\]](https://github.com/sail-sg/poolformer)
+  - PoolFormer: MetaFormer is Actually What You Need for Vision.
+    [\[arXiv:2111.11418\]](https://arxiv.org/abs/2111.11418)
 - ResNet, ResNeXt, ECA-ResNet, SE-ResNet and friends
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)

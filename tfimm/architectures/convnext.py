@@ -165,7 +165,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         drop_path_rate: float,
         norm_layer: str,
         act_layer: str,
-        init_scale=1e-6,
+        init_scale: float,
         **kwargs,
     ):
         super().__init__(**kwargs)
