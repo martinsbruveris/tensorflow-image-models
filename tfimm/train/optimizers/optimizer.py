@@ -13,7 +13,7 @@ class OptimizerConfig:
     # `exponential_decay`. Different schedules will use different sets of parameters
     # from below.
     lr_schedule: Any
-    lr_schedule_class: str = "const"
+    lr_schedule_class: str
 
     # Linear lr warmup over `lr_warmup` number of epochs from 0 to the value specified
     # by the schedule.

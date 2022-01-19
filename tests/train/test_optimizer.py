@@ -1,7 +1,45 @@
 import pytest
 import tensorflow as tf
 
-from tfimm.train import OptimizerConfig, OptimizerFactory, Timekeeping
+from tfimm.train import (
+    OptimizerConfig,
+    OptimizerFactory,
+    Timekeeping,
+    LrConstConfig,
+    LrMultiStepsConfig,
+    LrCosineDecayConfig,
+    LrExpDecayConfig,
+)
+
+
+def get_schedule(
+    name: str,
+    lr: float,
+    lr_decay_frequency: int,
+    lr_decay_rate: float,
+    lr_boundaries: tuple,
+    lr_values: tuple,
+):
+    if name == "const":
+        return LrConstConfig(lr), "ConstSchedule"
+    elif name == "multisteps":
+        return (
+            LrMultiStepsConfig(lr_boundaries=lr_boundaries, lr_values=lr_values),
+            "MultiStepsSchedule",
+        )
+    elif name == "cosine_decay":
+        return LrCosineDecayConfig(lr=lr), "CosineDecaySchedule"
+    elif name == "exponential_decay":
+        return (
+            LrExpDecayConfig(
+                lr=lr,
+                lr_decay_rate=lr_decay_rate,
+                lr_decay_frequency=lr_decay_frequency,
+            ),
+            "ExponentialDecaySchedule",
+        )
+    else:
+        raise NameError(f"Unknown schedule: {name}")
 
 
 @pytest.mark.parametrize("optimizer", ["sgd", "adam", "rmsprop"])
@@ -16,15 +54,21 @@ def test_optimizer(optimizer, lr_schedule, lr_warmup, mixed_precision):
         batch_size=256,
         nb_samples_per_epoch=1000,
     )
-    cfg = OptimizerConfig(
+
+    schedule, schedule_class = get_schedule(
+        lr_schedule,
         lr=0.001,
-        optimizer=optimizer,
-        lr_schedule=lr_schedule,
-        lr_warmup=lr_warmup,
-        lr_decay_rate=0.8,
         lr_decay_frequency=1,
+        lr_decay_rate=0.8,
         lr_boundaries=(2, 3),
         lr_values=(0.001, 0.0001, 0.00001),
+    )
+
+    cfg = OptimizerConfig(
+        optimizer=optimizer,
+        lr_schedule=schedule_class,
+        lr_schedule_class=schedule,
+        lr_warmup=lr_warmup,
     )
     optimizer = OptimizerFactory(cfg, timekeeping, mixed_precision)()
 
