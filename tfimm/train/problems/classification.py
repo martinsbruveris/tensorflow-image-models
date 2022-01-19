@@ -112,9 +112,10 @@ class ClassificationProblem(ProblemBase):
             # Weight decay
             # TODO: Exclude certain variables from weight decay based on model cfg
             reg_loss = 0.0
-            for weight in self.model.trainable_variables:
-                reg_loss += tf.reduce_sum(tf.square(weight))
-            reg_loss *= self.cfg.weight_decay
+            if self.cfg.weight_decay != 0.0:
+                for weight in self.model.trainable_variables:
+                    reg_loss += tf.reduce_sum(tf.square(weight))
+                reg_loss *= self.cfg.weight_decay
 
             # Total loss
             loss = ce_loss + reg_loss
