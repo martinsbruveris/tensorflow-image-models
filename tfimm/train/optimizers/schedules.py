@@ -26,7 +26,10 @@ class LRConstConfig:
 
 @cfg_serializable
 class LRConstFactory(BaseLRSchedule):
-    cfg_class: LRConstConfig
+    cfg_class = LRConstConfig
+
+    def __init__(self, cfg: LRConstConfig, timekeeping: Any):
+        super().__init__(cfg, timekeeping)
 
     def __call__(self):
         # We simulate a constant lr using a keras `LearningRateSchedule` so we can
@@ -47,7 +50,10 @@ class LRMultiStepsConfig:
 
 @cfg_serializable
 class LRMultiStepsFactory(BaseLRSchedule):
-    cfg_class: LRMultiStepsConfig
+    cfg_class = LRMultiStepsConfig
+
+    def __init__(self, cfg: LRMultiStepsConfig, timekeeping: Any):
+        super().__init__(cfg, timekeeping)
 
     def __call__(self):
         # We convert `lr_boundaries` from epochs to steps.
@@ -68,7 +74,10 @@ class LRCosineDecayConfig:
 
 @cfg_serializable
 class LRCosineDecayFactory(BaseLRSchedule):
-    cfg_class: LRCosineDecayConfig
+    cfg_class = LRCosineDecayConfig
+
+    def __init__(self, cfg: LRCosineDecayConfig, timekeeping: Any):
+        super().__init__(cfg, timekeeping)
 
     def __call__(self):
         return tf.keras.optimizers.schedules.CosineDecay(
@@ -89,7 +98,10 @@ class LRExpDecayConfig:
 
 @cfg_serializable
 class LRExponentialDecayFactory(BaseLRSchedule):
-    cfg_class: LRExpDecayConfig
+    cfg_class = LRExpDecayConfig
+
+    def __init__(self, cfg: LRExpDecayConfig, timekeeping: Any):
+        super().__init__(cfg, timekeeping)
 
     def __call__(self):
         return tf.keras.optimizers.schedules.ExponentialDecay(

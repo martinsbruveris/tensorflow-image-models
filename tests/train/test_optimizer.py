@@ -1,7 +1,6 @@
 import pytest
 import tensorflow as tf
 
-import tfimm.train  # noqa: F401
 from tfimm.train import (
     LRConstConfig,
     LRCosineDecayConfig,
