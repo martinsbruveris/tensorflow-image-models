@@ -1,5 +1,11 @@
 # Change Log
 
+## Unpublished
+
+- Added ConvNeXt models
+- Added PoolFormer models
+- Improved LR schedulers for training framework
+
 ## v0.2.2. - 2022-01-17
 
 - Improvements to the training framework.

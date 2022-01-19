@@ -8,18 +8,23 @@ import torch
 from torch.hub import load_state_dict_from_url  # noqa: F401
 
 import tfimm
+import tfimm.architectures.timm.poolformer
+from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 
 # We need to test models in both training and inference mode (BN)
 training = False
 nb_calls = 3
 
 # Load PyTorch model
-pt_model = timm.create_model("resnet18", pretrained=True)
+pt_model = timm.create_model("poolformer_s12", pretrained=False)
 # If a model is not part of the `timm` library, we can load the state dict directly
-# state_dict = load_state_dict_from_url(
-#     url="https://github.com/whai362/PVT/releases/download/v2/pvt_large.pth",
-# )
-# pt_model.load_state_dict(state_dict)
+state_dict = load_state_dict_from_url(
+    url=(
+        "https://github.com/sail-sg/poolformer/"
+        "releases/download/v1.0/poolformer_s12.pth.tar"
+    ),
+)
+pt_model.load_state_dict(state_dict)
 
 # For debug purposes we may want to print variable names, so we can compare with the
 # variable names in our TF model
@@ -30,7 +35,8 @@ if not training:  # Set PyTorch model to inference mode
     pt_model.eval()
 
 # Load TF model
-tf_model = tfimm.create_model("resnet18", pretrained="timm")
+tf_model = tfimm.create_model("poolformer_s12", pretrained=False)
+load_pytorch_weights_in_tf2_model(tf_model, pt_model.state_dict())
 # For debug purposes we may want to print variable names
 # for w in tf_model.weights:
 #     print(w.name)

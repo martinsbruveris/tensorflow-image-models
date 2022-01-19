@@ -37,7 +37,7 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow as tf
 
-from tfimm.layers import PatchEmbeddings, ConvMLP, DropPath, norm_layer_factory
+from tfimm.layers import ConvMLP, DropPath, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -255,7 +255,7 @@ class PoolFormer(tf.keras.Model):
                 )
             if j < len(cfg.nb_blocks) - 1:
                 self.blocks[f"stage_{j}/downsample"] = PatchEmbeddings(
-                    embed_dim=cfg.embed_dim[j+1],
+                    embed_dim=cfg.embed_dim[j + 1],
                     patch_size=3,
                     stride=2,
                     padding=1,
@@ -418,3 +418,7 @@ def poolformer_m48():
         crop_pct=0.95,
     )
     return PoolFormer, cfg
+
+
+# TODO: Add URLs
+# TODO: Add ConvNeXt and PoolFormer to Readme
