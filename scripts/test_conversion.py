@@ -7,24 +7,23 @@ import timm
 import torch
 from torch.hub import load_state_dict_from_url  # noqa: F401
 
-import tfimm
-import tfimm.architectures.timm.poolformer
-from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
+import tfimm  # noqa: F401
+from tfimm.utils.timm import load_pytorch_weights_in_tf2_model  # noqa: F401
 
 # We need to test models in both training and inference mode (BN)
 training = False
 nb_calls = 3
 
 # Load PyTorch model
-pt_model = timm.create_model("poolformer_s12", pretrained=False)
+pt_model = timm.create_model("resnet18", pretrained=True)
 # If a model is not part of the `timm` library, we can load the state dict directly
-state_dict = load_state_dict_from_url(
-    url=(
-        "https://github.com/sail-sg/poolformer/"
-        "releases/download/v1.0/poolformer_s12.pth.tar"
-    ),
-)
-pt_model.load_state_dict(state_dict)
+# state_dict = load_state_dict_from_url(
+#     url="https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_m48.pth.tar"  # noqa: E501
+# )
+# pt_model.load_state_dict(state_dict)
+# Note: We should not test conversion with randomly initialized models. Because most
+# normalization layers are initialized with 0 mean and variance 1, often mismatching
+# normalization layers can be hidden by the initialization.
 
 # For debug purposes we may want to print variable names, so we can compare with the
 # variable names in our TF model
@@ -35,8 +34,9 @@ if not training:  # Set PyTorch model to inference mode
     pt_model.eval()
 
 # Load TF model
-tf_model = tfimm.create_model("poolformer_s12", pretrained=False)
-load_pytorch_weights_in_tf2_model(tf_model, pt_model.state_dict())
+tf_model = tfimm.create_model("resnet18", pretrained=True)
+# If we want to load the weights from a pytorch model outside the model factory:
+# load_pytorch_weights_in_tf2_model(tf_model, pt_model.state_dict())
 # For debug purposes we may want to print variable names
 # for w in tf_model.weights:
 #     print(w.name)
