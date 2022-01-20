@@ -1,6 +1,6 @@
 # Change Log
 
-## Unpublished
+## v0.2.3 - 2022-01-20
 
 - Added ConvNeXt models
 - Added PoolFormer models
