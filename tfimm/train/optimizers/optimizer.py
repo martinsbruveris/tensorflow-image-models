@@ -1,14 +1,24 @@
 from dataclasses import dataclass
+from typing import Any
 
 import tensorflow as tf
 from tensorflow.keras.optimizers.schedules import LearningRateSchedule
 
-from .registry import cfg_serializable
+from ..registry import cfg_serializable, get_class
 
 
 @dataclass
 class OptimizerConfig:
-    lr: float = 0.0001
+    # Lr schedule. Currently, supports `const`, `multisteps`, `cosine_decay` and
+    # `exponential_decay`. Different schedules will use different sets of parameters
+    # from below.
+    lr_schedule: Any
+    lr_schedule_class: str
+
+    # Linear lr warmup over `lr_warmup` number of epochs from 0 to the value specified
+    # by the schedule.
+    lr_warmup: int = -1
+
     # Which optimizer to use. Currently supports `sgd`, `adam` and `rmsprop`.
     optimizer: str = "sgd"
     # Parameters for the optimizer. Usually momentum values. Not all optimizers need
@@ -20,23 +30,6 @@ class OptimizerConfig:
     # applies `tf.clip_by_norm` or `tf.clip_by_value` on each weight.
     clipnorm: float = -1.0
     clipvalue: float = -1.0
-
-    # Lr schedule. Currently, supports `const`, `multisteps`, `cosine_decay` and
-    # `exponential_decay`. Different schedules will use different sets of parameters
-    # from below.
-    lr_schedule: str = "const"
-    # Linear lr warmup over `lr_warmup` number of epochs from 0 to the value specified
-    # by the schedule.
-    lr_warmup: int = -1
-    # Used by `exponential_decay`. We decay the lr every `lr_decay_frequency` epochs
-    # by the facto `lr_decay_rate`.
-    lr_decay_rate: float = -1.0
-    lr_decay_frequency: int = -1
-    # Used by `multisteps`. At the epochs given by `lr_boundaries` we change the lr to
-    # the values given by `lr_values`. Note that we need
-    # `len(lr_values) = len(lr_boundaries) + 1`.
-    lr_boundaries: tuple = ()
-    lr_values: tuple = ()
 
 
 @cfg_serializable
@@ -50,59 +43,22 @@ class OptimizerFactory:
 
     def lr_schedule(self):
         """Create learning rate schedule as defined by config."""
-        cfg = self.cfg
 
-        if cfg.lr_schedule == "const":
-            # We simulate a constant lr using a keras `LearningRateSchedule` so we can
-            # wrap it using the `WarmupWrapper` below.
-            lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
-                boundaries=[0], values=[cfg.lr, cfg.lr]
-            )
-        elif cfg.lr_schedule == "multisteps":
-            if not cfg.lr_boundaries or not cfg.lr_values:
-                raise ValueError(
-                    "To use `lr_policy='multisteps'`, the parameters `lr_boundaries` "
-                    "and `lr_values` need to be set."
-                )
-            # We convert `lr_boundaries` from epochs to steps.
-            boundaries = [
-                val * self.timekeeping.nb_steps_per_epoch for val in cfg.lr_boundaries
-            ]
-            lr = tf.keras.optimizers.schedules.PiecewiseConstantDecay(
-                boundaries=boundaries, values=cfg.lr_values
-            )
-        elif cfg.lr_schedule == "cosine_decay":
-            lr = tf.keras.optimizers.schedules.CosineDecay(
-                cfg.lr,
-                decay_steps=self.timekeeping.nb_steps,
-            )
-        elif cfg.lr_schedule == "exponential_decay":
-            if cfg.lr_decay_frequency == -1.0 or cfg.lr_decay_rate == -1.0:
-                raise ValueError(
-                    "To use `lr_policy='multisteps'`, the parameters "
-                    "`lr_decay_frequency` and `lr_decay_rate` need to be set."
-                )
-            lr = tf.keras.optimizers.schedules.ExponentialDecay(
-                initial_learning_rate=cfg.lr,
-                decay_steps=cfg.lr_decay_frequency
-                * self.timekeeping.nb_steps_per_epoch,
-                decay_rate=cfg.lr_decay_rate,
-                staircase=True,
-            )
-        else:
-            raise ValueError(f"Unknown learning rate schedule {cfg.lr_schedule}")
+        lr = get_class(self.cfg.lr_schedule_class)(
+            cfg=self.cfg.lr_schedule,
+            timekeeping=self.timekeeping,
+        )()
 
-        if cfg.lr_warmup != -1:
+        if self.cfg.lr_warmup != -1:
             lr = WarmupWrapper(
                 lr_schedule=lr,
-                warmup_steps=cfg.lr_warmup * self.timekeeping.nb_steps_per_epoch,
+                warmup_steps=self.cfg.lr_warmup * self.timekeeping.nb_steps_per_epoch,
             )
 
         return lr
 
     def optimizer(self, lr):
         cfg = self.cfg
-        lr = self.lr_schedule()
 
         if cfg.clipnorm != -1.0 and cfg.clipvalue != -1.0:
             raise ValueError(
