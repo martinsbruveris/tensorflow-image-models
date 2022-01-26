@@ -31,7 +31,7 @@ class OptimizerConfig:
     clipnorm: float = -1.0
     clipvalue: float = -1.0
     # Epsilon parameter for Adam and RMSProp
-    epsilon = 1e-07
+    epsilon = 1e-7
 
 
 @cfg_serializable
