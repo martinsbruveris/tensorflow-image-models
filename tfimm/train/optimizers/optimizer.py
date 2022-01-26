@@ -30,6 +30,8 @@ class OptimizerConfig:
     # applies `tf.clip_by_norm` or `tf.clip_by_value` on each weight.
     clipnorm: float = -1.0
     clipvalue: float = -1.0
+    # Epsilon parameter for Adam and RMSProp
+    epsilon = 1e-7
 
 
 @cfg_serializable
@@ -84,6 +86,7 @@ class OptimizerFactory:
                 beta_2=cfg.betas[1],
                 clipnorm=clipnorm,
                 clipvalue=clipvalue,
+                epsilon=cfg.epsilon,
             )
         elif cfg.optimizer == "rmsprop":
             opt = tf.keras.optimizers.RMSprop(
@@ -92,6 +95,7 @@ class OptimizerFactory:
                 momentum=cfg.betas[1],
                 clipnorm=clipnorm,
                 clipvalue=clipvalue,
+                epsilon=cfg.epsilon,
             )
         else:
             raise ValueError(f"Unknown optimizer: {cfg.optimizer}.")
