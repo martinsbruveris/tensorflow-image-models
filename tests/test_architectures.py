@@ -76,7 +76,7 @@ def test_load_timm_model(model_name: str):
     assert (np.max(np.abs(tf_res - pt_res))) / (np.max(np.abs(pt_res)) + 1e-6) < 1e-3
 
 
-@pytest.mark.parametrize("model_name", list_models(module="convnext", exclude_filters=EXCLUDE_FILTERS))
+@pytest.mark.parametrize("model_name", list_models(exclude_filters=EXCLUDE_FILTERS))
 @pytest.mark.timeout(60)
 def test_feature_extraction(model_name: str):
     """

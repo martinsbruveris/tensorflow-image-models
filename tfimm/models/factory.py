@@ -48,7 +48,7 @@ def create_model(
         loaded_model(loaded_model.dummy_inputs)
         load_timm_weights(loaded_model, model_name)
     elif pretrained:
-        if cfg.url.endswith(".pth"):
+        if cfg.url.endswith(".pth") or cfg.url.endswith(".pth.tar"):
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
             load_pth_url_weights(loaded_model, cfg.url)

@@ -24,7 +24,9 @@ Contents
    :caption: Models
 
    content/transformers
+   content/layers
    content/convnext
+   content/poolformer
 
 .. toctree::
    :maxdepth: 2
