@@ -269,7 +269,6 @@ class PoolFormer(tf.keras.Model):
         # Classifier head
         self.norm = norm_layer(name="norm")
         self.pool = tf.keras.layers.GlobalAveragePooling2D()
-        print("Classes", cfg.nb_classes)
         self.head = (
             tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0

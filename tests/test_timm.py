@@ -14,9 +14,9 @@ TIMM_ARCHITECTURES = [
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",
-    "poolformer_s12",  # poolformer.py
-    "pvt_tiny",  # pvt.py
-    "pvt_v2_b0",  # pvt_v2.py
+    # "poolformer_s12",  # poolformer.py
+    # "pvt_tiny",  # pvt.py
+    # "pvt_v2_b0",  # pvt_v2.py
     "resnet18",  # resnet.py
     "resnetv2_50x1_bitm",  # resnetv2.py
     "swin_tiny_patch4_window7_224",  # swin.py
