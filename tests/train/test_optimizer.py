@@ -42,7 +42,9 @@ def get_schedule(
         raise NameError(f"Unknown schedule: {name}")
 
 
-@pytest.mark.parametrize("optimizer", ["sgd", "adam", "rmsprop"])
+@pytest.mark.parametrize(
+    "optimizer", ["sgd", "adam", "rmsprop", "adamax", "adadelta", "adagrad"]
+)
 @pytest.mark.parametrize(
     "lr_schedule", ["const", "multisteps", "cosine_decay", "exponential_decay"]
 )
