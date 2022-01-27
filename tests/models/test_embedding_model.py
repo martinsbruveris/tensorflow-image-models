@@ -6,12 +6,12 @@ import tensorflow as tf
 from tfimm.models import EmbeddingModel
 from tfimm.models.factory import create_model
 
+from . import architectures  # noqa: F401
+
 
 def test_save_load_model():
     """Tests ability to use keras save() and load() functions."""
-    # tf.keras.utils.register_keras_serializable(EmbeddingModel)
-
-    backbone = create_model("resnet18")
+    backbone = create_model("resnet_test_model_1")
     model = EmbeddingModel(backbone=backbone, embed_dim=32)
     model(model.dummy_inputs)
 

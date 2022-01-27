@@ -7,47 +7,35 @@ import tensorflow as tf
 from tfimm import list_models
 from tfimm.models.factory import create_model, create_preprocessing, transfer_weights
 
-MODEL_LIST = [
-    "cait_xxs24_224",  # cait.py
-    "convmixer_768_32",  # convmixer.py
-    "convnext_tiny",  # convnext.py
-    "mixer_s32_224",  # mlp_mixer.py
-    "resmlp_12_224",
-    "gmlp_ti16_224",
-    "poolformer_s12",  # poolformer.py
-    "pvt_tiny",  # pvt.py
-    "pvt_v2_b0",  # pvt_v2.py
-    "resnet18",  # resnet.py
-    "resnetv2_50x1_bitm",  # resnetv2.py
-    "swin_tiny_patch4_window7_224",  # swin.py
-    "deit_tiny_patch16_224",  # vit.py
-    "vit_tiny_patch16_224",
-    "vit_tiny_r_s16_p8_224",  # vit_hybrid.py
-    "vit_small_r26_s32_224",
-]
+from .architectures import TEST_ARCHITECTURES  # noqa: F401
+
 # Models for which we cannot change the input size during model creation. Examples
 # are some MLP models, where the number of patches becomes the number of filters
 # for convolutional kernels.
 FIXED_SIZE_MODELS_CREATION = [
-    "mixer_s32_224",  # mlp_mixer.py
-    "resmlp_12_224",
-    "gmlp_ti16_224",
+    "mixer_test_model",  # mlp_mixer.py
+    "resmlp_test_model",
+    "gmlp_test_model",
 ]
 # Models for which we cannot change the input size during inference.
 FIXED_SIZE_MODELS_INFERENCE = [
-    "mixer_s32_224",  # mlp_mixer.py
-    "resmlp_12_224",
-    "gmlp_ti16_224",
+    "mixer_test_model",  # mlp_mixer.py
+    "resmlp_test_model",
+    "gmlp_test_model",
     # For Swin Transformers the input size influences the attention windows, which are
     # determined at build time. Hence we can change the input size at creation time,
     # but not during inference.
-    "swin_tiny_patch4_window7_224",  # swin.py
+    "swin_test_model",  # swin.py
 ]
-FLEXIBLE_MODELS_CREATION = list(set(MODEL_LIST) - set(FIXED_SIZE_MODELS_CREATION))
-FLEXIBLE_MODELS_INFERENCE = list(set(MODEL_LIST) - set(FIXED_SIZE_MODELS_INFERENCE))
+FLEXIBLE_MODELS_CREATION = list(
+    set(TEST_ARCHITECTURES) - set(FIXED_SIZE_MODELS_CREATION)
+)
+FLEXIBLE_MODELS_INFERENCE = list(
+    set(TEST_ARCHITECTURES) - set(FIXED_SIZE_MODELS_INFERENCE)
+)
 
 
-@pytest.mark.parametrize("model_name", MODEL_LIST)
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 @pytest.mark.parametrize("nb_classes", [10, 0])
 def test_transfer_weights(model_name, nb_classes):
     # Create two models with same architecture, but different classifiers
@@ -65,8 +53,7 @@ def test_transfer_weights(model_name, nb_classes):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize("model_name", MODEL_LIST)
-@pytest.mark.timeout(90)
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 def test_save_load_model(model_name):
     """Tests ability to use keras save() and load() functions."""
     model = create_model(model_name)
@@ -83,8 +70,7 @@ def test_save_load_model(model_name):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize("model_name", MODEL_LIST)
-@pytest.mark.timeout(90)
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 def test_model_path(model_name):
     """Tests ability to use `model_path` parameter in `create_model`."""
     model = create_model(model_name)
@@ -120,9 +106,7 @@ def test_change_input_size(model_name):
     should be done via the transfer_weight hook in the config.
     """
     src_model = create_model(model_name)
-    input_size = (
-        (256, 256) if model_name != "swin_tiny_patch4_window7_224" else (448, 448)
-    )
+    input_size = (64, 64)
     dst_model = create_model(model_name, input_size=input_size)
     transfer_weights(src_model, dst_model)
 
@@ -152,11 +136,11 @@ def test_change_input_size_inference(model_name):
     assert (np.max(np.abs(res_1 - res_2))) / (np.max(np.abs(res_1)) + 1e-6) < 1e-6
 
     # Then we test, if we can run inference on input at different resolution
-    img = rng.random(size=(1, 256, 256, model.cfg.in_channels), dtype="float32")
+    img = rng.random(size=(1, 64, 64, model.cfg.in_channels), dtype="float32")
     flexible_model(img)
 
 
-@pytest.mark.parametrize("model_name", MODEL_LIST)
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 def test_variable_prefix(model_name):
     """
     We test if all model variables are created under the correct prefix
@@ -166,3 +150,39 @@ def test_variable_prefix(model_name):
 
     for var in model.variables:
         assert var.name.startswith("test/")
+
+
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
+def test_feature_extraction(model_name: str):
+    """
+    Tests if we can create a model and run inference with `return_features` set to
+    both `True` and `False.
+    """
+    model = create_model(model_name, pretrained=False)
+
+    inputs = model.dummy_inputs
+    x1, features = model(inputs, return_features=True)
+    x2 = model(inputs, return_features=False)
+
+    # Check that return value doesn't change if we also want features
+    x1, x2 = x1.numpy(), x2.numpy()
+    assert np.max(np.abs(x1 - x2)) < 1e-6
+
+    # Check that features dict contains exactly the expected keys
+    assert set(features.keys()) == set(model.feature_names)
+
+
+@pytest.mark.skip()
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
+def test_mixed_precision(model_name: str):
+    """
+    Test if we can run a forward pass with mixed precision.
+
+    These tests are very slow on CPUs, so we skip them by default.
+    """
+    tf.keras.backend.clear_session()
+    tf.keras.mixed_precision.set_global_policy("mixed_float16")
+    model = create_model(model_name)
+    img = tf.ones((1, *model.cfg.input_size, model.cfg.in_channels), dtype="float16")
+    res = model(img)
+    assert res.dtype == "float16"
