@@ -19,8 +19,8 @@ class OptimizerConfig:
     # by the schedule.
     lr_warmup: int = -1
 
-    # Which optimizer to use. Currently supports
-    # `sgd`, `adam`, `rmsprop`, `adadelta`, `adamax` and `adagrad`.
+    # Which optimizer to use. Currently supports `sgd`, `adam`, `rmsprop`, `adadelta`,
+    # `adamax` and `adagrad`.
     optimizer: str = "sgd"
     # Parameters for the optimizer. Usually momentum values. Not all optimizers need
     # both betas, e.g., `sgd` only uses `betas[0]` for its momentum. But, for
@@ -32,13 +32,12 @@ class OptimizerConfig:
     clipnorm: float = -1.0
     clipvalue: float = -1.0
     # Epsilon parameter for Adam and RMSProp
-    epsilon = 1e-7
+    epsilon: float = 1e-7
     # Rho parameter representing the decay rate for Adadelta
-    rho = 0.95
-    # Initial accumulator value for Adagrad.
-    # Starting value for the accumulators (per-parameter momentum values).
-    # Must be non-negative.
-    initial_accumulator_value = 0.1
+    rho: float = 0.95
+    # Initial accumulator value for Adagrad. Starting value for the accumulators
+    # (per-parameter momentum values). Must be non-negative.
+    initial_accumulator_value: float = 0.1
 
 
 @cfg_serializable
