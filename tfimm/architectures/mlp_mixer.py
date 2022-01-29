@@ -312,7 +312,7 @@ def mixer_s32_224():
     """
     cfg = MLPMixerConfig(
         name="mixer_s32_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=512,
         nb_blocks=8,
@@ -329,7 +329,7 @@ def mixer_s16_224():
     """
     cfg = MLPMixerConfig(
         name="mixer_s16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=512,
         nb_blocks=8,
@@ -346,7 +346,7 @@ def mixer_b32_224():
     """
     cfg = MLPMixerConfig(
         name="mixer_b32_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=768,
         nb_blocks=12,
@@ -362,7 +362,7 @@ def mixer_b16_224():
     """
     cfg = MLPMixerConfig(
         name="mixer_b16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=768,
         nb_blocks=12,
@@ -379,7 +379,7 @@ def mixer_b16_224_in21k():
     """
     cfg = MLPMixerConfig(
         name="mixer_b16_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=16,
         embed_dim=768,
@@ -397,7 +397,7 @@ def mixer_l32_224():
     """
     cfg = MLPMixerConfig(
         name="mixer_l32_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=1024,
         nb_blocks=24,
@@ -414,7 +414,7 @@ def mixer_l16_224():
     """
     cfg = MLPMixerConfig(
         name="mixer_l16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=1024,
         nb_blocks=24,
@@ -431,7 +431,7 @@ def mixer_l16_224_in21k():
     """
     cfg = MLPMixerConfig(
         name="mixer_l16_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=16,
         embed_dim=1024,
@@ -450,7 +450,7 @@ def mixer_b16_224_miil():
     """
     cfg = MLPMixerConfig(
         name="mixer_b16_224_miil",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=768,
         nb_blocks=12,
@@ -472,7 +472,7 @@ def mixer_b16_224_miil_in21k():
     """
     cfg = MLPMixerConfig(
         name="mixer_b16_224_miil_in21k",
-        url="",
+        url="[timm]",
         nb_classes=11221,
         patch_size=16,
         embed_dim=768,
@@ -493,7 +493,7 @@ def gmixer_12_224():
     """
     cfg = MLPMixerConfig(
         name="gmixer_12_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -514,7 +514,7 @@ def gmixer_24_224():
     """
     cfg = MLPMixerConfig(
         name="gmixer_24_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=24,
@@ -536,7 +536,7 @@ def resmlp_12_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_12_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -558,7 +558,7 @@ def resmlp_24_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_24_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=24,
@@ -581,7 +581,7 @@ def resmlp_36_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_36_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=36,
@@ -604,7 +604,7 @@ def resmlp_big_24_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_big_24_224",
-        url="",
+        url="[timm]",
         patch_size=8,
         embed_dim=768,
         nb_blocks=24,
@@ -627,7 +627,7 @@ def resmlp_12_distilled_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_12_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -649,7 +649,7 @@ def resmlp_24_distilled_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_24_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=24,
@@ -672,7 +672,7 @@ def resmlp_36_distilled_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_36_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=36,
@@ -695,7 +695,7 @@ def resmlp_big_24_distilled_224():
     """
     cfg = MLPMixerConfig(
         name="resmlp_big_24_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=8,
         embed_dim=768,
         nb_blocks=24,
@@ -718,7 +718,7 @@ def resmlp_big_24_224_in22ft1k():
     """
     cfg = MLPMixerConfig(
         name="resmlp_big_24_224_in22ft1k",
-        url="",
+        url="[timm]",
         patch_size=8,
         embed_dim=768,
         nb_blocks=24,
@@ -742,7 +742,7 @@ def resmlp_12_224_dino():
     """
     cfg = MLPMixerConfig(
         name="resmlp_12_224_dino",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -765,7 +765,7 @@ def resmlp_24_224_dino():
     """
     cfg = MLPMixerConfig(
         name="resmlp_24_224_dino",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=24,
@@ -788,7 +788,7 @@ def gmlp_ti16_224():
     """
     cfg = MLPMixerConfig(
         name="gmlp_ti16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=128,
         nb_blocks=30,
@@ -808,7 +808,7 @@ def gmlp_s16_224():
     """
     cfg = MLPMixerConfig(
         name="gmlp_s16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=256,
         nb_blocks=30,
@@ -828,7 +828,7 @@ def gmlp_b16_224():
     """
     cfg = MLPMixerConfig(
         name="gmlp_b16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=512,
         nb_blocks=30,

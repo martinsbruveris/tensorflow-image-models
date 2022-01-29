@@ -596,7 +596,7 @@ class ResNet(tf.keras.Model):
 def resnet18():
     """Constructs a ResNet-18 model."""
     cfg = ResNetConfig(
-        name="resnet18", url="", block="basic_block", nb_blocks=(2, 2, 2, 2)
+        name="resnet18", url="[timm]", block="basic_block", nb_blocks=(2, 2, 2, 2)
     )
     return ResNet, cfg
 
@@ -606,7 +606,7 @@ def resnet18d():
     """Constructs a ResNet-18-D model."""
     cfg = ResNetConfig(
         name="resnet18d",
-        url="",
+        url="[timm]",
         block="basic_block",
         nb_blocks=(2, 2, 2, 2),
         stem_width=32,
@@ -623,7 +623,7 @@ def resnet26():
     """Constructs a ResNet-26 model."""
     cfg = ResNetConfig(
         name="resnet26",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(2, 2, 2, 2),
         interpolation="bicubic",
@@ -636,7 +636,7 @@ def resnet26d():
     """Constructs a ResNet-26-D model."""
     cfg = ResNetConfig(
         name="resnet26d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(2, 2, 2, 2),
         stem_width=32,
@@ -653,7 +653,7 @@ def resnet26t():
     """Constructs a ResNet-26-T model."""
     cfg = ResNetConfig(
         name="resnet26t",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(2, 2, 2, 2),
@@ -672,7 +672,7 @@ def resnet26t():
 def resnet34():
     """Constructs a ResNet-34 model."""
     cfg = ResNetConfig(
-        name="resnet34", url="", block="basic_block", nb_blocks=(3, 4, 6, 3)
+        name="resnet34", url="[timm]", block="basic_block", nb_blocks=(3, 4, 6, 3)
     )
     return ResNet, cfg
 
@@ -682,7 +682,7 @@ def resnet34d():
     """Constructs a ResNet-34-D model."""
     cfg = ResNetConfig(
         name="resnet34d",
-        url="",
+        url="[timm]",
         block="basic_block",
         nb_blocks=(3, 4, 6, 3),
         stem_width=32,
@@ -699,7 +699,7 @@ def resnet50():
     """Constructs a ResNet-50 model."""
     cfg = ResNetConfig(
         name="resnet50",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         interpolation="bicubic",
@@ -713,7 +713,7 @@ def resnet50d():
     """Constructs a ResNet-50-D model."""
     cfg = ResNetConfig(
         name="resnet50d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         stem_width=32,
@@ -730,7 +730,7 @@ def resnet101():
     """Constructs a ResNet-101 model."""
     cfg = ResNetConfig(
         name="resnet101",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         interpolation="bicubic",
@@ -744,7 +744,7 @@ def resnet101d():
     """Constructs a ResNet-101-D model."""
     cfg = ResNetConfig(
         name="resnet101d",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
@@ -765,7 +765,7 @@ def resnet152():
     """Constructs a ResNet-152 model."""
     cfg = ResNetConfig(
         name="resnet152",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 8, 36, 3),
         interpolation="bicubic",
@@ -779,7 +779,7 @@ def resnet152d():
     """Constructs a ResNet-152-D model."""
     cfg = ResNetConfig(
         name="resnet152d",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(3, 8, 36, 3),
@@ -800,7 +800,7 @@ def resnet200d():
     """Constructs a ResNet-200-D model."""
     cfg = ResNetConfig(
         name="resnet200d",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(3, 24, 36, 3),
@@ -820,7 +820,7 @@ def resnet200d():
 def tv_resnet34():
     """Constructs a ResNet-34 model with original Torchvision weights."""
     cfg = ResNetConfig(
-        name="tv_resnet34", url="", block="basic_block", nb_blocks=(3, 4, 6, 3)
+        name="tv_resnet34", url="[timm]", block="basic_block", nb_blocks=(3, 4, 6, 3)
     )
     return ResNet, cfg
 
@@ -829,7 +829,7 @@ def tv_resnet34():
 def tv_resnet50():
     """Constructs a ResNet-50 model with original Torchvision weights."""
     cfg = ResNetConfig(
-        name="tv_resnet50", url="", block="bottleneck", nb_blocks=(3, 4, 6, 3)
+        name="tv_resnet50", url="[timm]", block="bottleneck", nb_blocks=(3, 4, 6, 3)
     )
     return ResNet, cfg
 
@@ -838,7 +838,7 @@ def tv_resnet50():
 def tv_resnet101():
     """Constructs a ResNet-101 model w/ Torchvision pretrained weights."""
     cfg = ResNetConfig(
-        name="tv_resnet101", url="", block="bottleneck", nb_blocks=(3, 4, 23, 3)
+        name="tv_resnet101", url="[timm]", block="bottleneck", nb_blocks=(3, 4, 23, 3)
     )
     return ResNet, cfg
 
@@ -847,7 +847,7 @@ def tv_resnet101():
 def tv_resnet152():
     """Constructs a ResNet-152 model w/ Torchvision pretrained weights."""
     cfg = ResNetConfig(
-        name="tv_resnet152", url="", block="bottleneck", nb_blocks=(3, 8, 36, 3)
+        name="tv_resnet152", url="[timm]", block="bottleneck", nb_blocks=(3, 8, 36, 3)
     )
     return ResNet, cfg
 
@@ -862,7 +862,7 @@ def wide_resnet50_2():
     """
     cfg = ResNetConfig(
         name="wide_resnet50_2",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         base_width=128,
@@ -880,7 +880,7 @@ def wide_resnet101_2():
     """
     cfg = ResNetConfig(
         name="wide_resnet101_2",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         base_width=128,
@@ -893,7 +893,7 @@ def resnet50_gn():
     """Constructs a ResNet-50 model w/ GroupNorm"""
     cfg = ResNetConfig(
         name="resnet50_gn",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         norm_layer="group_norm",
@@ -908,7 +908,7 @@ def resnext50_32x4d():
     """Constructs a ResNeXt50-32x4d model."""
     cfg = ResNetConfig(
         name="resnext50_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         cardinality=32,
@@ -926,7 +926,7 @@ def resnext50d_32x4d():
     """
     cfg = ResNetConfig(
         name="resnext50d_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         cardinality=32,
@@ -945,7 +945,7 @@ def resnext101_32x8d():
     """Constructs a ResNeXt-101 32x8d model."""
     cfg = ResNetConfig(
         name="resnext101_32x8d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -959,7 +959,7 @@ def tv_resnext50_32x4d():
     """Constructs a ResNeXt50-32x4d model with original Torchvision weights."""
     cfg = ResNetConfig(
         name="tv_resnext50_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         cardinality=32,
@@ -978,7 +978,7 @@ def ig_resnext101_32x8d():
     """
     cfg = ResNetConfig(
         name="ig_resnext101_32x8d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -997,7 +997,7 @@ def ig_resnext101_32x16d():
     """
     cfg = ResNetConfig(
         name="ig_resnext101_32x16d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1016,7 +1016,7 @@ def ig_resnext101_32x32d():
     """
     cfg = ResNetConfig(
         name="ig_resnext101_32x32d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1035,7 +1035,7 @@ def ig_resnext101_32x48d():
     """
     cfg = ResNetConfig(
         name="ig_resnext101_32x48d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1054,7 +1054,7 @@ def ssl_resnet18():
     """
     cfg = ResNetConfig(
         name="ssl_resnet18",
-        url="",
+        url="[timm]",
         block="basic_block",
         nb_blocks=(2, 2, 2, 2),
     )
@@ -1071,7 +1071,7 @@ def ssl_resnet50():
     """
     cfg = ResNetConfig(
         name="ssl_resnet50",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
     )
@@ -1089,7 +1089,7 @@ def ssl_resnext50_32x4d():
     """
     cfg = ResNetConfig(
         name="ssl_resnext50_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         cardinality=32,
@@ -1109,7 +1109,7 @@ def ssl_resnext101_32x4d():
     """
     cfg = ResNetConfig(
         name="ssl_resnext101_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1129,7 +1129,7 @@ def ssl_resnext101_32x8d():
     """
     cfg = ResNetConfig(
         name="ssl_resnext101_32x8d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1149,7 +1149,7 @@ def ssl_resnext101_32x16d():
     """
     cfg = ResNetConfig(
         name="ssl_resnext101_32x16d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1169,7 +1169,7 @@ def swsl_resnet18():
     """
     cfg = ResNetConfig(
         name="swsl_resnet18",
-        url="",
+        url="[timm]",
         block="basic_block",
         nb_blocks=(2, 2, 2, 2),
     )
@@ -1187,7 +1187,7 @@ def swsl_resnet50():
     """
     cfg = ResNetConfig(
         name="swsl_resnet50",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
     )
@@ -1205,7 +1205,7 @@ def swsl_resnext50_32x4d():
     """
     cfg = ResNetConfig(
         name="swsl_resnext50_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         cardinality=32,
@@ -1225,7 +1225,7 @@ def swsl_resnext101_32x4d():
     """
     cfg = ResNetConfig(
         name="swsl_resnext101_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1245,7 +1245,7 @@ def swsl_resnext101_32x8d():
     """
     cfg = ResNetConfig(
         name="swsl_resnext101_32x8d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1265,7 +1265,7 @@ def swsl_resnext101_32x16d():
     """
     cfg = ResNetConfig(
         name="swsl_resnext101_32x16d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         cardinality=32,
@@ -1283,7 +1283,7 @@ def ecaresnet26t():
     """
     cfg = ResNetConfig(
         name="ecaresnet26t",
-        url="",
+        url="[timm]",
         block="bottleneck",
         input_size=(256, 256),
         nb_blocks=(2, 2, 2, 2),
@@ -1305,7 +1305,7 @@ def ecaresnet50d():
     """Constructs a ResNet-50-D model with eca."""
     cfg = ResNetConfig(
         name="ecaresnet50d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         stem_type="deep",
@@ -1327,7 +1327,7 @@ def ecaresnet50t():
     """
     cfg = ResNetConfig(
         name="ecaresnet50t",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         stem_type="deep_tiered",
@@ -1348,7 +1348,7 @@ def ecaresnetlight():
     """Constructs a ResNet-50-D light model with eca."""
     cfg = ResNetConfig(
         name="ecaresnetlight",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(1, 1, 11, 3),
         stem_width=32,
@@ -1364,7 +1364,7 @@ def ecaresnet101d():
     """Constructs a ResNet-101-D model with eca."""
     cfg = ResNetConfig(
         name="ecaresnet101d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
         stem_type="deep",
@@ -1382,7 +1382,7 @@ def ecaresnet269d():
     """Constructs a ResNet-269-D model with ECA."""
     cfg = ResNetConfig(
         name="ecaresnet269d",
-        url="",
+        url="[timm]",
         input_size=(320, 320),
         block="bottleneck",
         nb_blocks=(3, 30, 48, 8),
@@ -1404,7 +1404,7 @@ def resnetblur50():
     """Constructs a ResNet-50 model with blur anti-aliasing"""
     cfg = ResNetConfig(
         name="resnetblur50",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         aa_layer="blur_pool",
@@ -1422,7 +1422,7 @@ def resnetrs50():
     """
     cfg = ResNetConfig(
         name="resnetrs50",
-        url="",
+        url="[timm]",
         input_size=(160, 160),
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
@@ -1450,7 +1450,7 @@ def resnetrs101():
     """
     cfg = ResNetConfig(
         name="resnetrs101",
-        url="",
+        url="[timm]",
         input_size=(192, 192),
         block="bottleneck",
         nb_blocks=(3, 4, 23, 3),
@@ -1478,7 +1478,7 @@ def resnetrs152():
     """
     cfg = ResNetConfig(
         name="resnetrs152",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(3, 8, 36, 3),
@@ -1506,7 +1506,7 @@ def resnetrs200():
     """
     cfg = ResNetConfig(
         name="resnetrs200",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(3, 24, 36, 3),
@@ -1534,7 +1534,7 @@ def resnetrs270():
     """
     cfg = ResNetConfig(
         name="resnetrs270",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(4, 29, 53, 4),
@@ -1562,7 +1562,7 @@ def resnetrs350():
     """
     cfg = ResNetConfig(
         name="resnetrs350",
-        url="",
+        url="[timm]",
         input_size=(288, 288),
         block="bottleneck",
         nb_blocks=(4, 36, 72, 4),
@@ -1590,7 +1590,7 @@ def resnetrs420():
     """
     cfg = ResNetConfig(
         name="resnetrs420",
-        url="",
+        url="[timm]",
         input_size=(320, 320),
         block="bottleneck",
         nb_blocks=(4, 44, 87, 4),
@@ -1613,7 +1613,7 @@ def resnetrs420():
 def seresnet50():
     cfg = ResNetConfig(
         name="seresnet50",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         attn_layer="se",
@@ -1626,7 +1626,7 @@ def seresnet50():
 def seresnet152d():
     cfg = ResNetConfig(
         name="seresnet152d",
-        url="",
+        url="[timm]",
         input_size=(256, 256),
         block="bottleneck",
         nb_blocks=(3, 8, 36, 3),
@@ -1651,7 +1651,7 @@ def seresnext26d_32x4d():
     """
     cfg = ResNetConfig(
         name="seresnext26d_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(2, 2, 2, 2),
         cardinality=32,
@@ -1674,7 +1674,7 @@ def seresnext26t_32x4d():
     """
     cfg = ResNetConfig(
         name="seresnext26t_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(2, 2, 2, 2),
         cardinality=32,
@@ -1693,7 +1693,7 @@ def seresnext26t_32x4d():
 def seresnext50_32x4d():
     cfg = ResNetConfig(
         name="seresnext50_32x4d",
-        url="",
+        url="[timm]",
         block="bottleneck",
         nb_blocks=(3, 4, 6, 3),
         cardinality=32,

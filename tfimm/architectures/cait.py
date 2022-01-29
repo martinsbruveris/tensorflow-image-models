@@ -436,7 +436,7 @@ class CaiT(tf.keras.Model):
 def cait_xxs24_224():
     cfg = CaiTConfig(
         name="cait_xxs24_224",
-        url="",
+        url="[timm]",
         input_size=(224, 224),
         patch_size=16,
         embed_dim=192,
@@ -451,7 +451,7 @@ def cait_xxs24_224():
 def cait_xxs24_384():
     cfg = CaiTConfig(
         name="cait_xxs24_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=192,
@@ -466,7 +466,7 @@ def cait_xxs24_384():
 def cait_xxs36_224():
     cfg = CaiTConfig(
         name="cait_xxs36_224",
-        url="",
+        url="[timm]",
         input_size=(224, 224),
         patch_size=16,
         embed_dim=192,
@@ -481,7 +481,7 @@ def cait_xxs36_224():
 def cait_xxs36_384():
     cfg = CaiTConfig(
         name="cait_xxs36_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=192,
@@ -496,7 +496,7 @@ def cait_xxs36_384():
 def cait_xs24_384():
     cfg = CaiTConfig(
         name="cait_xs24_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=288,
@@ -511,7 +511,7 @@ def cait_xs24_384():
 def cait_s24_224():
     cfg = CaiTConfig(
         name="cait_s24_224",
-        url="",
+        url="[timm]",
         input_size=(224, 224),
         patch_size=16,
         embed_dim=384,
@@ -526,7 +526,7 @@ def cait_s24_224():
 def cait_s24_384():
     cfg = CaiTConfig(
         name="cait_s24_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=384,
@@ -541,7 +541,7 @@ def cait_s24_384():
 def cait_s36_384():
     cfg = CaiTConfig(
         name="cait_s36_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=384,
@@ -556,7 +556,7 @@ def cait_s36_384():
 def cait_m36_384():
     cfg = CaiTConfig(
         name="cait_m36_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
@@ -571,7 +571,7 @@ def cait_m36_384():
 def cait_m48_448():
     cfg = CaiTConfig(
         name="cait_m48_448",
-        url="",
+        url="[timm]",
         input_size=(448, 448),
         patch_size=16,
         embed_dim=768,

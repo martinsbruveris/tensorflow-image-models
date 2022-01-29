@@ -417,7 +417,7 @@ class PyramidVisionTransformerV2(tf.keras.Model):
 def pvt_v2_b0():
     cfg = PyramidVisionTransformerV2Config(
         name="pvt_v2_b0",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b0.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b0.pth",
         embed_dim=(32, 64, 160, 256),
         nb_blocks=(2, 2, 2, 2),
     )
@@ -428,7 +428,7 @@ def pvt_v2_b0():
 def pvt_v2_b1():
     cfg = PyramidVisionTransformerV2Config(
         name="pvt_v2_b1",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b1.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b1.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(2, 2, 2, 2),
     )
@@ -439,7 +439,7 @@ def pvt_v2_b1():
 def pvt_v2_b2():
     cfg = PyramidVisionTransformerV2Config(
         name="pvt_v2_b2",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b2.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b2.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 4, 6, 3),
     )
@@ -450,7 +450,7 @@ def pvt_v2_b2():
 def pvt_v2_b3():
     cfg = PyramidVisionTransformerV2Config(
         name="pvt_v2_b3",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b3.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b3.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 4, 18, 3),
     )
@@ -461,7 +461,7 @@ def pvt_v2_b3():
 def pvt_v2_b4():
     cfg = PyramidVisionTransformerV2Config(
         name="pvt_v2_b4",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b4.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b4.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 8, 27, 3),
     )
@@ -472,7 +472,7 @@ def pvt_v2_b4():
 def pvt_v2_b5():
     cfg = PyramidVisionTransformerV2Config(
         name="pvt_v2_b5",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b5.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b5.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 6, 40, 3),
         mlp_ratio=(4.0, 4.0, 4.0, 4.0),
@@ -486,7 +486,7 @@ def pvt_v2_b5():
 # def pvt_v2_b2_li():
 #     cfg = PyramidVisionTransformerV2Config(
 #         name="pvt_v2_b2_li",
-#         url="https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b2_li.pth",
+#         url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_v2_b2_li.pth",
 #         embed_dim=(64, 128, 320, 512),
 #         nb_blocks=(3, 4, 6, 3),
 #         linear_sr=True,

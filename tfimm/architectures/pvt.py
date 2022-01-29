@@ -412,7 +412,7 @@ class PyramidVisionTransformer(tf.keras.Model):
 def pvt_tiny():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_tiny",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_tiny.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_tiny.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(2, 2, 2, 2),
     )
@@ -423,7 +423,7 @@ def pvt_tiny():
 def pvt_small():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_small",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_small.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_small.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 4, 6, 3),
     )
@@ -434,7 +434,7 @@ def pvt_small():
 def pvt_medium():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_medium",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_medium.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_medium.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 4, 18, 3),
     )
@@ -445,7 +445,7 @@ def pvt_medium():
 def pvt_large():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_large",
-        url="https://github.com/whai362/PVT/releases/download/v2/pvt_large.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_large.pth",
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 8, 27, 3),
     )

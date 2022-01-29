@@ -451,7 +451,7 @@ class ResNetV2(tf.keras.Model):
 def resnetv2_50x1_bitm():
     cfg = ResNetV2Config(
         name="resnetv2_50x1_bitm",
-        url="",
+        url="[timm]",
         input_size=(448, 448),
         nb_blocks=(3, 4, 6, 3),
         width_factor=1,
@@ -465,7 +465,7 @@ def resnetv2_50x1_bitm():
 def resnetv2_50x3_bitm():
     cfg = ResNetV2Config(
         name="resnetv2_50x3_bitm",
-        url="",
+        url="[timm]",
         input_size=(448, 448),
         nb_blocks=(3, 4, 6, 3),
         width_factor=3,
@@ -479,7 +479,7 @@ def resnetv2_50x3_bitm():
 def resnetv2_101x1_bitm():
     cfg = ResNetV2Config(
         name="resnetv2_101x1_bitm",
-        url="",
+        url="[timm]",
         input_size=(448, 448),
         nb_blocks=(3, 4, 23, 3),
         width_factor=1,
@@ -493,7 +493,7 @@ def resnetv2_101x1_bitm():
 def resnetv2_101x3_bitm():
     cfg = ResNetV2Config(
         name="resnetv2_101x3_bitm",
-        url="",
+        url="[timm]",
         input_size=(448, 448),
         nb_blocks=(3, 4, 23, 3),
         width_factor=3,
@@ -507,7 +507,7 @@ def resnetv2_101x3_bitm():
 def resnetv2_152x2_bitm():
     cfg = ResNetV2Config(
         name="resnetv2_152x2_bitm",
-        url="",
+        url="[timm]",
         input_size=(448, 448),
         nb_blocks=(3, 8, 36, 3),
         width_factor=2,
@@ -521,7 +521,7 @@ def resnetv2_152x2_bitm():
 def resnetv2_152x4_bitm():
     cfg = ResNetV2Config(
         name="resnetv2_152x4_bitm",
-        url="",
+        url="[timm]",
         input_size=(480, 480),
         nb_blocks=(3, 8, 36, 3),
         width_factor=4,
@@ -535,7 +535,7 @@ def resnetv2_152x4_bitm():
 def resnetv2_50x1_bitm_in21k():
     cfg = ResNetV2Config(
         name="resnetv2_50x1_bitm_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         nb_blocks=(3, 4, 6, 3),
         width_factor=1,
@@ -547,7 +547,7 @@ def resnetv2_50x1_bitm_in21k():
 def resnetv2_50x3_bitm_in21k():
     cfg = ResNetV2Config(
         name="resnetv2_50x3_bitm_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         nb_blocks=(3, 4, 6, 3),
         width_factor=3,
@@ -559,7 +559,7 @@ def resnetv2_50x3_bitm_in21k():
 def resnetv2_101x1_bitm_in21k():
     cfg = ResNetV2Config(
         name="resnetv2_101x1_bitm_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         nb_blocks=(3, 4, 23, 3),
         width_factor=1,
@@ -571,7 +571,7 @@ def resnetv2_101x1_bitm_in21k():
 def resnetv2_101x3_bitm_in21k():
     cfg = ResNetV2Config(
         name="resnetv2_101x3_bitm_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         nb_blocks=(3, 4, 23, 3),
         width_factor=3,
@@ -583,7 +583,7 @@ def resnetv2_101x3_bitm_in21k():
 def resnetv2_152x2_bitm_in21k():
     cfg = ResNetV2Config(
         name="resnetv2_152x2_bitm_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         nb_blocks=(3, 8, 36, 3),
         width_factor=2,
@@ -595,7 +595,7 @@ def resnetv2_152x2_bitm_in21k():
 def resnetv2_152x4_bitm_in21k():
     cfg = ResNetV2Config(
         name="resnetv2_152x4_bitm_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         nb_blocks=(3, 8, 36, 3),
         width_factor=4,
@@ -612,7 +612,7 @@ def resnetv2_50x1_bit_distilled():
     """
     cfg = ResNetV2Config(
         name="resnetv2_50x1_bit_distilled",
-        url="",
+        url="[timm]",
         nb_blocks=(3, 4, 6, 3),
         width_factor=1,
         interpolation="bicubic",
@@ -629,7 +629,7 @@ def resnetv2_152x2_bit_teacher():
     """
     cfg = ResNetV2Config(
         name="resnetv2_152x2_bit_teacher",
-        url="",
+        url="[timm]",
         nb_blocks=(3, 8, 36, 3),
         width_factor=2,
         interpolation="bicubic",
@@ -646,7 +646,7 @@ def resnetv2_152x2_bit_teacher_384():
     """
     cfg = ResNetV2Config(
         name="resnetv2_152x2_bit_teacher_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         nb_blocks=(3, 8, 36, 3),
         width_factor=2,

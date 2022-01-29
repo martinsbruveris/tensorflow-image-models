@@ -29,6 +29,7 @@ def vit_tiny_r_s16_p8_224():
     """R+ViT-Ti/S16 w/ 8x8 patch hybrid @ 224 x 224."""
     cfg = ViTConfig(
         name="vit_tiny_r_s16_p8_224",
+        url="[timm]",
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(),
@@ -47,6 +48,7 @@ def vit_tiny_r_s16_p8_384():
     """R+ViT-Ti/S16 w/ 8x8 patch hybrid @ 384 x 384."""
     cfg = ViTConfig(
         name="vit_tiny_r_s16_p8_384",
+        url="[timm]",
         input_size=(384, 384),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(),
@@ -65,6 +67,7 @@ def vit_small_r26_s32_224():
     """R26+ViT-S/S32 hybrid."""
     cfg = ViTConfig(
         name="vit_small_r26_s32_224",
+        url="[timm]",
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(2, 2, 2, 2),
@@ -83,6 +86,7 @@ def vit_small_r26_s32_384():
     """R26+ViT-S/S32 hybrid."""
     cfg = ViTConfig(
         name="vit_small_r26_s32_384",
+        url="[timm]",
         input_size=(384, 384),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(2, 2, 2, 2),
@@ -105,6 +109,7 @@ def vit_base_r50_s16_384():
     """
     cfg = ViTConfig(
         name="vit_base_r50_s16_384",
+        url="[timm]",
         input_size=(384, 384),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(3, 4, 9),
@@ -123,6 +128,7 @@ def vit_large_r50_s32_224():
     """R50+ViT-L/S32 hybrid."""
     cfg = ViTConfig(
         name="vit_large_r50_s32_224",
+        url="[timm]",
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(3, 4, 6, 3),
@@ -141,6 +147,7 @@ def vit_large_r50_s32_384():
     """R50+ViT-L/S32 hybrid."""
     cfg = ViTConfig(
         name="vit_large_r50_s32_384",
+        url="[timm]",
         input_size=(384, 384),
         patch_layer="hybrid_embeddings",
         patch_nb_blocks=(3, 4, 6, 3),
@@ -159,6 +166,7 @@ def vit_tiny_r_s16_p8_224_in21k():
     """R+ViT-Ti/S16 w/ 8x8 patch hybrid.  ImageNet-21k."""
     cfg = ViTConfig(
         name="vit_tiny_r_s16_p8_224_in21k",
+        url="[timm]",
         nb_classes=21843,
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",
@@ -178,6 +186,7 @@ def vit_small_r26_s32_224_in21k():
     """R26+ViT-S/S32 hybrid. ImageNet-21k."""
     cfg = ViTConfig(
         name="vit_small_r26_s32_224_in21k",
+        url="[timm]",
         nb_classes=21843,
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",
@@ -201,6 +210,7 @@ def vit_base_r50_s16_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_base_r50_s16_224_in21k",
+        url="[timm]",
         nb_classes=21843,
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",
@@ -221,6 +231,7 @@ def vit_large_r50_s32_224_in21k():
     """R50+ViT-L/S32 hybrid. ImageNet-21k."""
     cfg = ViTConfig(
         name="vit_large_r50_s32_224_in21k",
+        url="[timm]",
         nb_classes=21843,
         input_size=(224, 224),
         patch_layer="hybrid_embeddings",

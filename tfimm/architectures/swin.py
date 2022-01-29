@@ -521,7 +521,7 @@ def swin_tiny_patch4_window7_224():
     """Swin-T @ 224x224, trained ImageNet-1k"""
     cfg = SwinTransformerConfig(
         name="swin_tiny_patch4_window7_224",
-        url="",
+        url="[timm]",
         patch_size=4,
         embed_dim=96,
         nb_blocks=(2, 2, 6, 2),
@@ -536,7 +536,7 @@ def swin_small_patch4_window7_224():
     """Swin-S @ 224x224, trained ImageNet-1k"""
     cfg = SwinTransformerConfig(
         name="swin_small_patch4_window7_224",
-        url="",
+        url="[timm]",
         patch_size=4,
         embed_dim=96,
         nb_blocks=(2, 2, 18, 2),
@@ -551,7 +551,7 @@ def swin_base_patch4_window12_384():
     """Swin-B @ 384x384, pretrained ImageNet-22k, fine tune 1k"""
     cfg = SwinTransformerConfig(
         name="swin_base_patch4_window12_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=4,
         embed_dim=128,
@@ -568,7 +568,7 @@ def swin_base_patch4_window7_224():
     """Swin-B @ 224x224, pretrained ImageNet-22k, fine tune 1k"""
     cfg = SwinTransformerConfig(
         name="swin_base_patch4_window7_224",
-        url="",
+        url="[timm]",
         patch_size=4,
         embed_dim=128,
         nb_blocks=(2, 2, 18, 2),
@@ -583,7 +583,7 @@ def swin_base_patch4_window12_384_in22k():
     """Swin-B @ 384x384, trained ImageNet-22k"""
     cfg = SwinTransformerConfig(
         name="swin_base_patch4_window12_384_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         input_size=(384, 384),
         patch_size=4,
@@ -601,7 +601,7 @@ def swin_base_patch4_window7_224_in22k():
     """Swin-B @ 224x224, trained ImageNet-22k"""
     cfg = SwinTransformerConfig(
         name="swin_base_patch4_window7_224_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         patch_size=4,
         embed_dim=128,
@@ -617,7 +617,7 @@ def swin_large_patch4_window12_384():
     """Swin-L @ 384x384, pretrained ImageNet-22k, fine tune 1k"""
     cfg = SwinTransformerConfig(
         name="swin_large_patch4_window12_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=4,
         embed_dim=192,
@@ -634,7 +634,7 @@ def swin_large_patch4_window7_224():
     """Swin-L @ 224x224, pretrained ImageNet-22k, fine tune 1k"""
     cfg = SwinTransformerConfig(
         name="swin_large_patch4_window7_224",
-        url="",
+        url="[timm]",
         patch_size=4,
         embed_dim=192,
         nb_blocks=(2, 2, 18, 2),
@@ -649,7 +649,7 @@ def swin_large_patch4_window12_384_in22k():
     """Swin-L @ 384x384, trained ImageNet-22k"""
     cfg = SwinTransformerConfig(
         name="swin_large_patch4_window12_384_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         input_size=(384, 384),
         patch_size=4,
@@ -667,7 +667,7 @@ def swin_large_patch4_window7_224_in22k():
     """Swin-L @ 224x224, trained ImageNet-22k"""
     cfg = SwinTransformerConfig(
         name="swin_large_patch4_window7_224_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         patch_size=4,
         embed_dim=192,
