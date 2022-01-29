@@ -7,6 +7,8 @@ from tfimm.architectures import (
     ConvNeXtConfig,
     MLPMixer,
     MLPMixerConfig,
+    PoolingVisionTransformer,
+    PoolingVisionTransformerConfig,
     PoolFormer,
     PoolFormerConfig,
     PyramidVisionTransformer,
@@ -31,6 +33,8 @@ TEST_ARCHITECTURES = [
     "mixer_test_model",  # mlp_mixer.py
     "resmlp_test_model",
     "gmlp_test_model",
+    "pit_test_model",  # pit.py
+    "pit_distilled_test_model",
     "poolformer_test_model",  # poolformer.py
     "pvt_test_model",  # pvt.py
     "pvt_v2_test_model",  # pvt_v2.py
@@ -129,6 +133,40 @@ def gmlp_test_model():
         mlp_layer="gated_mlp",
     )
     return MLPMixer, cfg
+
+
+@register_model
+def pit_test_model():
+    cfg = PoolingVisionTransformerConfig(
+        name="pit_test_model",
+        nb_classes=12,
+        input_size=(32, 32),
+        patch_size=4,
+        stride=2,
+        embed_dim=(2, 4, 4),
+        nb_blocks=(1, 1, 1),
+        nb_heads=(1, 1, 1),
+        mlp_ratio=2.0,
+    )
+    return PoolingVisionTransformer, cfg
+
+
+@register_model
+def pit_distilled_test_model():
+    cfg = PoolingVisionTransformerConfig(
+        name="pit_distilled_test_model",
+        nb_classes=12,
+        input_size=(32, 32),
+        patch_size=4,
+        stride=2,
+        embed_dim=(2, 4, 4),
+        nb_blocks=(1, 1, 1),
+        nb_heads=(1, 1, 1),
+        mlp_ratio=2.0,
+        distilled=True,
+        classifier=("head", "head_dist"),
+    )
+    return PoolingVisionTransformer, cfg
 
 
 @register_model

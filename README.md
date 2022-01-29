@@ -157,6 +157,9 @@ The following architectures are currently available:
   [\[github\]](https://github.com/sail-sg/poolformer)
   - PoolFormer: MetaFormer is Actually What You Need for Vision.
     [\[arXiv:2111.11418\]](https://arxiv.org/abs/2111.11418)
+- Pooling-based Vision Transformers (PiT)
+  - Rethinking Spatial Dimensions of Vision Transformers.
+    [\[arXiv:2103.16302\]](https://arxiv.org/abs/2103.16302)
 - ResNet, ResNeXt, ECA-ResNet, SE-ResNet and friends
   - Deep Residual Learning for Image Recognition. 
     [\[arXiv:1512.03385\]](https://arxiv.org/abs/1512.03385)

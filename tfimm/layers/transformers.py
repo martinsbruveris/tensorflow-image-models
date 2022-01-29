@@ -47,6 +47,35 @@ def interpolate_pos_embeddings(
     return tgt_pos_embed
 
 
+def interpolate_pos_embeddings_grid(
+    pos_embed: tf.Tensor,
+    tgt_grid_size: Tuple[int, int],
+) -> tf.Tensor:
+    """
+    This method allows to interpolate the pre-trained position encodings, to be
+    able to use the model on higher resolution images. We use this function if position
+    embeddings are already given as a grid.
+
+    Args:
+        pos_embed: Positional embeddings to interpolate, shape (1, H, W, D)
+        tgt_grid_size: Input size to which position embeddings should be adapted
+
+    Returns:
+        Position embeddings (including class tokens) appropriate to input_size
+    """
+    height, width = tf.unstack(tf.shape(pos_embed)[1:3])
+    if (height, width) == tgt_grid_size:
+        return pos_embed  # No interpolation needed
+
+    tgt_pos_embed = tf.image.resize(
+        images=pos_embed,
+        size=tgt_grid_size,
+        method="bicubic",
+    )
+    tgt_pos_embed = tf.cast(tgt_pos_embed, dtype=pos_embed.dtype)
+    return tgt_pos_embed
+
+
 class PatchEmbeddings(tf.keras.layers.Layer):
     """
     Image to Patch Embedding.

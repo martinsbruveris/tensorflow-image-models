@@ -11,4 +11,5 @@ from .transformers import (  # noqa:F401
     GluMLP,
     PatchEmbeddings,
     interpolate_pos_embeddings,
+    interpolate_pos_embeddings_grid,
 )
