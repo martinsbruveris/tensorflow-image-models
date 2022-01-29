@@ -148,7 +148,6 @@ class PoolingVisionTransformerConfig(ModelConfig):
 class ConvHeadPooling(tf.keras.layers.Layer):
     def __init__(
         self,
-        input_size: Tuple[int, int],
         nb_tokens: int,
         in_channels: int,
         out_channels: int,
@@ -156,19 +155,12 @@ class ConvHeadPooling(tf.keras.layers.Layer):
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.input_size = input_size
         self.nb_tokens = nb_tokens
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.stride = stride
 
-        padding = stride // 2
-        self.output_size = (
-            (input_size[0] + 2 * padding) // stride,
-            (input_size[1] + 2 * padding) // stride,
-        )
-
-        self.pad = tf.keras.layers.ZeroPadding2D(padding=padding)
+        self.pad = tf.keras.layers.ZeroPadding2D(padding=stride // 2)
         self.conv = tf.keras.layers.Conv2D(
             filters=out_channels,
             kernel_size=stride + 1,
@@ -179,20 +171,22 @@ class ConvHeadPooling(tf.keras.layers.Layer):
         self.fc = tf.keras.layers.Dense(units=out_channels, name="fc")
 
     def call(self, x):
+        x, input_size = x
         batch_size, _, nb_channels = tf.unstack(tf.shape(x))
 
         tokens = x[:, : self.nb_tokens]
         x = x[:, self.nb_tokens :]  # (N, L, C)
-        x = tf.reshape(x, (batch_size, *self.input_size, nb_channels))  # (N, H, W, C)
+        x = tf.reshape(x, (batch_size, *input_size, nb_channels))  # (N, H, W, C)
 
         x = self.pad(x)
         x = self.conv(x)
         tokens = self.fc(tokens)
+        output_size = tf.unstack(tf.shape(x)[1:3])
 
         x = tf.reshape(x, (batch_size, -1, self.out_channels))
         x = tf.concat([tokens, x], axis=1)
 
-        return x
+        return x, output_size
 
 
 @keras_serializable
@@ -230,7 +224,6 @@ class PoolingVisionTransformer(tf.keras.Model):
         dpr = np.split(dpr, np.cumsum(cfg.nb_blocks))
 
         self.blocks = OrderedDict()
-        input_size = cfg.grid_size
         for j in range(len(cfg.nb_blocks)):
             for k in range(cfg.nb_blocks[j]):
                 self.blocks[f"stage_{j}/block_{k}"] = ViTBlock(
@@ -247,14 +240,12 @@ class PoolingVisionTransformer(tf.keras.Model):
                 )
             if j < len(cfg.nb_blocks) - 1:
                 self.blocks[f"stage_{j}/pool"] = ConvHeadPooling(
-                    input_size=input_size,
                     nb_tokens=cfg.nb_tokens,
                     in_channels=cfg.embed_dim[j],
                     out_channels=cfg.embed_dim[j + 1],
                     stride=2,
                     name=f"transformers/{j}/pool",
                 )
-                input_size = self.blocks[f"stage_{j}/pool"].output_size
 
         self.norm = norm_layer(name="norm")
 
@@ -307,10 +298,12 @@ class PoolingVisionTransformer(tf.keras.Model):
         Transforms the position embedding weights in accordance with `target_cfg` and
         returns them.
         """
-        return interpolate_pos_embeddings_grid(
-            pos_embed=self.pos_embed,
+        pos_embed = interpolate_pos_embeddings_grid(
+            pos_embed=tf.transpose(self.pos_embed, [0, 2, 3, 1]),
             tgt_grid_size=target_cfg.grid_size,
         )
+        pos_embed = tf.transpose(pos_embed, [0, 3, 1, 2])
+        return pos_embed
 
     def forward_features(
         self, x, training: bool = False, return_features: bool = False
@@ -347,14 +340,18 @@ class PoolingVisionTransformer(tf.keras.Model):
             x = x + pos_embed
         x = self.pos_drop(x, training=training)
 
-        batch_size, _, _, nb_channels = tf.unstack(tf.shape(x))
+        batch_size, height, width, nb_channels = tf.unstack(tf.shape(x))
+        input_size = (height, width)
         cls_token = tf.repeat(self.cls_token, repeats=batch_size, axis=0)
         x = tf.reshape(x, (batch_size, -1, nb_channels))
         x = tf.concat([cls_token, x], axis=1)
         features["patch_embedding"] = x
 
         for key, block in self.blocks.items():
-            x = block(x, training=training)
+            if key.endswith("pool"):
+                x, input_size = block((x, input_size), training=training)
+            else:
+                x = block(x, training=training)
             features[key] = x
         features["features_all"] = x
 
@@ -387,7 +384,6 @@ class PoolingVisionTransformer(tf.keras.Model):
             x, features = x
 
         if not self.cfg.distilled:
-            print(x.shape)
             x = self.head(x, training=training)
         else:
             y = self.head(x[:, 0], training=training)

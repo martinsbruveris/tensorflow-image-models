@@ -15,6 +15,8 @@ TIMM_ARCHITECTURES = [
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",
+    "pit_ti_224",  # pit.py
+    "pit_ti_distilled_224",
     "poolformer_s12",  # poolformer.py
     "pvt_tiny",  # pvt.py
     "pvt_v2_b0",  # pvt_v2.py
@@ -49,7 +51,7 @@ def test_load_timm_model(model_name: str):
     pt_img = torch.Tensor(img.transpose([0, 3, 1, 2]))
     pt_res = pt_model.forward(pt_img).detach().numpy()
 
-    if model_name.startswith("deit_") and "distilled" in model_name:
+    if "distilled" in model_name:
         # During inference timm distilled models return average of both heads, while
         # we return both heads
         tf_res = tf.reduce_mean(tf_res, axis=1)

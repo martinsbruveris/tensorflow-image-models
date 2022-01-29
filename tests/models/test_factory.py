@@ -87,7 +87,7 @@ def test_model_path(model_name):
     assert (np.max(np.abs(y_1 - y_2))) < 1e-6
 
 
-@pytest.mark.parametrize("model_name", list_models())
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 @pytest.mark.parametrize("input_shape", [(8, 8, 3), (1, 4, 4, 3)])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
 def test_preprocessing(model_name, input_shape, dtype):
