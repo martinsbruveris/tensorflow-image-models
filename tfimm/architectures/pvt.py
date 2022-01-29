@@ -423,7 +423,7 @@ def pvt_tiny():
 def pvt_small():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_small",
-        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_small.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_small.pth",  # noqa: E501
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 4, 6, 3),
     )
@@ -434,7 +434,7 @@ def pvt_small():
 def pvt_medium():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_medium",
-        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_medium.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_medium.pth",  # noqa: E501
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 4, 18, 3),
     )
@@ -445,7 +445,7 @@ def pvt_medium():
 def pvt_large():
     cfg = PyramidVisionTransformerConfig(
         name="pvt_large",
-        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_large.pth",
+        url="[pytorch]https://github.com/whai362/PVT/releases/download/v2/pvt_large.pth",  # noqa: E501
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(3, 8, 27, 3),
     )
