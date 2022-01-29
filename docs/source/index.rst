@@ -26,6 +26,7 @@ Contents
    content/transformers
    content/layers
    content/convnext
+   content/pit
    content/poolformer
 
 .. toctree::
