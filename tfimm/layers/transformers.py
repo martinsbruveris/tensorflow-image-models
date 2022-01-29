@@ -57,7 +57,7 @@ def interpolate_pos_embeddings_grid(
     embeddings are already given as a grid.
 
     Args:
-        pos_embed: Positional embeddings to interpolate, shape (1, H, W, D)
+        pos_embed: Positional embeddings to interpolate, shape (B, H, W, D)
         tgt_grid_size: Input size to which position embeddings should be adapted
 
     Returns:
