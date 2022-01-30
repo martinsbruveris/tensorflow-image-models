@@ -24,6 +24,7 @@ Contents
    :caption: Library
 
    content/models
+   content/utils
    content/transformers
    content/layers
 

@@ -4,7 +4,7 @@ Models
 Creating models
 ---------------
 
-.. py:module:: tfimm.models.factory
+.. py:module:: tfimm
 
 .. autofunction:: create_model
 .. autofunction:: create_preprocessing

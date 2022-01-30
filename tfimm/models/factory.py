@@ -7,7 +7,7 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
-from tfimm.utils import load_pth_url_weights, load_timm_weights, model_path_cache
+from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
 
 
 # TODO: Implement in_channels, to work with both timm as well as saved models
@@ -55,7 +55,7 @@ def create_model(
         loaded_model = tf.keras.models.load_model(model_path)
     elif pretrained:
         # First try loading model from cache
-        model_path = model_path_cache(model_name)
+        model_path = cached_model_path(model_name)
         if model_path:
             loaded_model = tf.keras.models.load_model(model_path)
         elif cfg.url == "[timm]":
