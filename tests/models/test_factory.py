@@ -35,12 +35,11 @@ FLEXIBLE_MODELS_INFERENCE = list(
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
-@pytest.mark.parametrize("in_channels", [1, 5])
 @pytest.mark.parametrize("nb_classes", [10, 0])
-def test_transfer_weights(model_name, in_channels, nb_classes):
+def test_transfer_weights(model_name, nb_classes):
     # Create two models with same architecture, but different classifiers
     model_1 = create_model(model_name)
-    model_2 = create_model(model_name, in_channels=in_channels, nb_classes=nb_classes)
+    model_2 = create_model(model_name, nb_classes=nb_classes)
 
     # Transfer weights from one to another
     transfer_weights(model_1, model_2)
