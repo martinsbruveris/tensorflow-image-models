@@ -10,7 +10,6 @@ from tfimm.models.registry import is_model, model_class, model_config
 from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
 
 
-# TODO: Implement in_channels, to work with both timm as well as saved models
 def create_model(
     model_name: str,
     pretrained: bool = False,
