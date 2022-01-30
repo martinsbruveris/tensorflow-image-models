@@ -1,67 +1,77 @@
 import logging
-import os
 import re
 from copy import deepcopy
-from typing import Callable, Optional, Union
+from typing import Callable, Optional
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
-from tfimm.utils import get_dir, load_pth_url_weights, load_timm_weights
+from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
 
 
 # TODO: Implement in_channels, to work with both timm as well as saved models
 def create_model(
     model_name: str,
-    pretrained: Union[bool, str] = False,
+    pretrained: bool = False,
     model_path: str = "",
     *,
     in_channels: Optional[int] = None,
     nb_classes: Optional[int] = None,
     **kwargs,
-):
-    """Creates a model.
+) -> tf.keras.Model:
+    """
+    Creates a model.
 
     Args:
         model_name: Name of model to instantiate
-        pretrained: If `pretrained="timm"`, load pretrained weights from timm library
-            and convert to Tensorflow. Requires timm and torch to be installed. If
-            `pretrained` casts to True as bool, load pretrained weights from URL in
-            config or the model cache. If `False`, no weights are loaded.
-        model_path: Path of model weights to load after model is initialized
-        in_channels: Number of input channels for model
+        pretrained: If ``True``, load pretrained weights as specified by the ``url``
+            field in config. We will check the cache first and download weights only
+            if they cannot be found in the cache.
+
+            If ``url`` is ``[timm]``, the weights will be downloaded from ``timm`` and
+            converted to TensorFlow. Requires ``timm`` and ``torch`` to be installed.
+            If ``url`` starts with ``[pytorch]``, the weights are in PyTorch format
+            and ``torch`` needs to be installed to convert them.
+        model_path: Path of model weights to load after model is initialized. This takes
+            over ``pretrained``.
+        in_channels: Number of input channels for model. If ``None``, use default
+            provided by model.
         nb_classes: Number of classes for classifier. If set to 0, no classifier is
-            used and last layer is pooling layer.
-        **kwargs: other kwargs are model specific
+            used and last layer is pooling layer. If ``None``, use default provided by
+            model.
+        **kwargs: Other kwargs are model specific.
+
+    Returns:
+        The created model.
     """
     if is_model(model_name):
         cls = model_class(model_name)
         cfg = model_config(model_name)
     else:
-        raise RuntimeError("Unknown model (%s)" % model_name)
+        raise RuntimeError(f"Unknown model {model_name}.")
 
     if model_path:
         loaded_model = tf.keras.models.load_model(model_path)
-    elif pretrained == "timm":
-        loaded_model = cls(cfg)
-        loaded_model(loaded_model.dummy_inputs)
-        load_timm_weights(loaded_model, model_name)
     elif pretrained:
-        if cfg.url.endswith(".pth") or cfg.url.endswith(".pth.tar"):
+        # First try loading model from cache
+        model_path = cached_model_path(model_name)
+        if model_path:
+            loaded_model = tf.keras.models.load_model(model_path)
+        elif cfg.url == "[timm]":
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
-            load_pth_url_weights(loaded_model, cfg.url)
-        elif cfg.url:
-            raise NotImplementedError(
-                "Download of weights only implemented for PyTorch models."
-            )
+            load_timm_weights(loaded_model, model_name)
+        elif cfg.url.startswith("[pytorch]"):
+            url = cfg.url[len("[pytorch]") :]
+            loaded_model = cls(cfg)
+            loaded_model(loaded_model.dummy_inputs)
+            load_pth_url_weights(loaded_model, url)
         else:
-            # Load model from cache
-            model_path = os.path.join(get_dir(), model_name)
-            if not os.path.exists(model_path):
-                raise RuntimeError(f"Cannot load model from {model_path}.")
-            loaded_model = tf.keras.models.load_model(model_path)
+            raise NotImplementedError(
+                "Model not found in cache. Download of weights only implemented for "
+                "PyTorch models."
+            )
     else:
         loaded_model = None
 
@@ -72,8 +82,7 @@ def create_model(
             setattr(cfg, key, value)
         else:
             logging.warning(
-                f"Config for model {model_name} does not have field `{key}`. "
-                "Ignoring field."
+                f"Config for {model_name} does not have field `{key}`. Ignoring field."
             )
     if in_channels is not None:
         setattr(cfg, "in_channels", in_channels)
@@ -89,7 +98,7 @@ def create_model(
     if loaded_model is not None and loaded_model.cfg == cfg:
         return loaded_model
 
-    # Otherwise we build a new model and transfer the weights to it. This is because
+    # Otherwise, we build a new model and transfer the weights to it. This is because
     # some parameter changes (in_channels and nb_classes) require changing the shape of
     # some weights or dropping of others. And there might be non-trivial interactions
     # between various parameters, e.g., global_pool can be None only if nb_classes is 0.
@@ -111,7 +120,10 @@ def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callab
 
     Args:
         model_name: Model for which to create preprocessing function.
-        dtype: Output dtype
+        dtype: Output dtype.
+
+    Returns:
+        Callable that operates on single images as well as batches.
     """
     if not is_model(model_name):
         raise ValueError(f"Unknown model: {model_name}.")
@@ -128,8 +140,12 @@ def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callab
 
 
 def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
-    """Transfers weights from src_model to dst_model, with special treatment of first
-    convolution and classification layers."""
+    """
+    Transfers weights from ``src_model`` to ``dst_model``, with special treatment of
+    first convolution and classification layers. The ``dst_model`` is modified in place.
+
+    TODO: Add changing of in_channels.
+    """
     keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
     dst_classifier = dst_model.cfg.classifier
     if isinstance(dst_classifier, str):  # Some models have multiple classifier heads

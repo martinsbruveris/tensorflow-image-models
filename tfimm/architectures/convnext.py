@@ -434,7 +434,7 @@ class ConvNeXt(tf.keras.Model):
 def convnext_tiny():
     cfg = ConvNeXtConfig(
         name="convnext_tiny",
-        url="",
+        url="[timm]",
         embed_dim=(96, 192, 384, 768),
         nb_blocks=(3, 3, 9, 3),
     )
@@ -445,7 +445,7 @@ def convnext_tiny():
 def convnext_small():
     cfg = ConvNeXtConfig(
         name="convnext_small",
-        url="",
+        url="[timm]",
         embed_dim=(96, 192, 384, 768),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -456,7 +456,7 @@ def convnext_small():
 def convnext_base():
     cfg = ConvNeXtConfig(
         name="convnext_base",
-        url="",
+        url="[timm]",
         embed_dim=(128, 256, 512, 1024),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -467,7 +467,7 @@ def convnext_base():
 def convnext_large():
     cfg = ConvNeXtConfig(
         name="convnext_large",
-        url="",
+        url="[timm]",
         embed_dim=(192, 384, 768, 1536),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -478,7 +478,7 @@ def convnext_large():
 def convnext_base_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_base_in22ft1k",
-        url="",
+        url="[timm]",
         embed_dim=(128, 256, 512, 1024),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -489,7 +489,7 @@ def convnext_base_in22ft1k():
 def convnext_large_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_large_in22ft1k",
-        url="",
+        url="[timm]",
         embed_dim=(192, 384, 768, 1536),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -500,7 +500,7 @@ def convnext_large_in22ft1k():
 def convnext_xlarge_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_xlarge_in22ft1k",
-        url="",
+        url="[timm]",
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -511,7 +511,7 @@ def convnext_xlarge_in22ft1k():
 def convnext_base_384_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_base_384_in22ft1k",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         embed_dim=(128, 256, 512, 1024),
         nb_blocks=(3, 3, 27, 3),
@@ -523,7 +523,7 @@ def convnext_base_384_in22ft1k():
 def convnext_large_384_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_large_384_in22ft1k",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         embed_dim=(192, 384, 768, 1536),
         nb_blocks=(3, 3, 27, 3),
@@ -535,7 +535,7 @@ def convnext_large_384_in22ft1k():
 def convnext_xlarge_384_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_xlarge_384_in22ft1k",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),
@@ -547,7 +547,7 @@ def convnext_xlarge_384_in22ft1k():
 def convnext_base_in22k():
     cfg = ConvNeXtConfig(
         name="convnext_base_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         embed_dim=(128, 256, 512, 1024),
         nb_blocks=(3, 3, 27, 3),
@@ -559,7 +559,7 @@ def convnext_base_in22k():
 def convnext_large_in22k():
     cfg = ConvNeXtConfig(
         name="convnext_large_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         embed_dim=(192, 384, 768, 1536),
         nb_blocks=(3, 3, 27, 3),
@@ -571,7 +571,7 @@ def convnext_large_in22k():
 def convnext_xlarge_in22k():
     cfg = ConvNeXtConfig(
         name="convnext_xlarge_in22k",
-        url="",
+        url="[timm]",
         nb_classes=21841,
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),

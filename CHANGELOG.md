@@ -3,6 +3,8 @@
 ## Unpublished
 
 - Adding PiT models
+- Simplified `pretrained` parameter in `create_function`.
+- Added model-specific cache
 
 ## v0.2.3 - 2022-01-20
 

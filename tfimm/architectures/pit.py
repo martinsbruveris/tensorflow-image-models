@@ -397,7 +397,7 @@ class PoolingVisionTransformer(tf.keras.Model):
 def pit_ti_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_ti_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         stride=8,
         embed_dim=(64, 128, 256),
@@ -412,7 +412,7 @@ def pit_ti_224():
 def pit_xs_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_xs_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         stride=8,
         embed_dim=(96, 192, 384),
@@ -427,7 +427,7 @@ def pit_xs_224():
 def pit_s_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_s_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         stride=8,
         embed_dim=(144, 288, 576),
@@ -442,7 +442,7 @@ def pit_s_224():
 def pit_b_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_b_224",
-        url="",
+        url="[timm]",
         patch_size=14,
         stride=7,
         embed_dim=(256, 512, 1024),
@@ -457,7 +457,7 @@ def pit_b_224():
 def pit_ti_distilled_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_ti_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         stride=8,
         embed_dim=(64, 128, 256),
@@ -474,7 +474,7 @@ def pit_ti_distilled_224():
 def pit_xs_distilled_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_xs_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         stride=8,
         embed_dim=(96, 192, 384),
@@ -491,7 +491,7 @@ def pit_xs_distilled_224():
 def pit_s_distilled_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_s_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         stride=8,
         embed_dim=(144, 288, 576),
@@ -508,7 +508,7 @@ def pit_s_distilled_224():
 def pit_b_distilled_224():
     cfg = PoolingVisionTransformerConfig(
         name="pit_b_distilled_224",
-        url="",
+        url="[timm]",
         patch_size=14,
         stride=7,
         embed_dim=(256, 512, 1024),

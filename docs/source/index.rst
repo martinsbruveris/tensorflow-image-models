@@ -21,10 +21,17 @@ Contents
 
 .. toctree::
    :maxdepth: 2
-   :caption: Models
+   :caption: Library
 
+   content/models
+   content/utils
    content/transformers
    content/layers
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Architectures
+
    content/convnext
    content/pit
    content/poolformer

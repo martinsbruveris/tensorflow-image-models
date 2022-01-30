@@ -4,7 +4,6 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
-from tfimm import list_models
 from tfimm.models.factory import create_model, create_preprocessing, transfer_weights
 
 from .architectures import TEST_ARCHITECTURES  # noqa: F401

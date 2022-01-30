@@ -149,7 +149,7 @@ def convmixer_768_32():
     """
     cfg = ConvMixerConfig(
         name="convmixer_768_32",
-        url="",
+        url="[timm]",
         patch_size=(7, 7),
         embed_dim=768,
         depth=32,
@@ -167,7 +167,7 @@ def convmixer_1024_20_ks9_p14():
     """
     cfg = ConvMixerConfig(
         name="convmixer_1024_20_ks9_p14",
-        url="",
+        url="[timm]",
         patch_size=(14, 14),
         embed_dim=1024,
         depth=20,
@@ -184,7 +184,7 @@ def convmixer_1536_20():
     """
     cfg = ConvMixerConfig(
         name="convmixer_1536_20",
-        url="",
+        url="[timm]",
         patch_size=(7, 7),
         embed_dim=1536,
         depth=20,

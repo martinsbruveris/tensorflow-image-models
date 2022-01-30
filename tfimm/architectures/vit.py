@@ -471,7 +471,7 @@ def vit_tiny_patch16_224():
     """ViT-Tiny (Vit-Ti/16)"""
     cfg = ViTConfig(
         name="vit_tiny_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=192,
         nb_blocks=12,
@@ -485,7 +485,7 @@ def vit_tiny_patch16_384():
     """ViT-Tiny (Vit-Ti/16) @ 384x384."""
     cfg = ViTConfig(
         name="vit_tiny_patch16_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=192,
@@ -501,7 +501,7 @@ def vit_small_patch32_224():
     """ViT-Small (ViT-S/32)"""
     cfg = ViTConfig(
         name="vit_small_patch32_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=384,
         nb_blocks=12,
@@ -515,7 +515,7 @@ def vit_small_patch32_384():
     """ViT-Small (ViT-S/32) at 384x384."""
     cfg = ViTConfig(
         name="vit_small_patch32_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=32,
         embed_dim=384,
@@ -531,7 +531,7 @@ def vit_small_patch16_224():
     """ViT-Small (ViT-S/16)"""
     cfg = ViTConfig(
         name="vit_small_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -545,7 +545,7 @@ def vit_small_patch16_384():
     """ViT-Small (ViT-S/16)"""
     cfg = ViTConfig(
         name="vit_small_patch16_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=384,
@@ -565,7 +565,7 @@ def vit_base_patch32_224():
     """
     cfg = ViTConfig(
         name="vit_base_patch32_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=768,
         nb_blocks=12,
@@ -583,7 +583,7 @@ def vit_base_patch32_384():
     """
     cfg = ViTConfig(
         name="vit_base_patch32_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=32,
         embed_dim=768,
@@ -603,7 +603,7 @@ def vit_base_patch16_224():
     """
     cfg = ViTConfig(
         name="vit_base_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=768,
         nb_blocks=12,
@@ -621,7 +621,7 @@ def vit_base_patch16_384():
     """
     cfg = ViTConfig(
         name="vit_base_patch16_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
@@ -641,7 +641,7 @@ def vit_base_patch8_224():
     """
     cfg = ViTConfig(
         name="vit_base_patch8_224",
-        url="",
+        url="[timm]",
         patch_size=8,
         embed_dim=768,
         nb_blocks=12,
@@ -658,7 +658,7 @@ def vit_large_patch32_224():
     """
     cfg = ViTConfig(
         name="vit_large_patch32_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=1024,
         nb_blocks=24,
@@ -676,7 +676,7 @@ def vit_large_patch32_384():
     """
     cfg = ViTConfig(
         name="vit_large_patch32_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=32,
         embed_dim=1024,
@@ -696,7 +696,7 @@ def vit_large_patch16_224():
     """
     cfg = ViTConfig(
         name="vit_large_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=1024,
         nb_blocks=24,
@@ -714,7 +714,7 @@ def vit_large_patch16_384():
     """
     cfg = ViTConfig(
         name="vit_large_patch16_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=1024,
@@ -733,7 +733,7 @@ def vit_base_patch32_sam_224():
     """
     cfg = ViTConfig(
         name="vit_base_patch32_sam_224",
-        url="",
+        url="[timm]",
         patch_size=32,
         embed_dim=768,
         nb_blocks=12,
@@ -750,7 +750,7 @@ def vit_base_patch16_sam_224():
     """
     cfg = ViTConfig(
         name="vit_base_patch16_sam_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=768,
         nb_blocks=12,
@@ -768,7 +768,7 @@ def vit_tiny_patch16_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_tiny_patch16_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=16,
         embed_dim=192,
@@ -787,7 +787,7 @@ def vit_small_patch32_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_small_patch32_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=32,
         embed_dim=384,
@@ -806,7 +806,7 @@ def vit_small_patch16_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_small_patch16_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=16,
         embed_dim=384,
@@ -826,7 +826,7 @@ def vit_base_patch32_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_base_patch32_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=32,
         embed_dim=768,
@@ -846,7 +846,7 @@ def vit_base_patch16_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_base_patch16_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=16,
         embed_dim=768,
@@ -865,7 +865,7 @@ def vit_base_patch8_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_base_patch8_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=8,
         embed_dim=768,
@@ -886,7 +886,7 @@ def vit_large_patch32_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_large_patch32_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=32,
         embed_dim=1024,
@@ -907,7 +907,7 @@ def vit_large_patch16_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_large_patch16_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=16,
         embed_dim=1024,
@@ -928,7 +928,7 @@ def vit_huge_patch14_224_in21k():
     """
     cfg = ViTConfig(
         name="vit_huge_patch14_224_in21k",
-        url="",
+        url="[timm]",
         nb_classes=21843,
         patch_size=14,
         embed_dim=1280,
@@ -947,7 +947,7 @@ def deit_tiny_patch16_224():
     """
     cfg = ViTConfig(
         name="deit_tiny_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=192,
         nb_blocks=12,
@@ -966,7 +966,7 @@ def deit_small_patch16_224():
     """
     cfg = ViTConfig(
         name="deit_small_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -985,7 +985,7 @@ def deit_base_patch16_224():
     """
     cfg = ViTConfig(
         name="deit_base_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=768,
         nb_blocks=12,
@@ -1004,7 +1004,7 @@ def deit_base_patch16_384():
     """
     cfg = ViTConfig(
         name="deit_base_patch16_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
@@ -1025,7 +1025,7 @@ def deit_tiny_distilled_patch16_224():
     """
     cfg = ViTConfig(
         name="deit_tiny_distilled_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=192,
         nb_blocks=12,
@@ -1046,7 +1046,7 @@ def deit_small_distilled_patch16_224():
     """
     cfg = ViTConfig(
         name="deit_small_distilled_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=384,
         nb_blocks=12,
@@ -1067,7 +1067,7 @@ def deit_base_distilled_patch16_224():
     """
     cfg = ViTConfig(
         name="deit_base_distilled_patch16_224",
-        url="",
+        url="[timm]",
         patch_size=16,
         embed_dim=768,
         nb_blocks=12,
@@ -1088,7 +1088,7 @@ def deit_base_distilled_patch16_384():
     """
     cfg = ViTConfig(
         name="deit_base_distilled_patch16_384",
-        url="",
+        url="[timm]",
         input_size=(384, 384),
         patch_size=16,
         embed_dim=768,
@@ -1111,7 +1111,7 @@ def vit_base_patch16_224_miil_in21k():
     """
     cfg = ViTConfig(
         name="vit_base_patch16_224_miil_in21k",
-        url="",
+        url="[timm]",
         nb_classes=11221,
         input_size=(224, 224),
         patch_size=16,
@@ -1136,7 +1136,7 @@ def vit_base_patch16_224_miil():
     """
     cfg = ViTConfig(
         name="vit_base_patch16_224_miil",
-        url="",
+        url="[timm]",
         input_size=(224, 224),
         patch_size=16,
         embed_dim=768,

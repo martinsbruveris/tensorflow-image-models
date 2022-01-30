@@ -356,7 +356,7 @@ def poolformer_s12():
     """PoolFormer-S12 model, Params: 12M."""
     cfg = PoolFormerConfig(
         name="poolformer_s12",
-        url="https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_s12.pth.tar",  # noqa: E501
+        url="[pytorch]https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_s12.pth.tar",  # noqa: E501
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(2, 2, 6, 2),
         crop_pct=0.9,
@@ -369,7 +369,7 @@ def poolformer_s24():
     """PoolFormer-S24 model, Params: 21M."""
     cfg = PoolFormerConfig(
         name="poolformer_s24",
-        url="https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_s24.pth.tar",  # noqa: E501
+        url="[pytorch]https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_s24.pth.tar",  # noqa: E501
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(4, 4, 12, 4),
         crop_pct=0.9,
@@ -382,7 +382,7 @@ def poolformer_s36():
     """PoolFormer-S36 model, Params: 31M."""
     cfg = PoolFormerConfig(
         name="poolformer_s36",
-        url="https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_s36.pth.tar",  # noqa: E501
+        url="[pytorch]https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_s36.pth.tar",  # noqa: E501
         embed_dim=(64, 128, 320, 512),
         nb_blocks=(6, 6, 18, 6),
         init_scale=1e-6,
@@ -396,7 +396,7 @@ def poolformer_m36():
     """PoolFormer-M36 model, Params: 56M."""
     cfg = PoolFormerConfig(
         name="poolformer_m36",
-        url="https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_m36.pth.tar",  # noqa: E501
+        url="[pytorch]https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_m36.pth.tar",  # noqa: E501
         embed_dim=(96, 192, 384, 768),
         nb_blocks=(6, 6, 18, 6),
         init_scale=1e-6,
@@ -410,7 +410,7 @@ def poolformer_m48():
     """PoolFormer-M48 model, Params: 73M."""
     cfg = PoolFormerConfig(
         name="poolformer_m48",
-        url="https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_m48.pth.tar",  # noqa: E501
+        url="[pytorch]https://github.com/sail-sg/poolformer/releases/download/v1.0/poolformer_m48.pth.tar",  # noqa: E501
         embed_dim=(96, 192, 384, 768),
         nb_blocks=(8, 8, 24, 8),
         init_scale=1e-6,
