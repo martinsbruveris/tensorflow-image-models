@@ -53,6 +53,44 @@ def test_transfer_weights(model_name, nb_classes):
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
+@pytest.mark.parametrize("in_channels", [1, 6])
+def test_change_in_channels(model_name, in_channels):
+    # Create two models with same architecture, but different number of in_channels
+    model_1 = create_model(model_name)
+    model_2 = create_model(model_name, in_channels=in_channels)
+
+    # Transfer weights from one to another
+    transfer_weights(model_1, model_2)
+
+    if in_channels == 1:
+        # For single channel input adaptation is equivalent to replicating image
+        # across the 3 channels.
+        img_2 = np.random.rand(1, *model_1.cfg.input_size, 1)
+        img_1 = np.repeat(img_2, repeats=3, axis=-1)
+    elif in_channels == 6:
+        # For six channel images adaptation is equivalent to replicating the three
+        # channel image across six channels.
+        img_1 = np.random.rand(1, *model_1.cfg.input_size, 3)
+        img_2 = np.tile(img_1, [1, 1, 1, 2])
+    else:
+        raise ValueError()
+
+    y_1 = model_1(img_1).numpy()
+    y_2 = model_2(img_2).numpy()
+
+    if model_name not in {
+        "resnetv2_test_model",
+        "vit_r_test_model_1",
+        "vit_r_test_model_2",
+    }:
+        # We expect results to be the same for both models. The exception are models
+        # based on ResNetV2, because they use `StdConv`, which normalizes weight
+        # statistics internally. The models are still adaptable, but results won't be
+        # the same.
+        assert (np.max(np.abs(y_1 - y_2))) / (np.max(np.abs(y_1)) + 1e-8) < 1e-5
+
+
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 def test_save_load_model(model_name):
     """Tests ability to use keras save() and load() functions."""
     model = create_model(model_name)

@@ -230,6 +230,7 @@ def resnet_test_model_2():
         block="bottleneck",
         nb_blocks=(1, 1, 1, 1),
         nb_channels=(2, 4, 6, 8),
+        first_conv="conv1/0",
     )
     return ResNet, cfg
 
