@@ -144,8 +144,12 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     Transfers weights from ``src_model`` to ``dst_model``, with special treatment of
     first convolution and classification layers. The ``dst_model`` is modified in place.
 
-    TODO: Add changing of in_channels.
+    Args:
+        src_model: Source model.
+        dst_model: Destination model, modified in place
     """
+    dst_first_conv = dst_model.cfg.first_conv
+
     keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
     dst_classifier = dst_model.cfg.classifier
     if isinstance(dst_classifier, str):  # Some models have multiple classifier heads
@@ -176,11 +180,11 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
                 # initialization of dst_model.
                 weight_value_tuples.append((dst_weight, src_weights[w_name]))
 
-        elif var_name == dst_model.cfg.first_conv:
-            # For the first convolution we need to adapt for the number of in_channels.
-            if src_model.cfg.in_channels != dst_model.cfg.in_channels:
-                raise ValueError("Different number of in_channels not supported yet.")
-            weight_value_tuples.append((dst_weight, src_weights[w_name]))
+        elif var_name == dst_first_conv:
+            src_weight = _transform_first_conv(
+                src_weights[w_name], dst_model.cfg.in_channels
+            )
+            weight_value_tuples.append((dst_weight, src_weight))
 
         elif var_name in transform_weights:
             # We check if we need to apply a transform. In that case the weight
@@ -216,3 +220,29 @@ def _get_layer_name(name):
     name = name.split("/", 1)[-1]  # Remove prefix, e.g., "res_net"
     name = name.rsplit("/", 1)[0]  # Remove last part, e.g., "kernel"
     return name
+
+
+def _transform_first_conv(weight, in_channels):
+    """
+    Adapts `weight` to have `in_channels` either by truncating or by repeating
+    across channel dimensions.
+    """
+    if tf.rank(weight) != 4:
+        # We don't need to adapt biases, because they don't depend on input channels
+        return weight
+
+    # Convolutional kernels have shape (H, W, in_channels, out_channels)
+    src_channels = tf.shape(weight)[2]
+    if in_channels == src_channels:
+        # Nothing to adapt here...
+        pass
+    elif in_channels == 1:
+        # For single-channel input, we sum the existing channels. We don't average in
+        # order to preserve weight statistics
+        weight = tf.reduce_sum(weight, axis=2, keepdims=True)
+    else:
+        nb_repeats = in_channels // src_channels + 1
+        weight = tf.tile(weight, [1, 1, nb_repeats, 1])
+        weight = weight[:, :, :in_channels, :]
+        weight *= tf.cast(src_channels / in_channels, tf.float32)
+    return weight
