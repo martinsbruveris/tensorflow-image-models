@@ -1,10 +1,11 @@
 # Change Log
 
-## Unpublished
+## v0.2.4 - 2022-01-31
 
 - Adding PiT models
 - Simplified `pretrained` parameter in `create_function`.
 - Added model-specific cache
+- Added adaptability of `in_channels`
 
 ## v0.2.3 - 2022-01-20
 
