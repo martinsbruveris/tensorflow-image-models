@@ -3,14 +3,14 @@
 ![Test Status](https://github.com/martinsbruveris/tensorflow-image-models/actions/workflows/tests.yml/badge.svg)
 [![Documentation Status](https://readthedocs.org/projects/tfimm/badge/?version=latest)](https://tfimm.readthedocs.io/en/latest/?badge=latest)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-
+[![Slack](https://img.shields.io/badge/Slack-4A154B?style=for-the-badge&logo=slack&logoColor=white)](https://join.slack.com/t/tfimm/shared_invite/zt-13dnaf3qo-5JJaCBFIQhugeBXBT3NK8A)
 
 - [Introduction](#introduction)
 - [Usage](#usage)
 - [Models](#models)
 - [Profiling](#profiling)
 - [License](#license)
+- [Contact](#contact)
 
 ## Introduction
 
@@ -204,3 +204,8 @@ def backprop():
 
 This repository is released under the Apache 2.0 license as found in the 
 [LICENSE](LICENSE) file.
+
+## Contact
+
+All things related to `tfimm` can be discussed via 
+[Slack](https://join.slack.com/t/tfimm/shared_invite/zt-13dnaf3qo-5JJaCBFIQhugeBXBT3NK8A).

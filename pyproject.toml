@@ -30,9 +30,6 @@ include = [
 
 [tool.poetry.dependencies]
 python = ">=3.7,<3.10"
-# There is an issue with poetry and file hashes stored on pypi. Until it is resolved,
-# we pin it to an older version. See: https://github.com/sighingnow/libclang/issues/19
-libclang = "<12.0.0"
 markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
 tensorflow = "^2.5"

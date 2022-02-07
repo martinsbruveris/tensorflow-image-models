@@ -1,5 +1,9 @@
 # Change Log
 
+## Unpublished
+
+- Removed temporary version restriction on `libclang``
+
 ## v0.2.4 - 2022-01-31
 
 - Adding PiT models
