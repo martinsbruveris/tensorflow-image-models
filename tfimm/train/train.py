@@ -75,21 +75,17 @@ def run(cfg: Union[ExperimentConfig, dict], parse_args: bool = True):
             name=cfg.experiment_name,
             resume=False,
         )
-
-    # When using sweeps, wandb sets the env variable WANDB_RUNQUEUE_ITEM_ID.
-    # The presence/absence of this variable allows us to detect if this run is
-    # part of a sweep.
-    sweep = bool(os.environ.get("WANDB_RUNQUEUE_ITEM_ID", False))
-    if sweep:
-        # If this run is part of a W&B hyperparameter sweep, we need to add
-        # suffixes to the run names and checkpoint directories, because otherwise
-        # all runs in the sweep will have the same name and the checkpoints will
-        # overwrite each other.
-        ckpt_dir = getattr(cfg.trainer, "ckpt_dir", "")
-        if ckpt_dir:
-            setattr(cfg.trainer, "ckpt_dir", os.path.join(ckpt_dir, wandb.run.id))
-        wandb.run.name = wandb.run.name + f"{wandb.run.id}"
-        wandb.run.save()
+        if wandb.run.sweep_id:
+            # If this run is part of a W&B hyperparameter sweep, we need to add
+            # suffixes to the run names and checkpoint directories, because otherwise
+            # all runs in the sweep will have the same name and the checkpoints will
+            # overwrite each other.
+            logging.info(f"Job running as part of sweep {wandb.run.sweep_id}.")
+            ckpt_dir = getattr(cfg.trainer, "ckpt_dir", "")
+            if ckpt_dir:
+                setattr(cfg.trainer, "ckpt_dir", os.path.join(ckpt_dir, wandb.run.id))
+            wandb.run.name = wandb.run.name + f"{wandb.run.id}"
+            wandb.run.save()
 
     # Construct constituent objects
     train_ds = get_class(cfg.train_dataset_class)(cfg=cfg.train_dataset)
