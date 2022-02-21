@@ -111,7 +111,12 @@ def create_model(
     return model
 
 
-def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callable:
+def create_preprocessing(
+    model_name: str,
+    *,
+    in_channels: Optional[float] = None,
+    dtype: Optional[str] = None,
+) -> Callable:
     """
     Creates a function to preprocess images for a particular model.
 
@@ -119,6 +124,7 @@ def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callab
 
     Args:
         model_name: Model for which to create preprocessing function.
+        in_channels: Number of input channels to model
         dtype: Output dtype.
 
     Returns:
@@ -130,9 +136,22 @@ def create_preprocessing(model_name: str, dtype: Optional[str] = None) -> Callab
     cfg = model_config(model_name)
     dtype = dtype or tf.keras.backend.floatx()
 
+    def _adapt_vector(v, n):
+        """Adapts vector v to length n by repeating as necessary."""
+        v = tf.convert_to_tensor(v, dtype=dtype)
+        m = tf.shape(v)[0]
+        nb_repeats = n // m + 1
+        v = tf.tile(v, [nb_repeats])
+        v = v[:n]
+        return v
+
+    in_channels = in_channels or cfg.in_channels
+    mean = _adapt_vector(cfg.mean, in_channels)
+    std = _adapt_vector(cfg.std, in_channels)
+
     def _preprocess(img: tf.Tensor) -> tf.Tensor:
         img = tf.cast(img, dtype=dtype) / 255.0
-        img = (img - cfg.mean) / cfg.std
+        img = (img - mean) / std
         return img
 
     return _preprocess
