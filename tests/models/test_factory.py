@@ -125,11 +125,13 @@ def test_model_path(model_name):
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
-@pytest.mark.parametrize("input_shape", [(8, 8, 3), (1, 4, 4, 3)])
+@pytest.mark.parametrize("input_size", [(8, 8), (1, 4, 4)])
+@pytest.mark.parametrize("in_channels", [1, 3, 5, 6])
 @pytest.mark.parametrize("dtype", ["float32", "float16"])
-def test_preprocessing(model_name, input_shape, dtype):
+def test_preprocessing(model_name, input_size, in_channels, dtype):
+    input_shape = (*input_size, in_channels)
     img = tf.ones(input_shape, dtype)
-    preprocess = create_preprocessing(model_name, dtype)
+    preprocess = create_preprocessing(model_name, in_channels=in_channels, dtype=dtype)
     img = preprocess(img)
     assert img.shape == input_shape
     assert img.dtype == dtype
