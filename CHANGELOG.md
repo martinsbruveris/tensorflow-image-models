@@ -1,7 +1,8 @@
 # Change Log
 
-## Unpublished
+## v0.2.5 - 2022-02-21
 
+- Preprocessing works for abritrary number of `in_channels`.
 - Removed temporary version restriction on `libclang``
 
 ## v0.2.4 - 2022-01-31
