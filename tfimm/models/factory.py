@@ -44,11 +44,11 @@ def create_model(
     Returns:
         The created model.
     """
-    if is_model(model_name):
-        cls = model_class(model_name)
-        cfg = model_config(model_name)
-    else:
+    if not is_model(model_name):
         raise RuntimeError(f"Unknown model {model_name}.")
+
+    cls = model_class(model_name)
+    cfg = model_config(model_name)
 
     if model_path:
         loaded_model = tf.keras.models.load_model(model_path)
