@@ -2,22 +2,11 @@
 Attention layers used in CNNs
 """
 import math
-from typing import Optional
 
 import tensorflow as tf
 
+from ..utils import make_divisible
 from .factory import act_layer_factory, norm_layer_factory
-
-
-def make_divisible(
-    v: int, divisor: int, min_value: Optional[int] = None, round_limit: float = 0.9
-) -> int:
-    min_value = min_value or divisor
-    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
-    # Make sure that round down does not go down by more than 10%.
-    if new_v < round_limit * v:
-        new_v += divisor
-    return new_v
 
 
 class SEModule(tf.keras.layers.Layer):
