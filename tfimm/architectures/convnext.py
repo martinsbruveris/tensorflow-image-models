@@ -544,6 +544,18 @@ def convnext_xlarge_384_in22ft1k():
 
 
 @register_model
+def convnext_small_in22k():
+    cfg = ConvNeXtConfig(
+        name="convnext_small_in22k",
+        url="[timm]",
+        nb_classes=21841,
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 27, 3),
+    )
+    return ConvNeXt, cfg
+
+
+@register_model
 def convnext_base_in22k():
     cfg = ConvNeXtConfig(
         name="convnext_base_in22k",
