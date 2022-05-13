@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.6 - 2022-05-13
+
+- Added tiny and small ConvNeXt models.
+
 ## v0.2.5 - 2022-02-21
 
 - Preprocessing works for abritrary number of `in_channels`.
