@@ -21,6 +21,7 @@ The following models are available.
 
 * Models trained on ImageNet-22k, fine-tuned on ImageNet-1k
 
+  * ``convnext_tiny_in22ft1k``
   * ``convnext_small_in22ft1k``
   * ``convnext_base_in22ft1k``
   * ``convnext_large_in22ft1k``
@@ -28,6 +29,7 @@ The following models are available.
 
 * Models trained on ImageNet-22k, fine-tuned on ImageNet-1k at 384 resolution
 
+  * ``convnext_tiny_384_in22ft1k``
   * ``convnext_small_384_in22ft1k``
   * ``convnext_base_384_in22ft1k``
   * ``convnext_large_384_in22ft1k``
@@ -35,6 +37,7 @@ The following models are available.
 
 * Models trained on ImageNet-22k
 
+  * ``convnext_tiny_in22k``
   * ``convnext_small_in22k``
   * ``convnext_base_in22k``
   * ``convnext_large_in22k``
@@ -478,6 +481,17 @@ def convnext_large():
 
 
 @register_model
+def convnext_tiny_in22ft1k():
+    cfg = ConvNeXtConfig(
+        name="convnext_tiny_in22ft1k",
+        url="[timm]",
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 9, 3),
+    )
+    return ConvNeXt, cfg
+
+
+@register_model
 def convnext_small_in22ft1k():
     cfg = ConvNeXtConfig(
         name="convnext_small_in22ft1k",
@@ -517,6 +531,18 @@ def convnext_xlarge_in22ft1k():
         url="[timm]",
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),
+    )
+    return ConvNeXt, cfg
+
+
+@register_model
+def convnext_tiny_384_in22ft1k():
+    cfg = ConvNeXtConfig(
+        name="convnext_tiny_384_in22ft1k",
+        url="[timm]",
+        input_size=(384, 384),
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 9, 3),
     )
     return ConvNeXt, cfg
 
@@ -565,6 +591,18 @@ def convnext_xlarge_384_in22ft1k():
         input_size=(384, 384),
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),
+    )
+    return ConvNeXt, cfg
+
+
+@register_model
+def convnext_tiny_in22k():
+    cfg = ConvNeXtConfig(
+        name="convnext_tiny_in22k",
+        url="[timm]",
+        nb_classes=21841,
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 9, 3),
     )
     return ConvNeXt, cfg
 
