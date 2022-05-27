@@ -1,4 +1,23 @@
-# TODO: Add module docstring
+"""
+We provide an implementation and pretrained weights for the EfficientNet family of
+models.
+
+Paper: EfficientNet: Rethinking Model Scaling for CNNs.
+`[arXiv:1905.11946] <https://arxiv.org/abs/1905.11946>`_.
+
+This code and weights have been ported from the
+`timm <https://github.com/rwightman/pytorch-image-models>`_ implementation. It does mean
+that some model weights have undergone the journey from TF (original weights from the
+Google Brain team) to PyTorch (timm library) back to TF (tfimm port of timm).
+
+The following models are available.
+
+* Original EfficientNet models
+
+  * ``tf_efficientnet_{b0, b1, b2, b3, b4, b5, b6, b7}``
+"""
+# Hacked together by / Copyright 2019, Ross Wightman
+# Copyright 2022 Marting Bruveris
 # TODO: Check sphinx documentation
 from collections import OrderedDict
 from dataclasses import dataclass
@@ -208,9 +227,9 @@ class EfficientNet(tf.keras.Model):
         return (x, features) if return_features else x
 
 
-# TODO: Enable splitting tfimm model name from timm model name
 def _efficientnet_cfg(
     name: str,
+    timm_name: str,
     input_size: Tuple[int, int],
     channel_multiplier: float,
     depth_multiplier: float,
@@ -246,7 +265,7 @@ def _efficientnet_cfg(
     assert framework in {"tf", "pytorch"}
     cfg = EfficientNetConfig(
         name=name,
-        url="[timm]",
+        url="[timm]" + timm_name,
         input_size=input_size,
         stem_size=round_channels(32, multiplier=channel_multiplier),
         architecture=(
@@ -271,10 +290,11 @@ def _efficientnet_cfg(
 
 
 @register_model
-def tf_efficientnet_b0():
+def efficientnet_b0():
     """EfficientNet-B0. Tensorflow compatible variant."""
     cfg = _efficientnet_cfg(
-        name="tf_efficientnet_b0",
+        name="efficientnet_b0",
+        timm_name="tf_efficientnet_b0",
         input_size=(224, 224),
         channel_multiplier=1.0,
         depth_multiplier=1.0,

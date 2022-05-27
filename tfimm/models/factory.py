@@ -57,10 +57,13 @@ def create_model(
         model_path = cached_model_path(model_name)
         if model_path:
             loaded_model = tf.keras.models.load_model(model_path)
-        elif cfg.url == "[timm]":
+        elif cfg.url.startswith("[timm]"):
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
-            load_timm_weights(loaded_model, model_name)
+            # Url can be "[timm]timm_model_name" or "[timm]" in which case we default
+            # to model_name.
+            timm_model_name = cfg.url[len("[timm]"):] or model_name
+            load_timm_weights(loaded_model, timm_model_name)
         elif cfg.url.startswith("[pytorch]"):
             url = cfg.url[len("[pytorch]") :]
             loaded_model = cls(cfg)
