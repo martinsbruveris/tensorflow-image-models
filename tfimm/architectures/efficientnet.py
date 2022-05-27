@@ -120,7 +120,7 @@ class EfficientNet(tf.keras.Model):
     Generic EfficientNet implementation supporting depth and width scaling and flexible
     architecture definitions, including
 
-    * EfficientNet B0-B8.
+    * EfficientNet B0-B7.
 
     Parameters:
         cfg: Configuration class for the model.
