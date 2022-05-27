@@ -6,6 +6,7 @@ import tensorflow as tf
 
 from tfimm.layers import (
     DropPath,
+    FanoutInitializer,
     PadConv2D,
     PadDepthwiseConv2D,
     norm_layer_factory,
@@ -23,7 +24,7 @@ def create_conv2d(
 ):
     """
     Selects a 2D convolution implementation based on arguments. Creates and returns one
-    of Conv2D, DepthwiseConv2D. Others TBA...
+    of Conv2D, DepthwiseConv2D.
 
     Used extensively by EfficientNet, MobileNetV3 and related networks.
     """
@@ -46,12 +47,19 @@ def create_conv2d(
             # )
         elif depthwise:
             # Depthwise convolution
-            # TODO: Create keras depthwise fanout initializer
-            conv = PadDepthwiseConv2D(kernel_size=kernel_size, **kwargs)
+            conv = PadDepthwiseConv2D(
+                kernel_size=kernel_size,
+                depthwise_initializer=FanoutInitializer(depthwise=True),
+                **kwargs,
+            )
         else:
             # Regular (group-wise) convolution
-            # TODO: Create keras fanout initializer with nb_groups as parameter
-            conv = PadConv2D(kernel_size=kernel_size, groups=nb_groups, **kwargs)
+            conv = PadConv2D(
+                kernel_size=kernel_size,
+                groups=nb_groups,
+                kernel_initializer=FanoutInitializer(nb_groups=nb_groups),
+                **kwargs,
+            )
     return conv
 
 
@@ -83,7 +91,7 @@ class BlockArgs:
 
     block_type: str
     nb_repeats: int
-    nb_experts: int  # TODO: Default could be None
+    nb_experts: Optional[int]
     filters: int
     exp_kernel_size: Tuple[int, int]
     dw_kernel_size: Tuple[int, int]
@@ -138,7 +146,7 @@ class BlockArgs:
         return BlockArgs(
             block_type=options["block_type"],
             nb_repeats=int(options.get("r")),
-            nb_experts=int(options.get("cc", 0)),
+            nb_experts=int(options.get("cc", 0)) or None,
             filters=int(options.get("c")),
             exp_kernel_size=exp_kernel_size,
             dw_kernel_size=dw_kernel_size,
@@ -217,12 +225,14 @@ class SqueezeExcite(tf.keras.layers.Layer):
             filters=rd_channels,
             kernel_size=1,
             use_bias=True,
+            kernel_initializer=FanoutInitializer(),
             name="conv_reduce",
         )
         self.conv_expand = tf.keras.layers.Conv2D(
             filters=channels,
             kernel_size=1,
             use_bias=True,
+            kernel_initializer=FanoutInitializer(),
             name="conv_expand",
         )
 

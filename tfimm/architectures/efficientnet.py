@@ -142,7 +142,6 @@ class EfficientNet(tf.keras.Model):
             kernel_size=3,
             strides=2,
             padding=cfg.padding,
-            use_bias=False,
             name="conv_stem",
         )
         self.bn1 = self.norm_layer(name="bn1")
@@ -347,6 +346,7 @@ def efficientnet_b0():
         framework="tf",
     )
     return EfficientNet, cfg
+
 
 # TODO: Add models B1-B8
 # TODO: Test models B1-B8

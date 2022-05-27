@@ -275,55 +275,7 @@ class EfficientNetBuilder:
                     total_idx=total_block_idx,
                     nb_blocks=total_block_count,
                 )
-                # TODO: Fix name, make consistent with other models
                 blocks[f"stage_{stack_idx}/block_{block_idx}"] = block
 
                 total_block_idx += 1  # incr global block idx (across all stacks)
         return blocks
-
-
-# def _init_weight_goog(m, n='', fix_group_fanout=True):
-#     """ Weight initialization as per Tensorflow official implementations.
-#
-#     Args:
-#         m (nn.Module): module to init
-#         n (str): module name
-#         fix_group_fanout (bool): enable correct (matching Tensorflow TPU impl) fanout calculation w/ group convs
-#
-#     Handles layers in EfficientNet, EfficientNet-CondConv, MixNet, MnasNet, MobileNetV3, etc:
-#     * https://github.com/tensorflow/tpu/blob/master/models/official/mnasnet/mnasnet_model.py
-#     * https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
-#     """
-#     if isinstance(m, CondConv2d):
-#         fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-#         if fix_group_fanout:
-#             fan_out //= m.groups
-#         init_weight_fn = get_condconv_initializer(
-#             lambda w: nn.init.normal_(w, 0, math.sqrt(2.0 / fan_out)), m.num_experts, m.weight_shape)
-#         init_weight_fn(m.weight)
-#         if m.bias is not None:
-#             nn.init.zeros_(m.bias)
-#     elif isinstance(m, nn.Conv2d):
-#         fan_out = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
-#         if fix_group_fanout:
-#             fan_out //= m.groups
-#         nn.init.normal_(m.weight, 0, math.sqrt(2.0 / fan_out))
-#         if m.bias is not None:
-#             nn.init.zeros_(m.bias)
-#     elif isinstance(m, nn.BatchNorm2d):
-#         nn.init.ones_(m.weight)
-#         nn.init.zeros_(m.bias)
-#     elif isinstance(m, nn.Linear):
-#         fan_out = m.weight.size(0)  # fan-out
-#         fan_in = 0
-#         if 'routing_fn' in n:
-#             fan_in = m.weight.size(1)
-#         init_range = 1.0 / math.sqrt(fan_in + fan_out)
-#         nn.init.uniform_(m.weight, -init_range, init_range)
-#         nn.init.zeros_(m.bias)
-
-#
-# def efficientnet_init_weights(model: nn.Module, init_fn=None):
-#     init_fn = init_fn or _init_weight_goog
-#     for n, m in model.named_modules():
-#         init_fn(m, n)
