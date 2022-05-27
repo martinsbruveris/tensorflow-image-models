@@ -12,11 +12,15 @@ def to_2tuple(x: Union[T, Iterable[T]]) -> Tuple[T, T]:
 
 
 def make_divisible(
-    v: int, divisor: int, min_value: Optional[int] = None, round_limit: float = 0.9
+    value: float,
+    divisor: int,
+    min_value: Optional[int] = None,
+    round_limit: float = 0.9,
 ) -> int:
+    """Ensures that `value` is divisible by `divisor`."""
     min_value = min_value or divisor
-    new_v = max(min_value, int(v + divisor / 2) // divisor * divisor)
+    new_value = max(min_value, int(value + divisor / 2) // divisor * divisor)
     # Make sure that round down does not go down by more than 10%.
-    if new_v < round_limit * v:
-        new_v += divisor
-    return new_v
+    if new_value < round_limit * value:
+        new_value += divisor
+    return new_value
