@@ -185,8 +185,6 @@ class EfficientNet(tf.keras.Model):
             else tf.keras.layers.Activation("linear")  # Identity layer
         )
 
-        # TODO: Check weight initialization
-
     @property
     def dummy_inputs(self) -> tf.Tensor:
         """Returns a tensor of the correct shape for inference."""
@@ -279,6 +277,7 @@ def _efficientnet_cfg(
     drop_rate: float,
     drop_path_rate: float,
     framework: str,
+    crop_pct: float,
 ):
     """
     Creates the config for an EfficientNet model.
@@ -328,6 +327,7 @@ def _efficientnet_cfg(
         norm_layer="batch_norm_tf" if framework == "tf" else "batch_norm",
         act_layer="swish",
         padding="same" if framework == "tf" else "symmetric",
+        crop_pct=crop_pct,
     )
     return cfg
 
@@ -344,9 +344,128 @@ def efficientnet_b0():
         drop_rate=0.2,
         drop_path_rate=0.2,
         framework="tf",
+        crop_pct=0.875,
     )
     return EfficientNet, cfg
 
 
-# TODO: Add models B1-B8
-# TODO: Test models B1-B8
+@register_model
+def efficientnet_b1():
+    """EfficientNet-B1. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b1",
+        timm_name="tf_efficientnet_b1",
+        input_size=(240, 240),
+        channel_multiplier=1.0,
+        depth_multiplier=1.1,
+        drop_rate=0.2,
+        drop_path_rate=0.2,
+        framework="tf",
+        crop_pct=0.882,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b2():
+    """EfficientNet-B2. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b2",
+        timm_name="tf_efficientnet_b2",
+        input_size=(260, 260),
+        channel_multiplier=1.1,
+        depth_multiplier=1.2,
+        drop_rate=0.3,
+        drop_path_rate=0.3,
+        framework="tf",
+        crop_pct=0.890,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b3():
+    """EfficientNet-B3. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b3",
+        timm_name="tf_efficientnet_b3",
+        input_size=(300, 300),
+        channel_multiplier=1.2,
+        depth_multiplier=1.4,
+        drop_rate=0.3,
+        drop_path_rate=0.3,
+        framework="tf",
+        crop_pct=0.904,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b4():
+    """EfficientNet-B4. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b4",
+        timm_name="tf_efficientnet_b4",
+        input_size=(380, 380),
+        channel_multiplier=1.4,
+        depth_multiplier=1.8,
+        drop_rate=0.4,
+        drop_path_rate=0.4,
+        framework="tf",
+        crop_pct=0.922,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b5():
+    """EfficientNet-B5. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b5",
+        timm_name="tf_efficientnet_b5",
+        input_size=(456, 456),
+        channel_multiplier=1.6,
+        depth_multiplier=2.2,
+        drop_rate=0.4,
+        drop_path_rate=0.4,
+        framework="tf",
+        crop_pct=0.934,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b6():
+    """EfficientNet-B6. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b6",
+        timm_name="tf_efficientnet_b6",
+        input_size=(528, 528),
+        channel_multiplier=1.8,
+        depth_multiplier=2.6,
+        drop_rate=0.5,
+        drop_path_rate=0.5,
+        framework="tf",
+        crop_pct=0.942,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b7():
+    """EfficientNet-B7. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b7",
+        timm_name="tf_efficientnet_b7",
+        input_size=(600, 600),
+        channel_multiplier=2.0,
+        depth_multiplier=3.1,
+        drop_rate=0.5,
+        drop_path_rate=0.5,
+        framework="tf",
+        crop_pct=0.949,
+    )
+    return EfficientNet, cfg
+
+
+# TODO: Test models B1-B7
