@@ -193,7 +193,6 @@ class EfficientNet(tf.keras.Model):
         """Returns a tensor of the correct shape for inference."""
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
-    # TODO: Check feature names and completeness
     @property
     def feature_names(self) -> List[str]:
         """
