@@ -6,7 +6,7 @@ from tfimm.layers.norm import Affine, GroupNormalization
 def act_layer_factory(act_layer: str):
     """Returns a function that creates the required activation layer."""
     if act_layer in {"linear", "swish", "relu", "gelu", "sigmoid"}:
-        return lambda: tf.keras.layers.Activation(act_layer)
+        return lambda **kwargs: tf.keras.layers.Activation(act_layer, **kwargs)
     else:
         raise ValueError(f"Unknown activation: {act_layer}.")
 
@@ -14,13 +14,21 @@ def act_layer_factory(act_layer: str):
 def norm_layer_factory(norm_layer: str):
     """Returns a function that creates a normalization layer"""
     if norm_layer == "":
-        return lambda **kwargs: tf.keras.layers.Activation("linear")
+        return lambda **kwargs: tf.keras.layers.Activation("linear", **kwargs)
 
     elif norm_layer == "batch_norm":
         bn_class = tf.keras.layers.BatchNormalization
         bn_args = {
             "momentum": 0.9,  # We use PyTorch default args here
             "epsilon": 1e-5,
+        }
+        return lambda **kwargs: bn_class(**bn_args, **kwargs)
+
+    elif norm_layer == "batch_norm_tf":  # Batch norm with TF defaults
+        bn_class = tf.keras.layers.BatchNormalization
+        bn_args = {
+            "momentum": 0.99,
+            "epsilon": 1e-3,
         }
         return lambda **kwargs: bn_class(**bn_args, **kwargs)
 
