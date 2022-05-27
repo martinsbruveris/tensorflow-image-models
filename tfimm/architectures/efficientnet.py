@@ -12,9 +12,10 @@ Google Brain team) to PyTorch (timm library) back to TF (tfimm port of timm).
 
 The following models are available.
 
-* Original EfficientNet models
+* Original EfficientNet models.
 
-  * ``tf_efficientnet_{b0, b1, b2, b3, b4, b5, b6, b7}``
+  * ``efficientnet_{b0, b1, b2, b3, b4, b5, b6, b7}``. These models correspond to
+    the models ``tf_efficientnet_{b0, ...}`` in timm.
 """
 # Hacked together by / Copyright 2019, Ross Wightman
 # Copyright 2022 Marting Bruveris
@@ -39,11 +40,49 @@ from .efficientnet_blocks import create_conv2d
 __all__ = ["EfficientNetConfig", "EfficientNet"]
 
 
-# TODO: Add docstring
 @dataclass
 class EfficientNetConfig(ModelConfig):
     """
     Configuration class for EfficientNet models.
+
+    Parameters:
+        name: Name of the model.
+        url: URL for pretrained weights.
+        nb_classes: Number of classes for classification head.
+        in_channels: Number of input image channels.
+        input_size: Input image size (height, width)
+
+        stem_size: Number of filters in first convolution.
+        architecture: Tuple of tuple of strings defining the architecture of residual
+            blocks. The outer tuple defines the stages while the inner tuple defines
+            the blocks per stage.
+        channel_multiplier: Multiplier for channel scaling. One of the three dimensions
+            of EfficientNet scaling.
+        depth_multiplier: Multiplier for depth scaling. One of the three dimensions of
+            EfficientNet scaling.
+        nb_features: Number of features before the classifier layer.
+
+        drop_rate: Dropout rate.
+        drop_path_rate: Dropout rate for stochastic depth.
+
+        norm_layer: Normalization layer. See :func:`~norm_layer_factory` for possible
+            values.
+        act_layer: Activation function. See :func:`~act_layer_factory` for possible
+            values.
+        padding: Type of padding to use for convolutional layers. Can be one of
+            "same", "valid" or "symmetric" (PyTorch-style symmetric padding).
+
+        crop_pct: Crop percentage for ImageNet evaluation.
+        interpolation: Interpolation method for ImageNet evaluation.
+        mean: Defines preprocessing function. If ``x`` is an image with pixel values
+            in (0, 1), the preprocessing function is ``(x - mean) / std``.
+        std: Defines preprpocessing function.
+
+        first_conv: Name of first convolutional layer. Used by
+            :func:`~tfimm.create_model` to adapt the number in input channels when
+            loading pretrained weights.
+        classifier: Name of classifier layer. Used by :func:`~tfimm.create_model` to
+            adapt the classifier when loading pretrained weights.
     """
 
     nb_classes: int = 1000
@@ -71,6 +110,7 @@ class EfficientNetConfig(ModelConfig):
     # Weight transfer
     first_conv: str = "conv_stem"
     classifier: str = "classifier"
+
 
 # TODO: Add docstring
 @keras_serializable
@@ -149,6 +189,7 @@ class EfficientNet(tf.keras.Model):
         """Returns a tensor of the correct shape for inference."""
         return tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels))
 
+    # TODO: Check feature names and completeness
     @property
     def feature_names(self) -> List[str]:
         """

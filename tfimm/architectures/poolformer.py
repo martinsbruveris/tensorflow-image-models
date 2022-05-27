@@ -64,9 +64,9 @@ class PoolFormerConfig(ModelConfig):
         drop_rate: Dropout rate.
         drop_path_rate: Dropout rate for stochastic depth.
 
-        norm_layer: Normalization layer. See :function:``norm_layer_factory`` for
-            possible values.
-        act_layer: Activation function. See :function:``act_layer_factory`` for possible
+        norm_layer: Normalization layer. See :func:`~norm_layer_factory` for possible
+            values.
+        act_layer: Activation function. See :func:`~act_layer_factory` for possible
             values.
         init_scale: Inital value for layer scale weights.
 
@@ -77,9 +77,9 @@ class PoolFormerConfig(ModelConfig):
         std: Defines preprpocessing function.
 
         first_conv: Name of first convolutional layer. Used by
-            :function:``create_model`` to adapt the number in input channels when
+            :func:`~tfimm.create_model` to adapt the number in input channels when
             loading pretrained weights.
-        classifier: Name of classifier layer. Used by :function:``create_model`` to
+        classifier: Name of classifier layer. Used by :func:`~tfimm.create_model` to
             adapt the classifier when loading pretrained weights.
     """
 
