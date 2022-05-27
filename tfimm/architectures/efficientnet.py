@@ -113,19 +113,25 @@ class EfficientNetConfig(ModelConfig):
 
 
 # TODO: Add docstring
+# TODO: Fix model naming
+# TODO: Add unit test for all model names
 @keras_serializable
 class EfficientNet(tf.keras.Model):
-    """(Generic) EfficientNet
+    """
+    Generic EfficientNet implementation supporting depth and width scaling and flexible
+    architecture definitions, including
 
-    A flexible and performant TensorFlow implementation of efficient network 
-    architectures, including:
-    * EfficientNet B0-B8
-    * More will be added...
+    * EfficientNet B0-B8.
+
+    Parameters:
+        cfg: Configuration class for the model.
+        **kwargs: Arguments are passed to ``tf.keras.Model``.
     """
 
     cfg_class = EfficientNetConfig
 
     def __init__(self, cfg: EfficientNetConfig, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
