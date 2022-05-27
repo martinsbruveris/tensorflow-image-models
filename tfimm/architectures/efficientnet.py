@@ -19,7 +19,6 @@ The following models are available.
 """
 # Hacked together by / Copyright 2019, Ross Wightman
 # Copyright 2022 Marting Bruveris
-# TODO: Check sphinx documentation
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import List, Tuple
@@ -112,9 +111,9 @@ class EfficientNetConfig(ModelConfig):
     classifier: str = "classifier"
 
 
-# TODO: Add docstring
-# TODO: Fix model naming
 # TODO: Add unit test for all model names
+# TODO: Fix naming of all models
+# TODO: Add unit tests for EfficientNet models
 @keras_serializable
 class EfficientNet(tf.keras.Model):
     """
@@ -188,7 +187,6 @@ class EfficientNet(tf.keras.Model):
         )
 
         # TODO: Check weight initialization
-        # efficientnet_init_weights(self)
 
     @property
     def dummy_inputs(self) -> tf.Tensor:
@@ -350,3 +348,6 @@ def efficientnet_b0():
         framework="tf",
     )
     return EfficientNet, cfg
+
+# TODO: Add models B1-B8
+# TODO: Test models B1-B8
