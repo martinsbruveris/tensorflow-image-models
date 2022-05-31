@@ -150,6 +150,7 @@ class EfficientNet(tf.keras.Model):
         # Middle stages (IR/ER/DS Blocks)
         builder = EfficientNetBuilder(
             output_stride=32,
+            channel_multiplier=cfg.channel_multiplier,
             padding=cfg.padding,
             act_layer=cfg.act_layer,
             norm_layer=cfg.norm_layer,
@@ -466,6 +467,3 @@ def efficientnet_b7():
         crop_pct=0.949,
     )
     return EfficientNet, cfg
-
-
-# TODO: Test models B1-B7

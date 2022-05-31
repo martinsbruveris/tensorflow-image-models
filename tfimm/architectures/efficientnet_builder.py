@@ -125,14 +125,19 @@ def decode_architecture(
         for block_str in block_strings:
             assert isinstance(block_str, str)
             block_args = BlockArgs.decode(block_str)
-            block_args.nb_experts *= experts_multiplier
+            if block_args.nb_experts is not None:
+                block_args.nb_experts *= experts_multiplier
             if group_size is not None:
                 block_args.group_size = group_size
             stack_args.append(block_args)
 
         fix_depths = fix_first_last and stack_idx in {0, len(architecture) - 1}
         mod_multiplier = 1.0 if fix_depths else multiplier
+        if stack_idx == 2:
+            print("Stack:", stack_idx, fix_depths, mod_multiplier, depth_truncation)
+            print(stack_args)
         stack_args = _scale_stage_depth(stack_args, mod_multiplier, depth_truncation)
+
         arch_args.append(stack_args)
     return arch_args
 
@@ -147,6 +152,7 @@ class EfficientNetBuilder:
     def __init__(
         self,
         output_stride=32,
+        channel_multiplier: float = 1.0,
         padding="",
         se_from_exp=False,  # ???
         act_layer=None,
@@ -154,18 +160,13 @@ class EfficientNetBuilder:
         drop_path_rate=0.0,
     ):
         self.output_stride = output_stride
+        self.channel_multiplier = channel_multiplier
         self.padding = padding
-        self.round_chs_fn = round_channels
-        self.se_from_exp = (
-            se_from_exp  # calculate se channel reduction from expanded (mid) chs
-        )
+        # Calculate se channel reduction from expanded (mid) chs
+        self.se_from_exp = se_from_exp
         self.norm_layer = norm_layer
         self.act_layer = act_layer
         self.drop_path_rate = drop_path_rate
-
-        # state updated during build, consumed by model
-        self.in_chs = None
-        self.features = []
 
     def _make_block(
         self,
@@ -180,7 +181,7 @@ class EfficientNetBuilder:
         drop_path_rate = self.drop_path_rate * total_idx / nb_blocks
 
         block_type = block_args.block_type
-        block_args.filters = self.round_chs_fn(block_args.filters)
+        block_args.filters = round_channels(block_args.filters, self.channel_multiplier)
         block_args.padding = self.padding
         block_args.norm_layer = self.norm_layer
         # block act fn overrides the model default
@@ -195,7 +196,7 @@ class EfficientNetBuilder:
 
         if block_type == "ir":
             _log(f"  InvertedResidual {block_idx}, Args: {str(block_args)}")
-            if block_args.nb_experts > 0:
+            if block_args.nb_experts is not None:
                 # TODO: Not implemented yet
                 block = CondConvResidual(cfg=block_args, name=block_name)
             else:
