@@ -25,14 +25,15 @@ from typing import List, Tuple
 
 import tensorflow as tf
 
-from tfimm.layers import norm_layer_factory, act_layer_factory
-from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from tfimm.architectures.efficientnet_builder import (
     EfficientNetBuilder,
-    round_channels,
     decode_architecture,
+    round_channels,
 )
+from tfimm.layers import act_layer_factory, norm_layer_factory
+from tfimm.models import ModelConfig, keras_serializable, register_model
+from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+
 from .efficientnet_blocks import create_conv2d
 
 # Model registry will add each entrypoint fn to this

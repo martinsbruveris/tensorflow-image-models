@@ -5,11 +5,10 @@ Handles stride, dilation calculations, and selects feature extraction points.
 
 Hacked together by / Copyright 2019, Ross Wightman
 """
-from collections import OrderedDict
-from typing import List, Optional, Tuple, Union
-
 import math
+from collections import OrderedDict
 from copy import deepcopy
+from typing import List, Optional, Tuple, Union
 
 from tfimm.utils import make_divisible
 

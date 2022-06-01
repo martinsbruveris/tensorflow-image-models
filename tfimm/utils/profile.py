@@ -146,7 +146,7 @@ def find_max_batch_size(
     # be <0.5 GB of memory.
     cfg = registry.model_config(model_name)
     img_size = 4 * cfg.input_size[0] * cfg.input_size[1] * cfg.in_channels
-    max_memory = 5 * 10 ** 8
+    max_memory = 5 * 10**8
     # We want max batch size to be a power of 2
     max_batch_size = 2 ** math.floor(math.log2(max_memory / img_size))
 

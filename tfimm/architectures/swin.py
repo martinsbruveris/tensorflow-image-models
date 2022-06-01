@@ -178,7 +178,7 @@ class WindowAttention(tf.keras.layers.Layer):
         )
         relative_position_bias = tf.reshape(
             relative_position_bias,
-            shape=(window_size ** 2, window_size ** 2, -1),
+            shape=(window_size**2, window_size**2, -1),
         )
         relative_position_bias = tf.transpose(relative_position_bias, perm=(2, 0, 1))
         attn = attn + tf.expand_dims(relative_position_bias, axis=0)
@@ -265,7 +265,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
 
             img_mask = tf.convert_to_tensor(img_mask)
             mask_windows = window_partition(img_mask, window_size)
-            mask_windows = tf.reshape(mask_windows, shape=(-1, window_size ** 2))
+            mask_windows = tf.reshape(mask_windows, shape=(-1, window_size**2))
             attn_mask = tf.expand_dims(mask_windows, axis=1) - tf.expand_dims(
                 mask_windows, axis=2
             )
@@ -300,7 +300,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
 
         # Partition windows
         x_windows = window_partition(shifted_x, window_size)
-        x_windows = tf.reshape(x_windows, shape=(-1, window_size ** 2, c))
+        x_windows = tf.reshape(x_windows, shape=(-1, window_size**2, c))
 
         # W-MSA/SW-MSA
         attn_windows = self.attn([x_windows, self.attn_mask])
@@ -440,10 +440,10 @@ class SwinTransformer(tf.keras.Model):
                 SwinTransformerStage(
                     cfg=cfg,
                     input_size=(
-                        cfg.patch_resolution[0] // (2 ** idx),
-                        cfg.patch_resolution[1] // (2 ** idx),
+                        cfg.patch_resolution[0] // (2**idx),
+                        cfg.patch_resolution[1] // (2**idx),
                     ),
-                    embed_dim=int(cfg.embed_dim * 2 ** idx),
+                    embed_dim=int(cfg.embed_dim * 2**idx),
                     nb_blocks=cfg.nb_blocks[idx],
                     nb_heads=cfg.nb_heads[idx],
                     drop_path_rate=dpr[block_idx_from:block_idx_to],

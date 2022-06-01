@@ -9,8 +9,8 @@ from tfimm.layers import (
     FanoutInitializer,
     PadConv2D,
     PadDepthwiseConv2D,
-    norm_layer_factory,
     act_layer_factory,
+    norm_layer_factory,
 )
 from tfimm.utils import make_divisible
 

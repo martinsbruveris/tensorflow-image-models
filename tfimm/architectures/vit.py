@@ -104,7 +104,7 @@ class ViTConfig(ModelConfig):
         if self.patch_layer == "hybrid_embeddings":
             # 2 reductions in the stem, 1 reduction in each stage except the first one
             reductions = 2 + max(len(self.patch_nb_blocks) - 1, 0)
-            stride = 2 ** reductions
+            stride = 2**reductions
             grid_size = (grid_size[0] // stride, grid_size[1] // stride)
         return grid_size
 
@@ -136,7 +136,7 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
         self.attn_drop_rate = attn_drop_rate
 
         head_dim = embed_dim // nb_heads
-        self.scale = head_dim ** -0.5
+        self.scale = head_dim**-0.5
 
         self.qkv = tf.keras.layers.Dense(
             units=3 * embed_dim, use_bias=qkv_bias, name="qkv"
