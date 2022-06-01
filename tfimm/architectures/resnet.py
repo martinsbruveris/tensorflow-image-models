@@ -456,6 +456,7 @@ class ResNet(tf.keras.Model):
     keys_to_ignore_on_load_missing = ["blur_kernel"]
 
     def __init__(self, cfg: ResNetConfig, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.cfg = cfg
 

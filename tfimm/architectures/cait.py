@@ -319,6 +319,7 @@ class CaiT(tf.keras.Model):
     cfg_class = CaiTConfig
 
     def __init__(self, cfg: CaiTConfig, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.nb_features = cfg.embed_dim

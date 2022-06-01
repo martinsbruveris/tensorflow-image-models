@@ -252,6 +252,7 @@ class PyramidVisionTransformer(tf.keras.Model):
     cfg_class = PyramidVisionTransformerConfig
 
     def __init__(self, cfg: PyramidVisionTransformerConfig, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
 

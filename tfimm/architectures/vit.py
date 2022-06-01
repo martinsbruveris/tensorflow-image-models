@@ -292,6 +292,7 @@ class ViT(tf.keras.Model):
     cfg_class = ViTConfig
 
     def __init__(self, cfg: ViTConfig, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.nb_features = cfg.embed_dim  # For consistency with other models
         self.norm_layer = norm_layer_factory(cfg.norm_layer)

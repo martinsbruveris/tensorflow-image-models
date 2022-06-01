@@ -112,8 +112,6 @@ class EfficientNetConfig(ModelConfig):
     classifier: str = "classifier"
 
 
-# TODO: Add unit test for all model names
-# TODO: Fix naming of all models
 # TODO: Add unit tests for EfficientNet models
 @keras_serializable
 class EfficientNet(tf.keras.Model):

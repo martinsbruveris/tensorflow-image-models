@@ -45,7 +45,7 @@ from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 # Model registry will add each entrypoint fn to this
-__all__ = ["PoolingVisionTransformerConfig", "PoolingVisionTransformer"]
+__all__ = ["PoolingVisionTransformer", "PoolingVisionTransformerConfig"]
 
 
 @dataclass
@@ -204,6 +204,7 @@ class PoolingVisionTransformer(tf.keras.Model):
     cfg_class = PoolingVisionTransformerConfig
 
     def __init__(self, cfg: PoolingVisionTransformerConfig, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
         norm_layer = norm_layer_factory(cfg.norm_layer)

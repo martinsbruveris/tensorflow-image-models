@@ -180,6 +180,17 @@ def test_change_input_size_inference(model_name):
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
+def test_model_name_keras(model_name):
+    """
+    We test if model.name == model.cfg.name, i.e., the keras model name is set
+    correctly.
+    """
+    tf.keras.backend.clear_session()
+    model = create_model(model_name)
+    assert model.name == model_name == model.cfg.name
+
+
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
 def test_variable_prefix(model_name):
     """
     We test if all model variables are created under the correct prefix

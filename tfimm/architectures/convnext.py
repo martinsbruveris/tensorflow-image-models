@@ -310,6 +310,7 @@ class ConvNeXt(tf.keras.Model):
     cfg_class = ConvNeXtConfig
 
     def __init__(self, cfg: ConvNeXtConfig, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
         norm_layer = norm_layer_factory(cfg.norm_layer)

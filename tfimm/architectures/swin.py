@@ -412,6 +412,7 @@ class SwinTransformer(tf.keras.Model):
     cfg_class = SwinTransformerConfig
 
     def __init__(self, cfg: SwinTransformerConfig, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
