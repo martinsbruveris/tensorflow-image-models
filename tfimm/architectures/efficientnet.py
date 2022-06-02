@@ -465,3 +465,20 @@ def efficientnet_b7():
         crop_pct=0.949,
     )
     return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b8():
+    """EfficientNet-B8. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b8",
+        timm_name="tf_efficientnet_b8",
+        input_size=(600, 600),
+        channel_multiplier=2.2,
+        depth_multiplier=3.6,
+        drop_rate=0.5,
+        drop_path_rate=0.5,
+        framework="tf",
+        crop_pct=0.954,
+    )
+    return EfficientNet, cfg

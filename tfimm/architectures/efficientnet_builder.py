@@ -132,9 +132,6 @@ def decode_architecture(
 
         fix_depths = fix_first_last and stack_idx in {0, len(architecture) - 1}
         mod_multiplier = 1.0 if fix_depths else multiplier
-        if stack_idx == 2:
-            print("Stack:", stack_idx, fix_depths, mod_multiplier, depth_truncation)
-            print(stack_args)
         stack_args = _scale_stage_depth(stack_args, mod_multiplier, depth_truncation)
 
         arch_args.append(stack_args)
