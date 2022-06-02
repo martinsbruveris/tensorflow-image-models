@@ -354,6 +354,7 @@ def _conv_filter(state_dict, patch_size=16):
 
 @register_model
 def pvt_tiny(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -372,6 +373,7 @@ def pvt_tiny(pretrained=False, **kwargs):
 
 @register_model
 def pvt_small(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -390,6 +392,7 @@ def pvt_small(pretrained=False, **kwargs):
 
 @register_model
 def pvt_medium(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -408,6 +411,7 @@ def pvt_medium(pretrained=False, **kwargs):
 
 @register_model
 def pvt_large(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -426,6 +430,7 @@ def pvt_large(pretrained=False, **kwargs):
 
 @register_model
 def pvt_huge_v2(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[128, 256, 512, 768],

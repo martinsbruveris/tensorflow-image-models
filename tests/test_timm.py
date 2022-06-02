@@ -1,3 +1,5 @@
+from typing import Tuple, Union
+
 import numpy as np
 import pytest
 import tensorflow as tf
@@ -12,6 +14,7 @@ TIMM_ARCHITECTURES = [
     "cait_xxs24_224",  # cait.py
     "convmixer_768_32",  # convmixer.py
     "convnext_tiny",  # convnext.py
+    ("efficientnet_b0", "tf_efficientnet_b0"),  # efficientnet.py
     "mixer_s32_224",  # mlp_mixer.py
     "resmlp_12_224",
     "gmlp_ti16_224",
@@ -31,15 +34,21 @@ TIMM_ARCHITECTURES = [
 
 
 @pytest.mark.parametrize("model_name", TIMM_ARCHITECTURES)
-def test_load_timm_model(model_name: str):
+def test_load_timm_model(model_name: Union[str, Tuple[str, str]]):
     """Test if we can load models from timm."""
+    # To cater for those models, where TIMM name differs from TFIMM name
+    if isinstance(model_name, tuple):
+        tf_model_name, pt_model_name = model_name
+    else:
+        tf_model_name = pt_model_name = model_name
+
     # We don't need to load the pretrained weights from timm, we only need a PyTorch
     # model, that we then convert to tensorflow. This allows us to run these tests
     # in GitHub CI without data transfer issues.
-    pt_model = timm.create_model(model_name, pretrained=False)
+    pt_model = timm.create_model(pt_model_name, pretrained=False)
     pt_model.eval()
 
-    tf_model = create_model(model_name, pretrained=False)
+    tf_model = create_model(tf_model_name, pretrained=False)
     load_pytorch_weights_in_tf2_model(tf_model, pt_model.state_dict())
 
     rng = np.random.default_rng(2021)

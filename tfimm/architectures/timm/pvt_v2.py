@@ -442,6 +442,7 @@ def _conv_filter(state_dict, patch_size=16):
 
 @register_model
 def pvt_v2_b0(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[32, 64, 160, 256],
@@ -460,6 +461,7 @@ def pvt_v2_b0(pretrained=False, **kwargs):
 
 @register_model
 def pvt_v2_b1(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -478,6 +480,7 @@ def pvt_v2_b1(pretrained=False, **kwargs):
 
 @register_model
 def pvt_v2_b2(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -496,6 +499,7 @@ def pvt_v2_b2(pretrained=False, **kwargs):
 
 @register_model
 def pvt_v2_b3(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -514,6 +518,7 @@ def pvt_v2_b3(pretrained=False, **kwargs):
 
 @register_model
 def pvt_v2_b4(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -532,6 +537,7 @@ def pvt_v2_b4(pretrained=False, **kwargs):
 
 @register_model
 def pvt_v2_b5(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -550,6 +556,7 @@ def pvt_v2_b5(pretrained=False, **kwargs):
 
 @register_model
 def pvt_v2_b2_li(pretrained=False, **kwargs):
+    kwargs.pop("pretrained_cfg", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
