@@ -368,7 +368,7 @@ class PoolFormer(nn.Module):
             self.out_indices = [0, 2, 4, 6]
             for i_emb, i_layer in enumerate(self.out_indices):
                 if i_emb == 0 and os.environ.get("FORK_LAST3", None):
-                    # TODO: more elegant way
+                    # TODOs: more elegant way
                     """For RetinaNet, `start_level=1`. The first norm layer will not used.
                     cmd: `FORK_LAST3=1 python -m torch.distributed.launch ...`
                     """

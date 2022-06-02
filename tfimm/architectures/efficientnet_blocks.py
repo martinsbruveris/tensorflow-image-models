@@ -183,7 +183,6 @@ class BlockArgs:
             return self.filters // self.group_size
 
 
-# TODO: Fix comment string
 class SqueezeExcite(tf.keras.layers.Layer):
     """
     Squeeze-and-Excitation layer with specific features for the EfficientNet family.
