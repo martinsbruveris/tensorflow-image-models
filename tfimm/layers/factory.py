@@ -24,10 +24,10 @@ def norm_layer_factory(norm_layer: str):
         }
         return lambda **kwargs: bn_class(**bn_args, **kwargs)
 
-    elif norm_layer == "batch_norm_tf":  # Batch norm with TF defaults
+    elif norm_layer == "batch_norm_tf":  # Batch norm with TF default for epsilon
         bn_class = tf.keras.layers.BatchNormalization
         bn_args = {
-            "momentum": 0.99,
+            "momentum": 0.9,
             "epsilon": 1e-3,
         }
         return lambda **kwargs: bn_class(**bn_args, **kwargs)
