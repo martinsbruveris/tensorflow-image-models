@@ -12,7 +12,12 @@ from typing import List, Optional, Tuple, Union
 
 from tfimm.utils import make_divisible
 
-from .efficientnet_blocks import BlockArgs, DepthwiseSeparableConv, InvertedResidual
+from .efficientnet_blocks import (
+    BlockArgs,
+    DepthwiseSeparableConv,
+    EdgeResidual,
+    InvertedResidual,
+)
 
 _DEBUG_BUILDER = False
 
@@ -178,6 +183,10 @@ class EfficientNetBuilder:
 
         block_type = block_args.block_type
         block_args.filters = round_channels(block_args.filters, self.channel_multiplier)
+        if block_args.force_in_channels is not None:
+            block_args.force_in_channels = round_channels(
+                block_args.force_in_channels, self.channel_multiplier
+            )
         block_args.padding = self.padding
         block_args.norm_layer = self.norm_layer
         # block act fn overrides the model default
@@ -191,27 +200,23 @@ class EfficientNetBuilder:
             block_args.se_ratio /= block_args.exp_ratio
 
         if block_type == "ir":
-            _log(f"  InvertedResidual {block_idx}, Args: {str(block_args)}")
             if block_args.nb_experts is not None:
                 # TODO: Not implemented yet
-                block = CondConvResidual(cfg=block_args, name=block_name)
+                _log(f"  CondConvResidual {block_idx}, Args: {str(block_args)}")
+                block = CondConvResidual(cfg=block_args, name=block_name)  # noqa: F821
             else:
+                _log(f"  InvertedResidual {block_idx}, Args: {str(block_args)}")
                 block = InvertedResidual(cfg=block_args, name=block_name)
         elif block_type in {"ds", "dsa"}:
             _log(f"  DepthwiseSeparable {block_idx}, Args: {str(block_args)}")
             block = DepthwiseSeparableConv(cfg=block_args, name=block_name)
         elif block_type == "er":
-            # TODO: Not implemented yet
-            _log_info_if(
-                "  EdgeResidual {}, Args: {}".format(block_idx, str(ba)), self.verbose
-            )
-            block = EdgeResidual(**ba)
+            _log(f"  EdgeResidual {block_idx}, Args: {str(block_args)}")
+            block = EdgeResidual(cfg=block_args, name=block_name)
         elif block_type == "cn":
             # TODO: Not implemented yet
-            _log_info_if(
-                "  ConvBnAct {}, Args: {}".format(block_idx, str(ba)), self.verbose
-            )
-            block = ConvBnAct(**ba)
+            _log(f"  ConvBnAct {block_idx}, Args: {str(block_args)}")
+            block = ConvBnAct(cfg=block_args, name=block_name)  # noqa: F821
         else:
             raise ValueError(f"Unknown block type {block_type} while building model.")
 

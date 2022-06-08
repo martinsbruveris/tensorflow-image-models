@@ -32,7 +32,12 @@ from tfimm.architectures.efficientnet_builder import (
 )
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
+from tfimm.utils import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
+    IMAGENET_INCEPTION_MEAN,
+    IMAGENET_INCEPTION_STD,
+)
 
 from .efficientnet_blocks import create_conv2d
 
@@ -40,6 +45,7 @@ from .efficientnet_blocks import create_conv2d
 __all__ = ["EfficientNetConfig", "EfficientNet"]
 
 # TODO: Fix list_timm_models with two different model names.
+
 
 @dataclass
 class EfficientNetConfig(ModelConfig):
@@ -281,7 +287,7 @@ def _efficientnet_cfg(
     """
     Creates the config for an EfficientNet model.
 
-    Ref impl: https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
+    Ref impl: https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py  # noqa: E501
     Paper: https://arxiv.org/abs/1905.11946
 
     Args:
@@ -812,5 +818,115 @@ def pt_efficientnet_b4():
         input_size=(320, 320),
         framework="pytorch",
         crop_pct=1.0,
+    )
+    return EfficientNet, cfg
+
+
+def _efficientnet_edge_cfg(
+    name: str,
+    timm_name: str,
+    variant: str,
+    input_size: Tuple[int, int],
+    framework: str,
+    crop_pct: float,
+    mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN,
+    std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD,
+):
+    """
+    Creates the config for an EfficientNet model.
+
+    Ref impl: https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py  # noqa: E501
+    Paper: https://arxiv.org/abs/1905.11946
+
+    Args:
+        name: Model name
+        timm_name: Model name in TIMM
+        variant: Model variant, e.g., "b0", etc.
+        framework: "tf" or "pytorch" for BN params and padding
+        crop_pct: Crop percentage for ImageNet evaluation
+    """
+    assert framework in {"tf", "pytorch"}
+
+    param_dict = {
+        "es": (1.0, 1.0, 0.2),
+        "em": (1.0, 1.1, 0.2),
+        "el": (1.2, 1.4, 0.3),
+    }
+    channel_multiplier, depth_multiplier, drop_rate = param_dict[variant]
+
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        input_size=input_size,
+        stem_size=round_channels(32, multiplier=channel_multiplier),
+        architecture=(
+            # Note: "fc" is present to override a mismatch between stem channels and
+            # in channels not present in other models
+            ("er_r1_k3_s1_e4_c24_fc24_noskip",),
+            ("er_r2_k3_s2_e8_c32",),
+            ("er_r4_k3_s2_e8_c48",),
+            ("ir_r5_k5_s2_e8_c96",),
+            ("ir_r4_k5_s1_e8_c144",),
+            ("ir_r2_k5_s2_e8_c192",),
+        ),
+        channel_multiplier=channel_multiplier,
+        depth_multiplier=depth_multiplier,
+        nb_features=round_channels(1280, multiplier=channel_multiplier),
+        drop_rate=drop_rate,
+        drop_path_rate=drop_rate,
+        norm_layer="batch_norm_tf" if framework == "tf" else "batch_norm",
+        act_layer="relu",
+        padding="same" if framework == "tf" else "symmetric",
+        crop_pct=crop_pct,
+        mean=mean,
+        std=std,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_es():
+    """EfficientNet-Edge Small. Tensorflow compatible variant."""
+    cfg = _efficientnet_edge_cfg(
+        name="efficientnet_es",
+        timm_name="tf_efficientnet_es",
+        variant="es",
+        input_size=(224, 224),
+        framework="tf",
+        crop_pct=0.875,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_em():
+    """EfficientNet-Edge Medium. Tensorflow compatible variant."""
+    cfg = _efficientnet_edge_cfg(
+        name="efficientnet_em",
+        timm_name="tf_efficientnet_em",
+        variant="em",
+        input_size=(240, 240),
+        framework="tf",
+        crop_pct=0.882,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_el():
+    """EfficientNet-Edge Large. Tensorflow compatible variant."""
+    cfg = _efficientnet_edge_cfg(
+        name="efficientnet_el",
+        timm_name="tf_efficientnet_el",
+        variant="el",
+        input_size=(300, 300),
+        framework="tf",
+        crop_pct=0.904,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
     )
     return EfficientNet, cfg

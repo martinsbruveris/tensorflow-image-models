@@ -93,6 +93,8 @@ class BlockArgs:
     nb_repeats: int
     nb_experts: Optional[int]
     filters: int
+    # Used to deal with in_channels issue in EdgeResidual blocks
+    force_in_channels: Optional[int]
     exp_kernel_size: Tuple[int, int]
     dw_kernel_size: Tuple[int, int]
     pw_kernel_size: Tuple[int, int]
@@ -148,6 +150,7 @@ class BlockArgs:
             nb_repeats=int(options.get("r")),
             nb_experts=int(options.get("cc", 0)) or None,
             filters=int(options.get("c")),
+            force_in_channels=int(options.get("fc", 0)) or None,
             exp_kernel_size=exp_kernel_size,
             dw_kernel_size=dw_kernel_size,
             pw_kernel_size=BlockArgs._parse_ksize(options.get("p", "1")),
@@ -399,6 +402,88 @@ class InvertedResidual(tf.keras.layers.Layer):
             x = self.se(x, training=training)
         x = self.conv_pwl(x)
         x = self.bn3(x, training=training)
+        if self.skip_connection:
+            x = self.drop_path(x, training=training)
+            x = x + shortcut
+        return x
+
+
+class EdgeResidual(tf.keras.layers.Layer):
+    """
+    Residual block with expansion convolution followed by pointwise-linear w/ stride
+
+    Originally introduced in `EfficientNet-EdgeTPU: Creating Accelerator-Optimized
+    Neural Networks with AutoML`
+    * https://ai.googleblog.com/2019/08/efficientnet-edgetpu-creating.html
+
+    This layer is also called FusedMBConv in the MobileDet, EfficientNet-X, and
+    EfficientNet-V2 papers
+    * MobileDet - https://arxiv.org/abs/2004.14525
+    * EfficientNet-X - https://arxiv.org/abs/2102.05610
+    * EfficientNet-V2 - https://arxiv.org/abs/2104.00298
+    """
+
+    def __init__(self, cfg: BlockArgs, **kwargs):
+        super().__init__(**kwargs)
+        self.cfg = cfg
+        # This depends on number of input channels and is set during build phase
+        self.skip_connection = None
+
+        norm_layer = norm_layer_factory(cfg.norm_layer)
+        act_layer = act_layer_factory(cfg.act_layer)
+
+        # Point-wise expansion
+        self.conv_exp = None
+        self.bn1 = norm_layer(name="bn1")
+        self.act1 = act_layer()
+
+        # Squeeze-and-excitation
+        self.se = (
+            SqueezeExcite(rd_ratio=cfg.se_ratio, act_layer=cfg.act_layer, name="se")
+            if cfg.use_se and cfg.se_ratio > 0.0
+            else None
+        )
+
+        # Point-wise linear projection
+        self.conv_pwl = create_conv2d(
+            filters=cfg.filters,
+            kernel_size=cfg.pw_kernel_size,
+            padding=cfg.padding,
+            name="conv_pwl",
+        )
+        self.bn2 = norm_layer(name="bn2")
+        self.drop_path = None
+
+    def build(self, input_shape):
+        in_channels = input_shape[-1]
+        self.skip_connection = (
+            self.cfg.stride == 1
+            and self.cfg.filters == in_channels
+            and self.cfg.skip_connection
+        )
+        # If force_in_channels is set, we use that value for the purpose of calculating
+        # the number of filters in the convolution
+        force_in_channels = self.cfg.force_in_channels or in_channels
+        self.conv_exp = create_conv2d(
+            filters=make_divisible(force_in_channels * self.cfg.exp_ratio, 8),
+            kernel_size=self.cfg.exp_kernel_size,
+            strides=self.cfg.stride,
+            padding=self.cfg.padding,
+            nb_groups=self.cfg.nb_groups,
+            name="conv_exp",
+        )
+        if self.skip_connection:
+            self.drop_path = DropPath(drop_prob=self.cfg.drop_path_rate)
+
+    def call(self, x, training: bool = False):
+        shortcut = x
+        x = self.conv_exp(x)
+        x = self.bn1(x, training=training)
+        x = self.act1(x)
+        if self.se is not None:
+            x = self.se(x, training=training)
+        x = self.conv_pwl(x)
+        x = self.bn2(x, training=training)
         if self.skip_connection:
             x = self.drop_path(x, training=training)
             x = x + shortcut

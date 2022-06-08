@@ -101,6 +101,7 @@ def efficientnet_test_model():
         architecture=(
             ("ds_r1_k3_s1_e1_c16_se0.25",),
             ("ir_r2_k3_s2_e6_c24_se0.25",),
+            ("er_r1_k3_s1_e4_c24_fc24_noskip",),
         ),
         nb_features=32,
     )
