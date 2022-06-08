@@ -32,13 +32,14 @@ from tfimm.architectures.efficientnet_builder import (
 )
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, IMAGENET_INCEPTION_MEAN, IMAGENET_INCEPTION_STD
 
 from .efficientnet_blocks import create_conv2d
 
 # Model registry will add each entrypoint fn to this
 __all__ = ["EfficientNetConfig", "EfficientNet"]
 
+# TODO: Fix list_timm_models with two different model names.
 
 @dataclass
 class EfficientNetConfig(ModelConfig):
@@ -270,13 +271,12 @@ class EfficientNet(tf.keras.Model):
 def _efficientnet_cfg(
     name: str,
     timm_name: str,
+    variant: str,
     input_size: Tuple[int, int],
-    channel_multiplier: float,
-    depth_multiplier: float,
-    drop_rate: float,
-    drop_path_rate: float,
     framework: str,
     crop_pct: float,
+    mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN,
+    std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD,
 ):
     """
     Creates the config for an EfficientNet model.
@@ -284,26 +284,29 @@ def _efficientnet_cfg(
     Ref impl: https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py
     Paper: https://arxiv.org/abs/1905.11946
 
-    EfficientNet params
-    name: (channel_multiplier, depth_multiplier, resolution, dropout_rate)
-    "efficientnet-b0": (1.0, 1.0, 224, 0.2),
-    "efficientnet-b1": (1.0, 1.1, 240, 0.2),
-    "efficientnet-b2": (1.1, 1.2, 260, 0.3),
-    "efficientnet-b3": (1.2, 1.4, 300, 0.3),
-    "efficientnet-b4": (1.4, 1.8, 380, 0.4),
-    "efficientnet-b5": (1.6, 2.2, 456, 0.4),
-    "efficientnet-b6": (1.8, 2.6, 528, 0.5),
-    "efficientnet-b7": (2.0, 3.1, 600, 0.5),
-    "efficientnet-b8": (2.2, 3.6, 672, 0.5),
-    "efficientnet-l2": (4.3, 5.3, 800, 0.5),
-
     Args:
         name: Model name
-        channel_multiplier: Multiplier to number of channels per layer
-        depth_multiplier: Multiplier to number of repeats per stage
+        timm_name: Model name in TIMM
+        variant: Model variant, e.g., "b0", etc.
         framework: "tf" or "pytorch" for BN params and padding
+        crop_pct: Crop percentage for ImageNet evaluation
     """
     assert framework in {"tf", "pytorch"}
+
+    param_dict = {
+        "b0": (1.0, 1.0, 0.2),
+        "b1": (1.0, 1.1, 0.2),
+        "b2": (1.1, 1.2, 0.3),
+        "b3": (1.2, 1.4, 0.3),
+        "b4": (1.4, 1.8, 0.4),
+        "b5": (1.6, 2.2, 0.4),
+        "b6": (1.8, 2.6, 0.5),
+        "b7": (2.0, 3.1, 0.5),
+        "b8": (2.2, 3.6, 0.5),
+        "l2": (4.3, 5.3, 0.5),
+    }
+    channel_multiplier, depth_multiplier, drop_rate = param_dict[variant]
+
     cfg = EfficientNetConfig(
         name=name,
         url="[timm]" + timm_name,
@@ -322,11 +325,13 @@ def _efficientnet_cfg(
         depth_multiplier=depth_multiplier,
         nb_features=round_channels(1280, multiplier=channel_multiplier),
         drop_rate=drop_rate,
-        drop_path_rate=drop_path_rate,
+        drop_path_rate=drop_rate,
         norm_layer="batch_norm_tf" if framework == "tf" else "batch_norm",
         act_layer="swish",
         padding="same" if framework == "tf" else "symmetric",
         crop_pct=crop_pct,
+        mean=mean,
+        std=std,
     )
     return cfg
 
@@ -337,11 +342,8 @@ def efficientnet_b0():
     cfg = _efficientnet_cfg(
         name="efficientnet_b0",
         timm_name="tf_efficientnet_b0",
+        variant="b0",
         input_size=(224, 224),
-        channel_multiplier=1.0,
-        depth_multiplier=1.0,
-        drop_rate=0.2,
-        drop_path_rate=0.2,
         framework="tf",
         crop_pct=0.875,
     )
@@ -354,11 +356,8 @@ def efficientnet_b1():
     cfg = _efficientnet_cfg(
         name="efficientnet_b1",
         timm_name="tf_efficientnet_b1",
+        variant="b1",
         input_size=(240, 240),
-        channel_multiplier=1.0,
-        depth_multiplier=1.1,
-        drop_rate=0.2,
-        drop_path_rate=0.2,
         framework="tf",
         crop_pct=0.882,
     )
@@ -371,11 +370,8 @@ def efficientnet_b2():
     cfg = _efficientnet_cfg(
         name="efficientnet_b2",
         timm_name="tf_efficientnet_b2",
+        variant="b2",
         input_size=(260, 260),
-        channel_multiplier=1.1,
-        depth_multiplier=1.2,
-        drop_rate=0.3,
-        drop_path_rate=0.3,
         framework="tf",
         crop_pct=0.890,
     )
@@ -388,11 +384,8 @@ def efficientnet_b3():
     cfg = _efficientnet_cfg(
         name="efficientnet_b3",
         timm_name="tf_efficientnet_b3",
+        variant="b3",
         input_size=(300, 300),
-        channel_multiplier=1.2,
-        depth_multiplier=1.4,
-        drop_rate=0.3,
-        drop_path_rate=0.3,
         framework="tf",
         crop_pct=0.904,
     )
@@ -405,11 +398,8 @@ def efficientnet_b4():
     cfg = _efficientnet_cfg(
         name="efficientnet_b4",
         timm_name="tf_efficientnet_b4",
+        variant="b4",
         input_size=(380, 380),
-        channel_multiplier=1.4,
-        depth_multiplier=1.8,
-        drop_rate=0.4,
-        drop_path_rate=0.4,
         framework="tf",
         crop_pct=0.922,
     )
@@ -422,11 +412,8 @@ def efficientnet_b5():
     cfg = _efficientnet_cfg(
         name="efficientnet_b5",
         timm_name="tf_efficientnet_b5",
+        variant="b5",
         input_size=(456, 456),
-        channel_multiplier=1.6,
-        depth_multiplier=2.2,
-        drop_rate=0.4,
-        drop_path_rate=0.4,
         framework="tf",
         crop_pct=0.934,
     )
@@ -439,11 +426,8 @@ def efficientnet_b6():
     cfg = _efficientnet_cfg(
         name="efficientnet_b6",
         timm_name="tf_efficientnet_b6",
+        variant="b6",
         input_size=(528, 528),
-        channel_multiplier=1.8,
-        depth_multiplier=2.6,
-        drop_rate=0.5,
-        drop_path_rate=0.5,
         framework="tf",
         crop_pct=0.942,
     )
@@ -456,11 +440,8 @@ def efficientnet_b7():
     cfg = _efficientnet_cfg(
         name="efficientnet_b7",
         timm_name="tf_efficientnet_b7",
+        variant="b7",
         input_size=(600, 600),
-        channel_multiplier=2.0,
-        depth_multiplier=3.1,
-        drop_rate=0.5,
-        drop_path_rate=0.5,
         framework="tf",
         crop_pct=0.949,
     )
@@ -473,12 +454,363 @@ def efficientnet_b8():
     cfg = _efficientnet_cfg(
         name="efficientnet_b8",
         timm_name="tf_efficientnet_b8",
-        input_size=(600, 600),
-        channel_multiplier=2.2,
-        depth_multiplier=3.6,
-        drop_rate=0.5,
-        drop_path_rate=0.5,
+        variant="b8",
+        input_size=(672, 672),
         framework="tf",
         crop_pct=0.954,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b0_ap():
+    """EfficientNet-B0 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b0_ap",
+        timm_name="tf_efficientnet_b0_ap",
+        variant="b0",
+        input_size=(224, 224),
+        framework="tf",
+        crop_pct=0.875,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b1_ap():
+    """EfficientNet-B1 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b1_ap",
+        timm_name="tf_efficientnet_b1_ap",
+        variant="b1",
+        input_size=(240, 240),
+        framework="tf",
+        crop_pct=0.882,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b2_ap():
+    """EfficientNet-B2 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b2_ap",
+        timm_name="tf_efficientnet_b2_ap",
+        variant="b2",
+        input_size=(260, 260),
+        framework="tf",
+        crop_pct=0.890,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b3_ap():
+    """EfficientNet-B3 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b3_ap",
+        timm_name="tf_efficientnet_b3_ap",
+        variant="b3",
+        input_size=(300, 300),
+        framework="tf",
+        crop_pct=0.904,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b4_ap():
+    """EfficientNet-B4 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b4_ap",
+        timm_name="tf_efficientnet_b4_ap",
+        variant="b4",
+        input_size=(380, 380),
+        framework="tf",
+        crop_pct=0.922,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b5_ap():
+    """EfficientNet-B5 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b5_ap",
+        timm_name="tf_efficientnet_b5_ap",
+        variant="b5",
+        input_size=(456, 456),
+        framework="tf",
+        crop_pct=0.934,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b6_ap():
+    """EfficientNet-B6 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b6_ap",
+        timm_name="tf_efficientnet_b6_ap",
+        variant="b6",
+        input_size=(528, 528),
+        framework="tf",
+        crop_pct=0.942,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b7_ap():
+    """EfficientNet-B7 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b7_ap",
+        timm_name="tf_efficientnet_b7_ap",
+        variant="b7",
+        input_size=(600, 600),
+        framework="tf",
+        crop_pct=0.949,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b8_ap():
+    """EfficientNet-B8 AdvProp. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b8_ap",
+        timm_name="tf_efficientnet_b8_ap",
+        variant="b8",
+        input_size=(672, 672),
+        framework="tf",
+        crop_pct=0.954,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b0_ns():
+    """EfficientNet-B0 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b0_ns",
+        timm_name="tf_efficientnet_b0_ns",
+        variant="b0",
+        input_size=(224, 224),
+        framework="tf",
+        crop_pct=0.875,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b1_ns():
+    """EfficientNet-B1 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b1_ns",
+        timm_name="tf_efficientnet_b1_ns",
+        variant="b1",
+        input_size=(240, 240),
+        framework="tf",
+        crop_pct=0.882,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b2_ns():
+    """EfficientNet-B2 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b2_ns",
+        timm_name="tf_efficientnet_b2_ns",
+        variant="b2",
+        input_size=(260, 260),
+        framework="tf",
+        crop_pct=0.890,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b3_ns():
+    """EfficientNet-B3 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b3_ns",
+        timm_name="tf_efficientnet_b3_ns",
+        variant="b3",
+        input_size=(300, 300),
+        framework="tf",
+        crop_pct=0.904,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b4_ns():
+    """EfficientNet-B4 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b4_ns",
+        timm_name="tf_efficientnet_b4_ns",
+        variant="b4",
+        input_size=(380, 380),
+        framework="tf",
+        crop_pct=0.922,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b5_ns():
+    """EfficientNet-B5 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b5_ns",
+        timm_name="tf_efficientnet_b5_ns",
+        variant="b5",
+        input_size=(456, 456),
+        framework="tf",
+        crop_pct=0.934,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b6_ns():
+    """EfficientNet-B6 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b6_ns",
+        timm_name="tf_efficientnet_b6_ns",
+        variant="b6",
+        input_size=(528, 528),
+        framework="tf",
+        crop_pct=0.942,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_b7_ns():
+    """EfficientNet-B7 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_b7_ns",
+        timm_name="tf_efficientnet_b7_ns",
+        variant="b7",
+        input_size=(600, 600),
+        framework="tf",
+        crop_pct=0.949,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_l2_ns_475():
+    """EfficientNet-L2 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_l2_ns_475",
+        timm_name="tf_efficientnet_l2_ns_475",
+        variant="l2",
+        input_size=(475, 475),
+        framework="tf",
+        crop_pct=0.936,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_l2_ns():
+    """EfficientNet-L2 NoisyStudent. Tensorflow compatible variant."""
+    cfg = _efficientnet_cfg(
+        name="efficientnet_l2_ns",
+        timm_name="tf_efficientnet_l2_ns",
+        variant="l2",
+        input_size=(800, 800),
+        framework="tf",
+        crop_pct=0.96,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def pt_efficientnet_b0():
+    """EfficientNet-B0. Default version from TIMM."""
+    cfg = _efficientnet_cfg(
+        name="pt_efficientnet_b0",
+        timm_name="efficientnet_b0",
+        variant="b0",
+        input_size=(224, 224),
+        framework="pytorch",
+        crop_pct=0.875,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def pt_efficientnet_b1():
+    """EfficientNet-B1. Default version from TIMM."""
+    cfg = _efficientnet_cfg(
+        name="pt_efficientnet_b1",
+        timm_name="efficientnet_b1",
+        variant="b1",
+        input_size=(256, 256),
+        framework="pytorch",
+        crop_pct=1.0,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def pt_efficientnet_b2():
+    """EfficientNet-B2. Default version from TIMM."""
+    cfg = _efficientnet_cfg(
+        name="pt_efficientnet_b2",
+        timm_name="efficientnet_b2",
+        variant="b2",
+        input_size=(256, 256),
+        framework="pytorch",
+        crop_pct=1.0,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def pt_efficientnet_b3():
+    """EfficientNet-B3. Default version from TIMM."""
+    cfg = _efficientnet_cfg(
+        name="pt_efficientnet_b3",
+        timm_name="efficientnet_b3",
+        variant="b3",
+        input_size=(288, 288),
+        framework="pytorch",
+        crop_pct=1.0,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def pt_efficientnet_b4():
+    """EfficientNet-B4. Default version from TIMM."""
+    cfg = _efficientnet_cfg(
+        name="pt_efficientnet_b4",
+        timm_name="efficientnet_b4",
+        variant="b4",
+        input_size=(320, 320),
+        framework="pytorch",
+        crop_pct=1.0,
     )
     return EfficientNet, cfg
