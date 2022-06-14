@@ -275,13 +275,13 @@ class EfficientNet(tf.keras.Model):
         x = self.classifier(x)
         features["logits"] = x
         return (x, features) if return_features else x
-    
+
 
 def _mobilenet_v2_cfg(
     name: str,
     timm_name: str,
-    channel_multiplier: float = 1.0, 
-    depth_multiplier: float = 1.0, 
+    channel_multiplier: float = 1.0,
+    depth_multiplier: float = 1.0,
     fix_stem_head: bool = False,
     crop_pct: float = 0.875,
     mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN,
@@ -289,10 +289,10 @@ def _mobilenet_v2_cfg(
 ):
     """
     Creates the config for a MobileNet-v2 model.
-    
+
     Ref impl: https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet_v2.py  # noqa: E501
     Paper: https://arxiv.org/abs/1801.04381
-    
+
     Args:
         name: Model name
         timm_name: Name of model in TIMM
@@ -1069,7 +1069,7 @@ def _efficientnet_v2_base_cfg(
     }
     channel_multiplier, depth_multiplier, drop_rate = param_dict[variant]
     round_chs_fn = partial(
-        round_channels, multiplier=channel_multiplier, round_limit=0.
+        round_channels, multiplier=channel_multiplier, round_limit=0.0
     )
     cfg = EfficientNetConfig(
         name=name,
