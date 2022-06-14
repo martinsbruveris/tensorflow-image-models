@@ -1,5 +1,9 @@
 # Change Log
 
+## Unpublished
+
+- Added EfficinentNet and MobileNet-V2 models.
+
 ## v0.2.6 - 2022-05-13
 
 - Added tiny and small ConvNeXt models.
