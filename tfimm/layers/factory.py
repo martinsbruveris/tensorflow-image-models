@@ -7,6 +7,8 @@ def act_layer_factory(act_layer: str):
     """Returns a function that creates the required activation layer."""
     if act_layer in {"linear", "swish", "relu", "gelu", "sigmoid"}:
         return lambda **kwargs: tf.keras.layers.Activation(act_layer, **kwargs)
+    if act_layer == "relu6":
+        return lambda **kwargs: tf.keras.layers.ReLU(max_value=6, **kwargs)
     else:
         raise ValueError(f"Unknown activation: {act_layer}.")
 

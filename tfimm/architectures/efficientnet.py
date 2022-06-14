@@ -21,6 +21,7 @@ The following models are available.
 # Copyright 2022 Marting Bruveris
 from collections import OrderedDict
 from dataclasses import dataclass
+from functools import partial
 from typing import List, Tuple
 
 import tensorflow as tf
@@ -67,6 +68,7 @@ class EfficientNetConfig(ModelConfig):
             of EfficientNet scaling.
         depth_multiplier: Multiplier for depth scaling. One of the three dimensions of
             EfficientNet scaling.
+        fix_first_last:  Fix first and last block depths when multiplier is applied.
         nb_features: Number of features before the classifier layer.
 
         drop_rate: Dropout rate.
@@ -100,6 +102,7 @@ class EfficientNetConfig(ModelConfig):
     architecture: Tuple[Tuple[str, ...], ...] = ()
     channel_multiplier: float = 1.0
     depth_multiplier: float = 1.0
+    fix_first_last: bool = False
     nb_features: int = 1280
     # Regularization
     drop_rate: float = 0.0
@@ -166,7 +169,7 @@ class EfficientNet(tf.keras.Model):
             depth_multiplier=cfg.depth_multiplier,
             depth_truncation="ceil",
             experts_multiplier=1,
-            fix_first_last=False,
+            fix_first_last=cfg.fix_first_last,
             group_size=None,
         )
         self.blocks = builder(architecture)
@@ -272,6 +275,118 @@ class EfficientNet(tf.keras.Model):
         x = self.classifier(x)
         features["logits"] = x
         return (x, features) if return_features else x
+    
+
+def _mobilenet_v2_cfg(
+    name: str,
+    timm_name: str,
+    channel_multiplier: float = 1.0, 
+    depth_multiplier: float = 1.0, 
+    fix_stem_head: bool = False,
+    crop_pct: float = 0.875,
+    mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN,
+    std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD,
+):
+    """
+    Creates the config for a MobileNet-v2 model.
+    
+    Ref impl: https://github.com/tensorflow/models/blob/master/research/slim/nets/mobilenet/mobilenet_v2.py  # noqa: E501
+    Paper: https://arxiv.org/abs/1801.04381
+    
+    Args:
+        name: Model name
+        timm_name: Name of model in TIMM
+        channel_multiplier: Multiplier for channel scaling.
+        depth_multiplier: Multiplier for depth scaling.
+        fix_stem_head: Scale stem channels and number of features or not
+        crop_pct: Crop percentage for ImageNet evaluation
+        mean: Defines preprocessing function.
+        std: Defines preprpocessing function.
+    """
+    round_channels_fn = partial(round_channels, multiplier=channel_multiplier)
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        stem_size=32 if fix_stem_head else round_channels_fn(32),
+        architecture=(
+            ("ds_r1_k3_s1_c16",),
+            ("ir_r2_k3_s2_e6_c24",),
+            ("ir_r3_k3_s2_e6_c32",),
+            ("ir_r4_k3_s2_e6_c64",),
+            ("ir_r3_k3_s1_e6_c96",),
+            ("ir_r3_k3_s2_e6_c160",),
+            ("ir_r1_k3_s1_e6_c320",),
+        ),
+        channel_multiplier=channel_multiplier,
+        depth_multiplier=depth_multiplier,
+        fix_first_last=fix_stem_head,
+        nb_features=1280 if fix_stem_head else max(1280, round_channels_fn(1280)),
+        norm_layer="batch_norm",
+        act_layer="relu6",
+        crop_pct=crop_pct,
+        mean=mean,
+        std=std,
+    )
+    return cfg
+
+
+@register_model
+def mobilenet_v2_050():
+    """MobileNet-V2 with 0.50 channel multiplier"""
+    cfg = _mobilenet_v2_cfg(
+        name="mobilenet_v2_050",
+        timm_name="mobilenetv2_050",
+        channel_multiplier=0.50,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def mobilenet_v2_100():
+    """MobileNet-V2 with 1.0 channel multiplier"""
+    cfg = _mobilenet_v2_cfg(
+        name="mobilenet_v2_100",
+        timm_name="mobilenetv2_100",
+        channel_multiplier=1.0,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def mobilenet_v2_140():
+    """MobileNet-V2 with 1.4 channel multiplier"""
+    cfg = _mobilenet_v2_cfg(
+        name="mobilenet_v2_140",
+        timm_name="mobilenetv2_140",
+        channel_multiplier=1.4,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def mobilenet_v2_110d():
+    """MobileNet-V2 with 1.1 channel and 1.2 depth multiplier"""
+    cfg = _mobilenet_v2_cfg(
+        name="mobilenet_v2_110d",
+        timm_name="mobilenetv2_110d",
+        channel_multiplier=1.1,
+        depth_multiplier=1.2,
+        fix_stem_head=True,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def mobilenet_v2_120d():
+    """MobileNet-V2 with 1.2 channel and 1.4 depth multiplier"""
+    cfg = _mobilenet_v2_cfg(
+        name="mobilenet_v2_120d",
+        timm_name="mobilenetv2_120d",
+        channel_multiplier=1.2,
+        depth_multiplier=1.4,
+        fix_stem_head=True,
+    )
+    return EfficientNet, cfg
 
 
 def _efficientnet_cfg(
