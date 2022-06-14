@@ -87,7 +87,7 @@ def test_change_in_channels(model_name, in_channels):
         # based on ResNetV2, because they use `StdConv`, which normalizes weight
         # statistics internally. The models are still adaptable, but results won't be
         # the same.
-        assert (np.max(np.abs(y_1 - y_2))) / (np.max(np.abs(y_1)) + 1e-8) < 1e-5
+        assert np.all(np.isclose(y_1, y_2, rtol=1e-5, atol=1e-5))
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
