@@ -12,10 +12,78 @@ Google Brain team) to PyTorch (timm library) back to TF (tfimm port of timm).
 
 The following models are available.
 
-* Original EfficientNet models.
+* MobileNet-V2 models. These models correspond to the ``mobilenetv2_...`` models in
+  timm.
 
-  * ``efficientnet_{b0, b1, b2, b3, b4, b5, b6, b7}``. These models correspond to
-    the models ``tf_efficientnet_{b0, ...}`` in timm.
+  * ``mobilenet_v2_{050, 100, 140}``. These are MobileNet-V2 models with channel
+    multiplier set to 0.5, 1.0 and 1.4 respectively.
+  * ``mobilenet_v2_{110d, 120d}``. These are MobileNet-V2 models with (channel, depth)
+    multipliers set to (1.1, 1.2) and (1.2, 1.4) respectively.
+
+* Original EfficientNet models. These models correspond to the models ``tf_...`` in
+  timm.
+
+  * ``efficientnet_{b0, b1, b2, b3, b4, b5, b6, b7, b8}``
+
+* EfficientNet AdvProp models, trained with adversarial examples. These models
+  correspond to the ``tf_...`` models in timm.
+
+  * ``efficientnet_{b0, ..., b8}_ap``
+
+* EfficientNet NoisyStudent models, trained via semi-supervised learning. These models
+  correspond to the ``tf_...`` models in timm.
+
+  * ``efficientnet_{b0, ..., b7}_ns``
+  * ``efficientnet_l2_ns_475``
+  * ``efficientnet_l2``
+
+* PyTorch versions of the EfficientNet models. These models use symmetric padding rather
+  than "same" padding that is default in TF. They correspond to the ``efficientnet_...``
+  models in timm.
+
+  * ``pt_efficientnet_{b0, ..., b4}``
+
+* EfficientNet-EdgeTPU models, optimized for inference on Google's Edge TPU hardware.
+  These models correspond to the ``tf_...`` models in timm.
+
+  * ``efficientnet_es``
+  * ``efficientnet_em``
+  * ``efficientnet_el``
+
+* EfficientNet-Lite models, optimized for inference on mobile devices, CPUs and GPUs.
+  These models correspond to the ``tf_...`` models in timm.
+
+  * ``efficientnet_lite0``
+  * ``efficientnet_lite1``
+  * ``efficientnet_lite2``
+  * ``efficientnet_lite3``
+  * ``efficientnet_lite4``
+
+* EfficientNet-V2 models. These models correspond to the ``tf_...`` models in timm.
+
+  * ``efficientnet_v2_b0``
+  * ``efficientnet_v2_b1``
+  * ``efficientnet_v2_b2``
+  * ``efficientnet_v2_b3``
+  * ``efficientnet_v2_s``
+  * ``efficientnet_v2_m``
+  * ``efficientnet_v2_l``
+
+* EfficientNet-V2 models, pretrained on ImageNet-21k, fine-tuned on ImageNet-1k. These
+  models correspond to the ``tf_...`` models in timm.
+
+  * ``efficientnet_v2_s_in21ft1k``
+  * ``efficientnet_v2_m_in21ft1k``
+  * ``efficientnet_v2_l_in21ft1k``
+  * ``efficientnet_v2_xl_in21ft1k``
+
+* EfficientNet-V2 models, pretrained on ImageNet-21k. These models correspond to the
+  ``tf_...`` models in timm.
+
+  * ``efficientnet_v2_s_in21k``
+  * ``efficientnet_v2_m_in21k``
+  * ``efficientnet_v2_l_in21k``
+  * ``efficientnet_v2_xl_in21k``
 """
 # Hacked together by / Copyright 2019, Ross Wightman
 # Copyright 2022 Marting Bruveris
