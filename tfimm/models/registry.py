@@ -171,6 +171,7 @@ def _to_timm_module_name(module):
     return module
 
 
+# TODO: Make it work with efficientnet, i.e., diverging names between TFIMM and TIMM
 def _compare_available_models_with_timm(
     name_filter: Union[str, List[str]] = "",
     module: str = "",
