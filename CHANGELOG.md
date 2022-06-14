@@ -1,6 +1,6 @@
 # Change Log
 
-## Unpublished
+## v0.2.7 - 2022-06-14
 
 - Added EfficinentNet and MobileNet-V2 models.
 
