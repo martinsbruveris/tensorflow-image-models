@@ -87,7 +87,7 @@ def test_change_in_channels(model_name, in_channels):
         # based on ResNetV2, because they use `StdConv`, which normalizes weight
         # statistics internally. The models are still adaptable, but results won't be
         # the same.
-        assert (np.max(np.abs(y_1 - y_2))) / (np.max(np.abs(y_1)) + 1e-8) < 1e-5
+        assert np.all(np.isclose(y_1, y_2, rtol=1e-5, atol=1e-5))
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
@@ -96,7 +96,7 @@ def test_save_load_model(model_name):
     model = create_model(model_name)
     with tempfile.TemporaryDirectory() as tmpdir:
         model.save(tmpdir)
-        loaded_model = tf.keras.models.load_model(tmpdir)
+        loaded_model = tf.keras.models.load_model(tmpdir, compile=False)
 
     assert type(model) is type(loaded_model)
 
@@ -177,6 +177,17 @@ def test_change_input_size_inference(model_name):
     # Then we test, if we can run inference on input at different resolution
     img = rng.random(size=(1, 64, 64, model.cfg.in_channels), dtype="float32")
     flexible_model(img)
+
+
+@pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)
+def test_model_name_keras(model_name):
+    """
+    We test if model.name == model.cfg.name, i.e., the keras model name is set
+    correctly.
+    """
+    tf.keras.backend.clear_session()
+    model = create_model(model_name)
+    assert model.name == model_name == model.cfg.name
 
 
 @pytest.mark.parametrize("model_name", TEST_ARCHITECTURES)

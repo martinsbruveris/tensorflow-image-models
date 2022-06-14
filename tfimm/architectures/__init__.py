@@ -1,6 +1,7 @@
 from .cait import *  # noqa: F401
 from .convmixer import *  # noqa: F401
 from .convnext import *  # noqa: F401
+from .efficientnet import *  # noqa: F401
 from .mlp_mixer import *  # noqa: F401
 from .pit import *  # noqa: F401
 from .poolformer import *  # noqa: F401

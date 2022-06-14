@@ -42,7 +42,7 @@ from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 # Model registry will add each entrypoint fn to this
-__all__ = ["PoolFormerConfig", "PoolFormer"]
+__all__ = ["PoolFormer", "PoolFormerConfig"]
 
 
 @dataclass
@@ -64,9 +64,9 @@ class PoolFormerConfig(ModelConfig):
         drop_rate: Dropout rate.
         drop_path_rate: Dropout rate for stochastic depth.
 
-        norm_layer: Normalization layer. See :function:``norm_layer_factory`` for
-            possible values.
-        act_layer: Activation function. See :function:``act_layer_factory`` for possible
+        norm_layer: Normalization layer. See :func:`~norm_layer_factory` for possible
+            values.
+        act_layer: Activation function. See :func:`~act_layer_factory` for possible
             values.
         init_scale: Inital value for layer scale weights.
 
@@ -77,9 +77,9 @@ class PoolFormerConfig(ModelConfig):
         std: Defines preprpocessing function.
 
         first_conv: Name of first convolutional layer. Used by
-            :function:``create_model`` to adapt the number in input channels when
+            :func:`~tfimm.create_model` to adapt the number in input channels when
             loading pretrained weights.
-        classifier: Name of classifier layer. Used by :function:``create_model`` to
+        classifier: Name of classifier layer. Used by :func:`~tfimm.create_model` to
             adapt the classifier when loading pretrained weights.
     """
 
@@ -154,7 +154,6 @@ class PoolFormerBlock(tf.keras.layers.Layer):
         kernel_initializer, bias_initializer = _weight_initializers()
 
         self.norm1 = norm_layer(name="norm1")
-        self.pad = tf.keras.layers.ZeroPadding2D(padding=1)
         self.pool = tf.keras.layers.AveragePooling2D(
             pool_size=3, strides=1, padding="same"
         )
@@ -219,6 +218,7 @@ class PoolFormer(tf.keras.Model):
     cfg_class = PoolFormerConfig
 
     def __init__(self, cfg: PoolFormerConfig, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
         norm_layer = norm_layer_factory(cfg.norm_layer)

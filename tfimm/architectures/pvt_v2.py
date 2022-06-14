@@ -162,7 +162,7 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         self.sr_ratio = sr_ratio
         self.linear_sr = linear_sr
         head_dim = embed_dim // nb_heads
-        self.scale = head_dim ** -0.5
+        self.scale = head_dim**-0.5
         self.norm_layer = norm_layer_factory(norm_layer)
         self.act_layer = act_layer_factory(act_layer)
 
@@ -302,6 +302,7 @@ class PyramidVisionTransformerV2(tf.keras.Model):
     cfg_class = PyramidVisionTransformerV2Config
 
     def __init__(self, cfg: PyramidVisionTransformerV2Config, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
         norm_layer = norm_layer_factory(cfg.norm_layer)

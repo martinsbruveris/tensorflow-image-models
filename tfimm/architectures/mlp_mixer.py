@@ -241,6 +241,7 @@ class MLPMixer(tf.keras.Model):
     cfg_class = MLPMixerConfig
 
     def __init__(self, cfg: MLPMixerConfig, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.cfg = cfg
         self.nb_features = cfg.embed_dim

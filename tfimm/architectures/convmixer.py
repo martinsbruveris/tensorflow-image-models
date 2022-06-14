@@ -78,6 +78,7 @@ class ConvMixer(tf.keras.Model):
     cfg_class = ConvMixerConfig
 
     def __init__(self, cfg: ConvMixerConfig, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.nb_features = cfg.embed_dim  # For consistency with other models
         self.act_layer = act_layer_factory(cfg.act_layer)

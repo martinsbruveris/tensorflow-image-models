@@ -177,8 +177,8 @@ def load_pytorch_weights_in_tf2_model(
         if list(symbolic_weight.shape) != list(array.shape):
             try:
                 array = numpy.reshape(array, symbolic_weight.shape)
-            except AssertionError as e:
-                e.args += (symbolic_weight.shape, array.shape)
+            except (AssertionError, ValueError) as e:
+                e.args += (name, sw_name)
                 raise e
 
         try:

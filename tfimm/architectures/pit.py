@@ -45,7 +45,7 @@ from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 # Model registry will add each entrypoint fn to this
-__all__ = ["PoolingVisionTransformerConfig", "PoolingVisionTransformer"]
+__all__ = ["PoolingVisionTransformer", "PoolingVisionTransformerConfig"]
 
 
 @dataclass
@@ -74,9 +74,9 @@ class PoolingVisionTransformerConfig(ModelConfig):
         attn_drop_rate: Attention dropout rate.
         drop_path_rate: Dropout rate for stochastic depth.
 
-        norm_layer: Normalization layer. See :function:``norm_layer_factory`` for
-            possible values.
-        act_layer: Activation function. See :function:``act_layer_factory`` for possible
+        norm_layer: Normalization layer. See :func:`~norm_layer_factory` for possible
+            values.
+        act_layer: Activation function. See :func:`~act_layer_factory` for possible
             values.
 
         interpolate_input: If ``True``, we interpolate position embeddings to given
@@ -89,11 +89,10 @@ class PoolingVisionTransformerConfig(ModelConfig):
         std: Defines preprpocessing function.
 
         first_conv: Name of first convolutional layer. Used by
-            :function:``create_model`` to adapt the number in input channels when
+            :func:`~tfimm.create_model` to adapt the number in input channels when
             loading pretrained weights.
-        classifier: Name of classifier layer. Used by :function:``create_model`` to
-            adapt the classifier when loading pretrained weights. Some models have
-            two classifier heads, one for distillation.
+        classifier: Name of classifier layer. Used by :func:`~tfimm.create_model` to
+            adapt the classifier when loading pretrained weights.
     """
 
     nb_classes: int = 1000
@@ -205,6 +204,7 @@ class PoolingVisionTransformer(tf.keras.Model):
     cfg_class = PoolingVisionTransformerConfig
 
     def __init__(self, cfg: PoolingVisionTransformerConfig, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(**kwargs)
         self.cfg = cfg
         norm_layer = norm_layer_factory(cfg.norm_layer)

@@ -19,8 +19,10 @@ weights, obtained by porting architectures from
 [timm](https://github.com/rwightman/pytorch-image-models) to TensorFlow. The hope is
 that the number of available architectures will grow over time. For now, it contains
 vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer models 
-(MLP-Mixer, ResMLP, gMLP, PoolFormer and ConvMixer) and various ResNet flavours (ResNet,
-ResNeXt, ECA-ResNet, SE-ResNet) as well as the recent ConvNeXt.
+(MLP-Mixer, ResMLP, gMLP, PoolFormer and ConvMixer), various ResNet flavours (ResNet,
+ResNeXt, ECA-ResNet, SE-ResNet), the EfficientNet family (including AdvProp, 
+NoisyStudent, Edge-TPU, V2 and Lite versions), MobileNet-V2, as well as the recent 
+ConvNeXt.
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
@@ -144,6 +146,22 @@ The following architectures are currently available:
   [\[github\]](https://github.com/tmp-iclr/convmixer)
   - Patches Are All You Need? 
     [\[ICLR 2022 submission\]](https://openreview.net/forum?id=TVHS5Y4dNvM)
+- EfficientNet family
+  - EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks
+    [\[arXiv:1905.11946\]](https://arxiv.org/abs/1905.11946)
+  - Adversarial Examples Improve Image Recognition
+    [\[arXiv:1911.09665\]](https://arxiv.org/abs/1911.09665)
+  - Self-training with Noisy Student improves ImageNet classification
+    [\[arXiv:1911.04252\]](https://arxiv.org/abs/1911.04252)
+  - EfficientNet-EdgeTPU
+    [\[Blog\]](https://ai.googleblog.com/2019/08/efficientnet-edgetpu-creating.html)
+  - EfficientNet-Lite
+    [\[Blog\]](https://blog.tensorflow.org/2020/03/higher-accuracy-on-vision-models-with-efficientnet-lite.html)
+  - EfficientNetV2: Smaller Models and Faster Training
+    [\[arXiv:2104.00298\]](https://arxiv.org/abs/2104.00298)
+- MobileNet-V2
+  - MobileNetV2: Inverted Residuals and Linear Bottlenecks
+    [\[arXiv:1801.04381\]](https://arxiv.org/abs/1801.04381)
 - Pyramid Vision Transformer 
   [\[github\]](https://github.com/whai362/PVT)
   - Pyramid Vision Transformer: A Versatile Backbone for Dense Prediction without

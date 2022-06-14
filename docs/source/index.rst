@@ -33,6 +33,7 @@ Contents
    :caption: Architectures
 
    content/convnext
+   content/efficientnet
    content/pit
    content/poolformer
 

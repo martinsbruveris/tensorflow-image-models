@@ -5,6 +5,8 @@ from tfimm.architectures import (
     ConvMixerConfig,
     ConvNeXt,
     ConvNeXtConfig,
+    EfficientNet,
+    EfficientNetConfig,
     MLPMixer,
     MLPMixerConfig,
     PoolFormer,
@@ -30,6 +32,7 @@ TEST_ARCHITECTURES = [
     "cait_test_model",  # cait.py
     "convmixer_test_model",  # convmixer.py
     "convnext_test_model",  # convnext.py
+    "efficientnet_test_model",  # efficientnet.py
     "mixer_test_model",  # mlp_mixer.py
     "resmlp_test_model",
     "gmlp_test_model",
@@ -88,6 +91,21 @@ def convnext_test_model():
         nb_blocks=(1, 1, 1, 1),
     )
     return ConvNeXt, cfg
+
+
+@register_model
+def efficientnet_test_model():
+    cfg = EfficientNetConfig(
+        name="efficientnet_test_model",
+        input_size=(32, 32),
+        architecture=(
+            ("ds_r1_k3_s1_e1_c16_se0.25",),
+            ("ir_r2_k3_s2_e6_c24_se0.25",),
+            ("er_r1_k3_s1_e4_c24_fc24_noskip",),
+        ),
+        nb_features=32,
+    )
+    return EfficientNet, cfg
 
 
 @register_model

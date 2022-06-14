@@ -355,6 +355,7 @@ class ResNetV2(tf.keras.Model):
     cfg_class = ResNetV2Config
 
     def __init__(self, cfg: ResNetV2Config, *args, **kwargs):
+        kwargs["name"] = kwargs.get("name", cfg.name)
         super().__init__(*args, **kwargs)
         self.cfg = cfg
 
