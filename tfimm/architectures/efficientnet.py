@@ -1383,3 +1383,190 @@ def efficientnet_v2_l_in21k():
         nb_classes=21843,
     )
     return EfficientNet, cfg
+
+
+def _efficientnet_v2_xl_cfg(
+    name: str,
+    timm_name: str,
+    nb_classes: int = 1000,
+):
+    """
+    Creates the config for an EfficientNet-V2 XLarge model.
+
+    Ref impl: https://github.com/google/automl/tree/master/efficientnetv2
+    Paper: `EfficientNetV2: Smaller Models and Faster Training`
+    Link: https://arxiv.org/abs/2104.00298
+    """
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        nb_classes=nb_classes,
+        input_size=(384, 384),
+        stem_size=32,
+        architecture=(
+            ("cn_r4_k3_s1_e1_c32_skip",),
+            ("er_r8_k3_s2_e4_c64",),
+            ("er_r8_k3_s2_e4_c96",),
+            ("ir_r16_k3_s2_e4_c192_se0.25",),
+            ("ir_r24_k3_s1_e6_c256_se0.25",),
+            ("ir_r32_k3_s2_e6_c512_se0.25",),
+            ("ir_r8_k3_s1_e6_c640_se0.25",),
+        ),
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+        nb_features=1280,
+        drop_rate=0.5,
+        drop_path_rate=0.5,
+        norm_layer="batch_norm_tf",
+        act_layer="swish",
+        padding="same",
+        crop_pct=1.0,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_v2_xl_in21ft1k():
+    """
+    EfficientNet-V2 XLarge. Pretrained on ImageNet-21k, fine-tuned on 1k. Tensorflow
+    compatible variant.
+    """
+    cfg = _efficientnet_v2_xl_cfg(
+        name="efficientnet_v2_xl_in21ft1k",
+        timm_name="tf_efficientnetv2_xl_in21ft1k",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_xl_in21k():
+    """
+    EfficientNet-V2 XLarge. ImageNet-21k pre-trained weights. Tensorflow compatible
+    variant.
+    """
+    cfg = _efficientnet_v2_xl_cfg(
+        name="efficientnet_v2_xl_in21k",
+        timm_name="tf_efficientnetv2_xl_in21k",
+        nb_classes=21843,
+    )
+    return EfficientNet, cfg
+
+
+def _efficientnet_lite_cfg(
+    name: str,
+    timm_name: str,
+    variant: str,
+    crop_pct: float,
+):
+    """
+    Creates the config for an EfficientNet model.
+
+    Ref impl: https://github.com/tensorflow/tpu/blob/master/models/official/efficientnet/efficientnet_model.py  # noqa: E501
+    Paper: https://arxiv.org/abs/1905.11946
+
+    Args:
+        name: Model name
+        timm_name: Model name in TIMM
+        variant: Model variant, e.g., "lite0", etc.
+        crop_pct: Crop percentage for ImageNet evaluation
+    """
+    param_dict = {
+        "lite0": (1.0, 1.0, 224, 0.2),
+        "lite1": (1.0, 1.1, 240, 0.2),
+        "lite2": (1.1, 1.2, 260, 0.3),
+        "lite3": (1.2, 1.4, 280, 0.3),
+        "lite4": (1.4, 1.8, 300, 0.3),
+    }
+    channel_multiplier, depth_multiplier, input_size, drop_rate = param_dict[variant]
+    input_size = (input_size, input_size)
+
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        input_size=input_size,
+        stem_size=32,
+        architecture=(
+            ("ds_r1_k3_s1_e1_c16",),
+            ("ir_r2_k3_s2_e6_c24",),
+            ("ir_r2_k5_s2_e6_c40",),
+            ("ir_r3_k3_s2_e6_c80",),
+            ("ir_r3_k5_s1_e6_c112",),
+            ("ir_r4_k5_s2_e6_c192",),
+            ("ir_r1_k3_s1_e6_c320",),
+        ),
+        channel_multiplier=channel_multiplier,
+        depth_multiplier=depth_multiplier,
+        fix_first_last=True,
+        nb_features=1280,
+        drop_rate=drop_rate,
+        drop_path_rate=drop_rate,
+        norm_layer="batch_norm_tf",
+        act_layer="relu6",
+        padding="same",
+        crop_pct=crop_pct,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_lite0():
+    """EfficientNet-Lite0. Tensorflow compatible variant."""
+    cfg = _efficientnet_lite_cfg(
+        name="efficientnet_lite0",
+        timm_name="tf_efficientnet_lite0",
+        variant="lite0",
+        crop_pct=0.875,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_lite1():
+    """EfficientNet-Lite1. Tensorflow compatible variant."""
+    cfg = _efficientnet_lite_cfg(
+        name="efficientnet_lite1",
+        timm_name="tf_efficientnet_lite1",
+        variant="lite1",
+        crop_pct=0.882,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_lite2():
+    """EfficientNet-Lite2. Tensorflow compatible variant."""
+    cfg = _efficientnet_lite_cfg(
+        name="efficientnet_lite2",
+        timm_name="tf_efficientnet_lite2",
+        variant="lite2",
+        crop_pct=0.890,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_lite3():
+    """EfficientNet-Lite3. Tensorflow compatible variant."""
+    cfg = _efficientnet_lite_cfg(
+        name="efficientnet_lite3",
+        timm_name="tf_efficientnet_lite3",
+        variant="lite3",
+        crop_pct=0.904,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_lite4():
+    """EfficientNet-Lite4. Tensorflow compatible variant."""
+    cfg = _efficientnet_lite_cfg(
+        name="efficientnet_lite4",
+        timm_name="tf_efficientnet_lite4",
+        variant="lite4",
+        crop_pct=0.920,
+    )
+    return EfficientNet, cfg
