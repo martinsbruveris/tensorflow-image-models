@@ -248,6 +248,51 @@ class SqueezeExcite(tf.keras.layers.Layer):
         return x
 
 
+class ConvBnAct(tf.keras.layers.Layer):
+    """Conv + Norm Layer + Activation with optional skip connection."""
+
+    def __init__(self, cfg: BlockArgs, **kwargs):
+        super().__init__(**kwargs)
+        self.cfg = cfg
+        # This depends on number of input channels and is set during build phase
+        self.skip_connection = None
+
+        norm_layer = norm_layer_factory(cfg.norm_layer)
+        act_layer = act_layer_factory(cfg.act_layer)
+
+        self.conv = create_conv2d(
+            filters=cfg.filters,
+            kernel_size=cfg.dw_kernel_size,
+            strides=cfg.stride,
+            padding=cfg.padding,
+            dilation_rate=cfg.dilation_rate,
+            name="conv",
+        )
+        self.bn1 = norm_layer(name="bn1")
+        self.act1 = act_layer()
+        self.drop_path = None
+
+    def build(self, input_shape):
+        in_channels = input_shape[-1]
+        self.skip_connection = (
+            self.cfg.stride == 1
+            and self.cfg.filters == in_channels
+            and self.cfg.skip_connection
+        )
+        if self.skip_connection:
+            self.drop_path = DropPath(drop_prob=self.cfg.drop_path_rate)
+
+    def call(self, x, training: bool = False):
+        shortcut = x
+        x = self.conv(x)
+        x = self.bn1(x, training=training)
+        x = self.act1(x)
+        if self.skip_connection:
+            x = self.drop_path(x, training=training)
+            x = x + shortcut
+        return x
+
+
 class DepthwiseSeparableConv(tf.keras.layers.Layer):
     """
     Depthwise separable block. Used for DS convolutions in MobileNet-V1 and in the place

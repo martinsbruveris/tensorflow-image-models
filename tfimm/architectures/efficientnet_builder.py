@@ -14,6 +14,7 @@ from tfimm.utils import make_divisible
 
 from .efficientnet_blocks import (
     BlockArgs,
+    ConvBnAct,
     DepthwiseSeparableConv,
     EdgeResidual,
     InvertedResidual,
@@ -214,7 +215,6 @@ class EfficientNetBuilder:
             _log(f"  EdgeResidual {block_idx}, Args: {str(block_args)}")
             block = EdgeResidual(cfg=block_args, name=block_name)
         elif block_type == "cn":
-            # TODO: Not implemented yet
             _log(f"  ConvBnAct {block_idx}, Args: {str(block_args)}")
             block = ConvBnAct(cfg=block_args, name=block_name)  # noqa: F821
         else:

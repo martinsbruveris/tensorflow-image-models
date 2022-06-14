@@ -1045,3 +1045,105 @@ def efficientnet_el():
         std=IMAGENET_INCEPTION_STD,
     )
     return EfficientNet, cfg
+
+
+def _efficientnet_v2_base(
+    name: str,
+    timm_name: str,
+    variant: str,
+    input_size: Tuple[int, int],
+    crop_pct: float,
+):
+    """
+    Creates the config for an EfficientNet-V2 base model.
+
+    Ref impl: https://github.com/google/automl/tree/master/efficientnetv2
+    Paper: `EfficientNetV2: Smaller Models and Faster Training`
+    Link: https://arxiv.org/abs/2104.00298
+    """
+    param_dict = {
+        "b0": (1.0, 1.0, 0.2),
+        "b1": (1.0, 1.1, 0.2),
+        "b2": (1.1, 1.2, 0.3),
+        "b3": (1.2, 1.4, 0.3),
+    }
+    channel_multiplier, depth_multiplier, drop_rate = param_dict[variant]
+    round_chs_fn = partial(
+        round_channels, multiplier=channel_multiplier, round_limit=0.
+    )
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        input_size=input_size,
+        stem_size=round_chs_fn(32),
+        architecture=(
+            ("cn_r1_k3_s1_e1_c16_skip",),
+            ("er_r2_k3_s2_e4_c32",),
+            ("er_r2_k3_s2_e4_c48",),
+            ("ir_r3_k3_s2_e4_c96_se0.25",),
+            ("ir_r5_k3_s1_e6_c112_se0.25",),
+            ("ir_r8_k3_s2_e6_c192_se0.25",),
+        ),
+        channel_multiplier=channel_multiplier,
+        depth_multiplier=depth_multiplier,
+        nb_features=round_chs_fn(1280),
+        drop_rate=drop_rate,
+        drop_path_rate=drop_rate,
+        norm_layer="batch_norm_tf",
+        act_layer="swish",
+        padding="same",
+        crop_pct=crop_pct,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_v2_b0():
+    """EfficientNet-V2-B0. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_base(
+        name="efficientnet_v2_b0",
+        timm_name="tf_efficientnetv2_b0",
+        variant="b0",
+        input_size=(192, 192),
+        crop_pct=0.875,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_b1():
+    """EfficientNet-V2-B1. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_base(
+        name="efficientnet_v2_b1",
+        timm_name="tf_efficientnetv2_b1",
+        variant="b1",
+        input_size=(192, 192),
+        crop_pct=0.882,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_b2():
+    """EfficientNet-V2-b2. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_base(
+        name="efficientnet_v2_b2",
+        timm_name="tf_efficientnetv2_b2",
+        variant="b2",
+        input_size=(208, 208),
+        crop_pct=0.890,
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_b3():
+    """EfficientNet-V2-b3. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_base(
+        name="efficientnet_v2_b3",
+        timm_name="tf_efficientnetv2_b3",
+        variant="b3",
+        input_size=(240, 240),
+        crop_pct=0.904,
+    )
+    return EfficientNet, cfg
