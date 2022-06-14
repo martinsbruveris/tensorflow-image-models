@@ -1047,7 +1047,7 @@ def efficientnet_el():
     return EfficientNet, cfg
 
 
-def _efficientnet_v2_base(
+def _efficientnet_v2_base_cfg(
     name: str,
     timm_name: str,
     variant: str,
@@ -1100,7 +1100,7 @@ def _efficientnet_v2_base(
 @register_model
 def efficientnet_v2_b0():
     """EfficientNet-V2-B0. Tensorflow compatible variant."""
-    cfg = _efficientnet_v2_base(
+    cfg = _efficientnet_v2_base_cfg(
         name="efficientnet_v2_b0",
         timm_name="tf_efficientnetv2_b0",
         variant="b0",
@@ -1113,7 +1113,7 @@ def efficientnet_v2_b0():
 @register_model
 def efficientnet_v2_b1():
     """EfficientNet-V2-B1. Tensorflow compatible variant."""
-    cfg = _efficientnet_v2_base(
+    cfg = _efficientnet_v2_base_cfg(
         name="efficientnet_v2_b1",
         timm_name="tf_efficientnetv2_b1",
         variant="b1",
@@ -1126,7 +1126,7 @@ def efficientnet_v2_b1():
 @register_model
 def efficientnet_v2_b2():
     """EfficientNet-V2-b2. Tensorflow compatible variant."""
-    cfg = _efficientnet_v2_base(
+    cfg = _efficientnet_v2_base_cfg(
         name="efficientnet_v2_b2",
         timm_name="tf_efficientnetv2_b2",
         variant="b2",
@@ -1139,11 +1139,247 @@ def efficientnet_v2_b2():
 @register_model
 def efficientnet_v2_b3():
     """EfficientNet-V2-b3. Tensorflow compatible variant."""
-    cfg = _efficientnet_v2_base(
+    cfg = _efficientnet_v2_base_cfg(
         name="efficientnet_v2_b3",
         timm_name="tf_efficientnetv2_b3",
         variant="b3",
         input_size=(240, 240),
         crop_pct=0.904,
+    )
+    return EfficientNet, cfg
+
+
+def _efficientnet_v2_s_cfg(
+    name: str,
+    timm_name: str,
+    nb_classes: int = 1000,
+):
+    """
+    Creates the config for an EfficientNet-V2 small model.
+
+    Ref impl: https://github.com/google/automl/tree/master/efficientnetv2
+    Paper: `EfficientNetV2: Smaller Models and Faster Training`
+    Link: https://arxiv.org/abs/2104.00298
+    """
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        nb_classes=nb_classes,
+        input_size=(300, 300),
+        stem_size=24,
+        architecture=(
+            ("cn_r2_k3_s1_e1_c24_skip",),
+            ("er_r4_k3_s2_e4_c48",),
+            ("er_r4_k3_s2_e4_c64",),
+            ("ir_r6_k3_s2_e4_c128_se0.25",),
+            ("ir_r9_k3_s1_e6_c160_se0.25",),
+            ("ir_r15_k3_s2_e6_c256_se0.25",),
+        ),
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+        nb_features=1280,
+        drop_rate=0.3,
+        drop_path_rate=0.3,
+        norm_layer="batch_norm_tf",
+        act_layer="swish",
+        padding="same",
+        crop_pct=1.0,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_v2_s():
+    """EfficientNet-V2 Small. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_s_cfg(
+        name="efficientnet_v2_s",
+        timm_name="tf_efficientnetv2_s",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_s_in21ft1k():
+    """
+    EfficientNet-V2 Small. Pretrained on ImageNet-21k, fine-tuned on 1k. Tensorflow
+    compatible variant.
+    """
+    cfg = _efficientnet_v2_s_cfg(
+        name="efficientnet_v2_s_in21ft1k",
+        timm_name="tf_efficientnetv2_s_in21ft1k",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_s_in21k():
+    """
+    EfficientNet-V2 Small. ImageNet-21k pre-trained weights. Tensorflow compatible
+    variant.
+    """
+    cfg = _efficientnet_v2_s_cfg(
+        name="efficientnet_v2_s_in21k",
+        timm_name="tf_efficientnetv2_s_in21k",
+        nb_classes=21843,
+    )
+    return EfficientNet, cfg
+
+
+def _efficientnet_v2_m_cfg(
+    name: str,
+    timm_name: str,
+    nb_classes: int = 1000,
+):
+    """
+    Creates the config for an EfficientNet-V2 medium model.
+
+    Ref impl: https://github.com/google/automl/tree/master/efficientnetv2
+    Paper: `EfficientNetV2: Smaller Models and Faster Training`
+    Link: https://arxiv.org/abs/2104.00298
+    """
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        nb_classes=nb_classes,
+        input_size=(384, 384),
+        stem_size=24,
+        architecture=(
+            ("cn_r3_k3_s1_e1_c24_skip",),
+            ("er_r5_k3_s2_e4_c48",),
+            ("er_r5_k3_s2_e4_c80",),
+            ("ir_r7_k3_s2_e4_c160_se0.25",),
+            ("ir_r14_k3_s1_e6_c176_se0.25",),
+            ("ir_r18_k3_s2_e6_c304_se0.25",),
+            ("ir_r5_k3_s1_e6_c512_se0.25",),
+        ),
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+        nb_features=1280,
+        drop_rate=0.4,
+        drop_path_rate=0.4,
+        norm_layer="batch_norm_tf",
+        act_layer="swish",
+        padding="same",
+        crop_pct=1.0,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_v2_m():
+    """EfficientNet-V2 Medium. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_m_cfg(
+        name="efficientnet_v2_m",
+        timm_name="tf_efficientnetv2_m",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_m_in21ft1k():
+    """
+    EfficientNet-V2 Medium. Pretrained on ImageNet-21k, fine-tuned on 1k. Tensorflow
+    compatible variant.
+    """
+    cfg = _efficientnet_v2_m_cfg(
+        name="efficientnet_v2_m_in21ft1k",
+        timm_name="tf_efficientnetv2_m_in21ft1k",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_m_in21k():
+    """
+    EfficientNet-V2 Medium. ImageNet-21k pre-trained weights. Tensorflow compatible
+    variant.
+    """
+    cfg = _efficientnet_v2_m_cfg(
+        name="efficientnet_v2_m_in21k",
+        timm_name="tf_efficientnetv2_m_in21k",
+        nb_classes=21843,
+    )
+    return EfficientNet, cfg
+
+
+def _efficientnet_v2_l_cfg(
+    name: str,
+    timm_name: str,
+    nb_classes: int = 1000,
+):
+    """
+    Creates the config for an EfficientNet-V2 large model.
+
+    Ref impl: https://github.com/google/automl/tree/master/efficientnetv2
+    Paper: `EfficientNetV2: Smaller Models and Faster Training`
+    Link: https://arxiv.org/abs/2104.00298
+    """
+    cfg = EfficientNetConfig(
+        name=name,
+        url="[timm]" + timm_name,
+        nb_classes=nb_classes,
+        input_size=(384, 384),
+        stem_size=32,
+        architecture=(
+            ("cn_r4_k3_s1_e1_c32_skip",),
+            ("er_r7_k3_s2_e4_c64",),
+            ("er_r7_k3_s2_e4_c96",),
+            ("ir_r10_k3_s2_e4_c192_se0.25",),
+            ("ir_r19_k3_s1_e6_c224_se0.25",),
+            ("ir_r25_k3_s2_e6_c384_se0.25",),
+            ("ir_r7_k3_s1_e6_c640_se0.25",),
+        ),
+        channel_multiplier=1.0,
+        depth_multiplier=1.0,
+        nb_features=1280,
+        drop_rate=0.5,
+        drop_path_rate=0.5,
+        norm_layer="batch_norm_tf",
+        act_layer="swish",
+        padding="same",
+        crop_pct=1.0,
+        mean=IMAGENET_INCEPTION_MEAN,
+        std=IMAGENET_INCEPTION_STD,
+    )
+    return cfg
+
+
+@register_model
+def efficientnet_v2_l():
+    """EfficientNet-V2 Large. Tensorflow compatible variant."""
+    cfg = _efficientnet_v2_l_cfg(
+        name="efficientnet_v2_l",
+        timm_name="tf_efficientnetv2_l",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_l_in21ft1k():
+    """
+    EfficientNet-V2 Large. Pretrained on ImageNet-21k, fine-tuned on 1k. Tensorflow
+    compatible variant.
+    """
+    cfg = _efficientnet_v2_l_cfg(
+        name="efficientnet_v2_l_in21ft1k",
+        timm_name="tf_efficientnetv2_l_in21ft1k",
+    )
+    return EfficientNet, cfg
+
+
+@register_model
+def efficientnet_v2_l_in21k():
+    """
+    EfficientNet-V2 Large. ImageNet-21k pre-trained weights. Tensorflow compatible
+    variant.
+    """
+    cfg = _efficientnet_v2_l_cfg(
+        name="efficientnet_v2_l_in21k",
+        timm_name="tf_efficientnetv2_l_in21k",
+        nb_classes=21843,
     )
     return EfficientNet, cfg
