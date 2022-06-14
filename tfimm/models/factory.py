@@ -51,7 +51,7 @@ def create_model(
     cfg = model_config(model_name)
 
     if model_path:
-        loaded_model = tf.keras.models.load_model(model_path)
+        loaded_model = tf.keras.models.load_model(model_path, compile=False)
     elif pretrained:
         # First try loading model from cache
         model_path = cached_model_path(model_name)

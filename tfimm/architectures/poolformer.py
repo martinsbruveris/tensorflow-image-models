@@ -154,7 +154,6 @@ class PoolFormerBlock(tf.keras.layers.Layer):
         kernel_initializer, bias_initializer = _weight_initializers()
 
         self.norm1 = norm_layer(name="norm1")
-        self.pad = tf.keras.layers.ZeroPadding2D(padding=1)
         self.pool = tf.keras.layers.AveragePooling2D(
             pool_size=3, strides=1, padding="same"
         )

@@ -96,7 +96,7 @@ def test_save_load_model(model_name):
     model = create_model(model_name)
     with tempfile.TemporaryDirectory() as tmpdir:
         model.save(tmpdir)
-        loaded_model = tf.keras.models.load_model(tmpdir)
+        loaded_model = tf.keras.models.load_model(tmpdir, compile=False)
 
     assert type(model) is type(loaded_model)
 
