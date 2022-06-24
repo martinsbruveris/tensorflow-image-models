@@ -181,7 +181,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
     self.legacy_mode = legacy_mode
 
     # Set layer attributes.
-    layer._name += '_spec_norm'
+    # layer._name += '_spec_norm'
 
     if not isinstance(layer, tf.keras.layers.Conv2D):
       raise ValueError(
