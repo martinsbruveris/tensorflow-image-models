@@ -125,9 +125,6 @@ class BasicBlock(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.conv_layer = make_conv2d_layer(
-            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
-        )
 
         # Num channels after first conv
         first_planes = nb_channels // cfg.block_reduce_first
@@ -135,7 +132,7 @@ class BasicBlock(tf.keras.layers.Layer):
         use_aa = cfg.aa_layer and stride == 2
 
         self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv1 = self.conv_layer(
+        self.conv1 = tf.keras.layers.Conv2D(
             filters=first_planes,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -143,17 +140,31 @@ class BasicBlock(tf.keras.layers.Layer):
             use_bias=False,
             name="conv1",
         )
+        # SN
+        if cfg.use_spec_norm:
+            self.conv1_sn = SpectralNormalizationConv2D(
+                layer=self.conv1,
+                norm_multiplier=cfg.spec_norm_bound,
+                iteration=cfg.spec_norm_nb_iterations,
+            )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = self.conv_layer(
+        self.conv2 = tf.keras.layers.Conv2D(
             filters=out_planes,
             kernel_size=3,
             use_bias=False,
             name="conv2",
         )
+        # SN
+        if cfg.use_spec_norm:
+            self.conv2_sn = SpectralNormalizationConv2D(
+                layer=self.conv2,
+                norm_multiplier=cfg.spec_norm_bound,
+                iteration=cfg.spec_norm_nb_iterations,
+            )
         initializer = "zeros" if cfg.zero_init_last_bn else "ones"
         if cfg.norm_layer == "batch_norm":
             # Only batch norm layer has moving_variance_initializer parameter
@@ -225,17 +236,24 @@ class Bottleneck(tf.keras.layers.Layer):
         out_planes = nb_channels * self.expansion
         use_aa = cfg.aa_layer and stride == 2
 
-        self.conv1 = self.conv_layer(
+        self.conv1 = tf.keras.layers.Conv2D(
             filters=first_planes,
             kernel_size=1,
             use_bias=False,
             name="conv1",
         )
+        # SN
+        if cfg.use_spec_norm:
+            self.conv1_sn = SpectralNormalizationConv2D(
+                layer=self.conv1,
+                norm_multiplier=cfg.spec_norm_bound,
+                iteration=cfg.spec_norm_nb_iterations,
+            )
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = self.conv_layer(
+        self.conv2 = tf.keras.layers.Conv2D(
             filters=width,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -244,16 +262,30 @@ class Bottleneck(tf.keras.layers.Layer):
             use_bias=False,
             name="conv2",
         )
+        # SN
+        if cfg.use_spec_norm:
+            self.conv2_sn = SpectralNormalizationConv2D(
+                layer=self.conv2,
+                norm_multiplier=cfg.spec_norm_bound,
+                iteration=cfg.spec_norm_nb_iterations,
+            )
         self.bn2 = self.norm_layer(name="bn2")
         self.act2 = self.act_layer()
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
-        self.conv3 = self.conv_layer(
+        self.conv3 = tf.keras.layers.Conv2D(
             filters=out_planes,
             kernel_size=1,
             use_bias=False,
             name="conv3",
         )
+        # SN
+        if cfg.use_spec_norm:
+            self.conv3_sn = SpectralNormalizationConv2D(
+                layer=self.conv3,
+                norm_multiplier=cfg.spec_norm_bound,
+                iteration=cfg.spec_norm_nb_iterations,
+            )
         initializer = "zeros" if cfg.zero_init_last_bn else "ones"
         if cfg.norm_layer == "batch_norm":
             # Only batch norm layer has moving_variance_initializer parameter
