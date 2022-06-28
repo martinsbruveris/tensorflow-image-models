@@ -190,8 +190,6 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
             not be enabled unless for backward compatibility reasons.
           **kwargs: (dict) Other keyword arguments for the layers.Wrapper class.
         """
-        print("INIT GP ... INIT GP ... INIT GP")
-
         self.iteration = iteration
         self.do_power_iteration = training
         self.aggregation = aggregation
@@ -281,7 +279,6 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
 
     def update_weights(self):
         """Computes power iteration for convolutional filters based on [3]."""
-        print("UPDATING WEIGHTS ... UPDATING WEIGHTS ... UPDATING WEIGHTS")
         # Initialize u, v vectors.
         u_hat = self.u
         v_hat = self.v
