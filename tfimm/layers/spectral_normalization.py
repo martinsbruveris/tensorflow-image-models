@@ -167,6 +167,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
         norm_multiplier=0.95,
         training=True,
         aggregation=tf.VariableAggregation.MEAN,
+        inhere_layer_name=False,
         legacy_mode=False,
         **kwargs
     ):
@@ -183,16 +184,24 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
           aggregation: (tf.VariableAggregation) Indicates how a distributed variable
             will be aggregated. Accepted values are constants defined in the class
             tf.VariableAggregation.
+          inhere_layer_name: (bool) Whether to inhere the name of the input layer.
           legacy_mode: (bool) Whether to use the legacy implementation where the
             dimension of the u and v vectors are set to the batch size. It should
             not be enabled unless for backward compatibility reasons.
           **kwargs: (dict) Other keyword arguments for the layers.Wrapper class.
         """
+        print("INIT GP ... INIT GP ... INIT GP")
+
         self.iteration = iteration
         self.do_power_iteration = training
         self.aggregation = aggregation
         self.norm_multiplier = norm_multiplier
         self.legacy_mode = legacy_mode
+
+        # Set layer name.
+        wrapper_name = kwargs.pop("name", None)
+        if inhere_layer_name:
+            wrapper_name = layer.name
 
         # Set layer attributes.
         # layer._name += '_spec_norm'
@@ -203,7 +212,10 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
                     input=layer
                 )
             )
-        super(SpectralNormalizationConv2D, self).__init__(layer, **kwargs)
+        # call __init__ of tf.keras.layers.Wrapper
+        super(SpectralNormalizationConv2D, self).__init__(
+            layer, name=wrapper_name, **kwargs
+        )
 
     def build(self, input_shape):
         if not self.layer.built:
@@ -269,6 +281,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
 
     def update_weights(self):
         """Computes power iteration for convolutional filters based on [3]."""
+        print("UPDATING WEIGHTS ... UPDATING WEIGHTS ... UPDATING WEIGHTS")
         # Initialize u, v vectors.
         u_hat = self.u
         v_hat = self.v
