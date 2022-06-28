@@ -219,7 +219,7 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
             if w_name in src_weights:
                 weight_value_tuples.append((dst_weight, src_weights[w_name]))
             else:
-                weights_not_found.append(dst_weight)
+                weights_not_found.append(dst_weight.name)
 
     # This modifies weights in place
     K.batch_set_value(weight_value_tuples)
