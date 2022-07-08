@@ -213,6 +213,9 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
+        self.conv_layer = spectral_normalize_conv2d(
+            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
+        )
 
         # Number of channels after second convolution
         width = int(math.floor(nb_channels * (cfg.base_width / 64)) * cfg.cardinality)
