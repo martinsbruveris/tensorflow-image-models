@@ -201,9 +201,6 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
         if inhere_layer_name:
             wrapper_name = layer.name
 
-        # Set layer attributes.
-        # layer._name += '_spec_norm'
-
         if not isinstance(layer, tf.keras.layers.Conv2D):
             raise ValueError(
                 "layer must be a `tf.keras.layer.Conv2D` instance. You passed: {input}".format(
@@ -301,8 +298,8 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
                 u_hat = tf.nn.l2_normalize(tf.reshape(u_, [1, -1]))
                 u_hat = tf.reshape(u_hat, u_.shape)
 
+        # Calculate denominator for normalization
         v_w_hat = tf.nn.conv2d(v_hat, self.w, strides=self.strides, padding="SAME")
-
         sigma = tf.matmul(tf.reshape(v_w_hat, [1, -1]), tf.reshape(u_hat, [-1, 1]))
         # Convert sigma from a 1x1 matrix to a scalar.
         sigma = tf.reshape(sigma, [])
@@ -324,3 +321,35 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
     def restore_weights(self):
         """Restores layer weights to maintain gradient update (See Alg 1 of [1])."""
         return self.layer.kernel.assign(self.w)
+
+
+def spectral_normalize_dense(
+    use_spec_norm: bool, spec_norm_nb_iterations: int, spec_norm_bound: float
+):
+    """Apply spectral normalization to Dense layer if requested."""
+
+    def DenseNormed(*conv_args, **conv_kwargs):  # pylint: disable=invalid-name
+        return SpectralNormalization(
+            tf.keras.layers.Dense(*conv_args, **conv_kwargs),
+            iteration=spec_norm_nb_iterations,
+            norm_multiplier=spec_norm_bound,
+            inhere_layer_name=True,
+        )
+
+    return DenseNormed if use_spec_norm else tf.keras.layers.Dense
+
+
+def spectral_normalize_conv2d(
+    use_spec_norm: bool, spec_norm_nb_iterations: int, spec_norm_bound: float
+):
+    """Apply spectral normalization to Conv2D layer if requested."""
+
+    def Conv2DNormed(*conv_args, **conv_kwargs):  # pylint: disable=invalid-name
+        return SpectralNormalizationConv2D(
+            tf.keras.layers.Conv2D(*conv_args, **conv_kwargs),
+            iteration=spec_norm_nb_iterations,
+            norm_multiplier=spec_norm_bound,
+            inhere_layer_name=True,
+        )
+
+    return Conv2DNormed if use_spec_norm else tf.keras.layers.Conv2D

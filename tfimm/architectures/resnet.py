@@ -36,10 +36,10 @@ from tfimm.layers import (
     BlurPool2D,
     ClassifierHead,
     DropPath,
-    SpectralNormalizationConv2D,
     act_layer_factory,
     attn_layer_factory,
     norm_layer_factory,
+    spectral_normalize_conv2d,
 )
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
@@ -122,7 +122,7 @@ class BasicBlock(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.conv_layer = make_conv2d_layer(
+        self.conv_layer = spectral_normalize_conv2d(
             cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
         )
 
@@ -1706,19 +1706,3 @@ def seresnext50_32x4d():
         interpolation="bicubic",
     )
     return ResNet, cfg
-
-
-def make_conv2d_layer(
-    use_spec_norm: bool, spec_norm_nb_iterations: int, spec_norm_bound: float
-):
-    """Defines type of Conv2D layer to use based on spectral normalization."""
-
-    def Conv2DNormed(*conv_args, **conv_kwargs):  # pylint: disable=invalid-name
-        return SpectralNormalizationConv2D(
-            tf.keras.layers.Conv2D(*conv_args, **conv_kwargs),
-            iteration=spec_norm_nb_iterations,
-            norm_multiplier=spec_norm_bound,
-            inhere_layer_name=True,
-        )
-
-    return Conv2DNormed if use_spec_norm else tf.keras.layers.Conv2D
