@@ -31,8 +31,8 @@ from tfimm.models import register_model
 TEST_ARCHITECTURES = [
     "cait_test_model",  # cait.py
     "convmixer_test_model",  # convmixer.py
-    "convnext_test_model_1",  # convnext.py
-    "convnext_test_model_2",
+    "convnext_test_model",  # convnext.py
+    "convnext_test_model_sn",
     "efficientnet_test_model",  # efficientnet.py
     "mixer_test_model",  # mlp_mixer.py
     "resmlp_test_model",
@@ -44,7 +44,7 @@ TEST_ARCHITECTURES = [
     "pvt_v2_test_model",  # pvt_v2.py
     "resnet_test_model_1",  # resnet.py
     "resnet_test_model_2",
-    "resnet_test_model_3",
+    "resnet_test_model_sn",
     "resnetv2_test_model",  # resnetv2.py
     "swin_test_model",  # swin.py
     "vit_test_model",  # vit.py
@@ -84,9 +84,9 @@ def convmixer_test_model():
 
 
 @register_model
-def convnext_test_model_1():
+def convnext_test_model():
     cfg = ConvNeXtConfig(
-        name="convnext_test_model_1",
+        name="convnext_test_model",
         nb_classes=12,
         input_size=(32, 32),
         embed_dim=(4, 4, 4, 4),
@@ -96,9 +96,9 @@ def convnext_test_model_1():
 
 
 @register_model
-def convnext_test_model_2():
+def convnext_test_model_sn():
     cfg = ConvNeXtConfig(
-        name="convnext_test_model_2",
+        name="convnext_test_model_sn",
         nb_classes=12,
         input_size=(32, 32),
         embed_dim=(4, 4, 4, 4),
@@ -269,9 +269,9 @@ def resnet_test_model_2():
 
 
 @register_model
-def resnet_test_model_3():
+def resnet_test_model_sn():
     cfg = ResNetConfig(
-        name="resnet_test_model_3",
+        name="resnet_test_model_sn",
         nb_classes=12,
         input_size=(32, 32),
         block="basic_block",
