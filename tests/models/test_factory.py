@@ -15,6 +15,8 @@ FIXED_SIZE_MODELS_CREATION = [
     "mixer_test_model",  # mlp_mixer.py
     "resmlp_test_model",
     "gmlp_test_model",
+    "resnet_test_model_sn",  # spectral normalization (SN)
+    "convnext_test_model_sn",
 ]
 # Models for which we cannot change the input size during inference.
 FIXED_SIZE_MODELS_INFERENCE = [
@@ -25,6 +27,8 @@ FIXED_SIZE_MODELS_INFERENCE = [
     # determined at build time. Hence we can change the input size at creation time,
     # but not during inference.
     "swin_test_model",  # swin.py
+    "resnet_test_model_sn",  # spectral normalization (SN)
+    "convnext_test_model_sn",
 ]
 FLEXIBLE_MODELS_CREATION = list(
     set(TEST_ARCHITECTURES) - set(FIXED_SIZE_MODELS_CREATION)
