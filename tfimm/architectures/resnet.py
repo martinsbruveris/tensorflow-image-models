@@ -1,8 +1,6 @@
 """
 TensorFlow implementation of ResNets
-
 Based on timm/models/resnet.py by Ross Wightman.
-
 It includes the following models:
 - Resnets from the PyTorch model hub
 - ResNets trained by Ross Wightman
@@ -24,7 +22,6 @@ It includes the following models:
 - ResNets with a squeeze-and-excitation layer
   Paper: Squeeze-and-Excitation Networks
   Link: https://arxiv.org/abs/1709.01507
-
 Copyright 2021 Martins Bruveris
 Copyright 2021 Ross Wightman
 """
@@ -42,6 +39,7 @@ from tfimm.layers import (
     act_layer_factory,
     attn_layer_factory,
     norm_layer_factory,
+    spectral_normalize_conv2d,
 )
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
@@ -93,6 +91,10 @@ class ResNetConfig(ModelConfig):
     # Weight transfer
     first_conv: str = "conv1"
     classifier: str = "fc"
+    # Spectral normalization, gaussian process (SNGP)
+    use_spec_norm: bool = False
+    spec_norm_nb_iterations: int = 1
+    spec_norm_bound: float = 0.95
 
     def __post_init__(self):
         if self.test_input_size is None:
@@ -120,6 +122,9 @@ class BasicBlock(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
+        self.conv_layer = spectral_normalize_conv2d(
+            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
+        )
 
         # Num channels after first conv
         first_planes = nb_channels // cfg.block_reduce_first
@@ -127,7 +132,7 @@ class BasicBlock(tf.keras.layers.Layer):
         use_aa = cfg.aa_layer and stride == 2
 
         self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv1 = tf.keras.layers.Conv2D(
+        self.conv1 = self.conv_layer(
             filters=first_planes,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -140,7 +145,7 @@ class BasicBlock(tf.keras.layers.Layer):
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = tf.keras.layers.Conv2D(
+        self.conv2 = self.conv_layer(
             filters=out_planes,
             kernel_size=3,
             use_bias=False,
@@ -208,6 +213,9 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
+        self.conv_layer = spectral_normalize_conv2d(
+            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
+        )
 
         # Number of channels after second convolution
         width = int(math.floor(nb_channels * (cfg.base_width / 64)) * cfg.cardinality)
@@ -217,7 +225,7 @@ class Bottleneck(tf.keras.layers.Layer):
         out_planes = nb_channels * self.expansion
         use_aa = cfg.aa_layer and stride == 2
 
-        self.conv1 = tf.keras.layers.Conv2D(
+        self.conv1 = self.conv_layer(
             filters=first_planes,
             kernel_size=1,
             use_bias=False,
@@ -227,7 +235,7 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act1 = self.act_layer()
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = tf.keras.layers.Conv2D(
+        self.conv2 = self.conv_layer(
             filters=width,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -240,7 +248,7 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act2 = self.act_layer()
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
-        self.conv3 = tf.keras.layers.Conv2D(
+        self.conv3 = self.conv_layer(
             filters=out_planes,
             kernel_size=1,
             use_bias=False,
@@ -386,9 +394,7 @@ def make_stage(
 class ResNet(tf.keras.Model):
     """
     ResNet / ResNeXt / SE-ResNeXt / SE-Net
-
     This class implements various ResNet versions.
-
     Parameters
     ----------
     nb_classes : int, default 1000
