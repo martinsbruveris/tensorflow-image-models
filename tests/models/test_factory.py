@@ -261,4 +261,4 @@ def test_spectral_normalization(model_name: str):
     res = model(img).numpy()
     res_sn = model_sn(img).numpy()
 
-    assert np.all(np.isclose(res, res_sn, rtol=1e-4, atol=1e-4))
+    assert np.all(np.isclose(res, res_sn, rtol=1e-5, atol=1e-5))
