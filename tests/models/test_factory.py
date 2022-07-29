@@ -242,9 +242,7 @@ def test_mixed_precision(model_name: str):
     assert res.dtype == "float16"
 
 
-@pytest.mark.parametrize(
-    "model_name", ["resnet_test_model_1", "resnet_test_model_2", "convnext_test_model"]
-)
+@pytest.mark.parametrize("model_name", ["convnext_tiny", "resnet18"])
 def test_spectral_normalization(model_name: str):
     """
     Test if pre-trained models with and without spectral normalization produce
