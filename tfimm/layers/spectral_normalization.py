@@ -364,7 +364,8 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
 
         if not isinstance(layer, tf.keras.layers.DepthwiseConv2D):
             raise ValueError(
-                f"`layer` must be a `tf.keras.layer.DepthwiseConv2D`. Observed `{layer}`"
+                "`layer` must be a `tf.keras.layer.DepthwiseConv2D`. "
+                + f"Observed `{layer}`"
             )
         # call __init__ of tf.keras.layers.Wrapper
         super().__init__(layer, name=wrapper_name, **kwargs)

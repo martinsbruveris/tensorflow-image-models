@@ -226,7 +226,8 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     # Warn user if weights were not found
     if weights_not_found:
         logging.warning(
-            f"Not all weights of the destination model were found in the source model. The following weights were not transferred: {weights_not_found}."
+            "Not all weights of the destination model were found in the source model. "
+            + f"The following weights were not transferred: {weights_not_found}."
         )
 
 
