@@ -38,7 +38,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
         layer,
         iteration=1,
         norm_multiplier=0.95,
-        training=True,
+        do_power_iteration=True,
         aggregation=tf.VariableAggregation.MEAN,
         inhere_layer_name=False,
         legacy_mode=False,
@@ -52,7 +52,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
           norm_multiplier: (float) Multiplicative constant to threshold the
             normalization. Usually under normalization, the singular value will
             converge to this value.
-          training: (bool) Whether to perform power iteration to update the singular
+          do_power_iteration: (bool) Whether to perform power iteration to update the singular
             value estimate.
           aggregation: (tf.VariableAggregation) Indicates how a distributed variable
             will be aggregated. Accepted values are constants defined in the class
@@ -64,7 +64,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
           **kwargs: (dict) Other keyword arguments for the layers.Wrapper class.
         """
         self.iteration = iteration
-        self.do_power_iteration = training
+        self.do_power_iteration = do_power_iteration
         self.aggregation = aggregation
         self.norm_multiplier = norm_multiplier
         self.legacy_mode = legacy_mode
@@ -200,7 +200,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
         layer,
         iteration=1,
         norm_multiplier=0.95,
-        training=True,
+        do_power_iteration=True,
         aggregation=tf.VariableAggregation.MEAN,
         inhere_layer_name=False,
         legacy_mode=False,
@@ -214,7 +214,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
           norm_multiplier: (float) Multiplicative constant to threshold the
             normalization. Usually under normalization, the singular value will
             converge to this value.
-          training: (bool) Whether to perform power iteration to update the singular
+          do_power_iteration: (bool) Whether to perform power iteration to update the singular
             value estimate.
           aggregation: (tf.VariableAggregation) Indicates how a distributed variable
             will be aggregated. Accepted values are constants defined in the class
@@ -226,7 +226,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
           **kwargs: (dict) Other keyword arguments for the layers.Wrapper class.
         """
         self.iteration = iteration
-        self.do_power_iteration = training
+        self.do_power_iteration = do_power_iteration
         self.aggregation = aggregation
         self.norm_multiplier = norm_multiplier
         self.legacy_mode = legacy_mode
