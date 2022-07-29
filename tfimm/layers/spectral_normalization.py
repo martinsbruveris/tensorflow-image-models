@@ -1,3 +1,18 @@
+"""Spectral normalization layers.
+## References:
+[1] Yuichi Yoshida, Takeru Miyato. Spectral Norm Regularization for Improving
+    the Generalizability of Deep Learning.
+    _arXiv preprint arXiv:1705.10941_, 2017. https://arxiv.org/abs/1705.10941
+[2] Takeru Miyato, Toshiki Kataoka, Masanori Koyama, Yuichi Yoshida.
+    Spectral normalization for generative adversarial networks.
+    In _International Conference on Learning Representations_, 2018.
+[3] Henry Gouk, Eibe Frank, Bernhard Pfahringer, Michael Cree.
+    Regularisation of neural networks by enforcing lipschitz continuity.
+    _arXiv preprint arXiv:1804.04368_, 2018. https://arxiv.org/abs/1804.04368
+"""
+# `SpectralNormalization` and  `SpectralNormalizationConv2D` classes copied from
+# `https://github.com/tensorflow/models/blob/master/official/nlp/modeling/layers/spectral_normalization.py`
+#
 # Copyright 2022 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,18 +27,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Normalization layers.
-## References:
-[1] Yuichi Yoshida, Takeru Miyato. Spectral Norm Regularization for Improving
-    the Generalizability of Deep Learning.
-    _arXiv preprint arXiv:1705.10941_, 2017. https://arxiv.org/abs/1705.10941
-[2] Takeru Miyato, Toshiki Kataoka, Masanori Koyama, Yuichi Yoshida.
-    Spectral normalization for generative adversarial networks.
-    In _International Conference on Learning Representations_, 2018.
-[3] Henry Gouk, Eibe Frank, Bernhard Pfahringer, Michael Cree.
-    Regularisation of neural networks by enforcing lipschitz continuity.
-    _arXiv preprint arXiv:1804.04368_, 2018. https://arxiv.org/abs/1804.04368
-"""
 
 import numpy as np
 import tensorflow as tf
