@@ -607,7 +607,7 @@ class ResNet(tf.keras.Model):
 
 
 def create_conv2d(
-    *,
+    *args,
     depthwise: bool = False,
     use_spec_norm: bool,
     spec_norm_nb_iterations: int,
@@ -615,7 +615,7 @@ def create_conv2d(
     **kwargs,
 ):
     if not depthwise:
-        conv = tf.keras.layers.Conv2D(**kwargs)
+        conv = tf.keras.layers.Conv2D(*args, **kwargs)
         if use_spec_norm:
             conv = SpectralNormalizationConv2D(
                 conv,
@@ -624,7 +624,7 @@ def create_conv2d(
                 inhere_layer_name=True,
             )
     else:  # Depthwise convolution
-        conv = tf.keras.layers.DepthwiseConv2D(**kwargs)
+        conv = tf.keras.layers.DepthwiseConv2D(*args, **kwargs)
         if use_spec_norm:
             conv = SpectralNormalizationDepthwiseConv2D(
                 conv,
