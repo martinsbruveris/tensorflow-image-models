@@ -72,10 +72,10 @@ class SpectralNormalization(tf.keras.layers.Wrapper):
             raise ValueError(
                 f"`layer` must be a `tf.keras.layer.Layer`. Observed `{layer}`"
             )
-        super(SpectralNormalization, self).__init__(layer, name=wrapper_name, **kwargs)
+        super().__init__(layer, name=wrapper_name, **kwargs)
 
     def build(self, input_shape):
-        super(SpectralNormalization, self).build(input_shape)
+        super().build(input_shape)
         self.layer.kernel._aggregation = (
             self.aggregation
         )  # pylint: disable=protected-access
@@ -205,9 +205,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
                 f"`layer` must be a `tf.keras.layers.Conv2D`. Observed `{layer}`"
             )
         # call __init__ of tf.keras.layers.Wrapper
-        super(SpectralNormalizationConv2D, self).__init__(
-            layer, name=wrapper_name, **kwargs
-        )
+        super().__init__(layer, name=wrapper_name, **kwargs)
 
     def build(self, input_shape):
         if not self.layer.built:
@@ -256,7 +254,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
             aggregation=self.aggregation,
         )
 
-        super(SpectralNormalizationConv2D, self).build()
+        super().build()
 
     def call(self, inputs):
         u_update_op, v_update_op, w_update_op = self.update_weights()
@@ -369,9 +367,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
                 f"`layer` must be a `tf.keras.layer.DepthwiseConv2D`. Observed `{layer}`"
             )
         # call __init__ of tf.keras.layers.Wrapper
-        super(SpectralNormalizationDepthwiseConv2D, self).__init__(
-            layer, name=wrapper_name, **kwargs
-        )
+        super().__init__(layer, name=wrapper_name, **kwargs)
 
     def build(self, input_shape):
         if not self.layer.built:
@@ -420,7 +416,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
             aggregation=self.aggregation,
         )
 
-        super(SpectralNormalizationDepthwiseConv2D, self).build()
+        super().build()
 
     def call(self, inputs):
         u_update_op, v_update_op, w_update_op = self.update_weights()
