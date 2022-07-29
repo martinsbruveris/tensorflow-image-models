@@ -91,7 +91,7 @@ class ResNetConfig(ModelConfig):
     # Weight transfer
     first_conv: str = "conv1"
     classifier: str = "fc"
-    # Spectral normalization, gaussian process (SNGP)
+    # Spectral normalization
     use_spec_norm: bool = False
     spec_norm_nb_iterations: int = 1
     spec_norm_bound: float = 0.95

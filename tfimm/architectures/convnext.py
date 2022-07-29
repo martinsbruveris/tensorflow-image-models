@@ -101,6 +101,14 @@ class ConvNeXtConfig(ModelConfig):
             values.
         init_scale: Inital value for layer scale weights.
 
+        use_spec_norm: If set to `True`, then apply spectral normalization during
+            training.
+        spec_norm_nb_iterations: The number of power iteration to perform to estimate
+            weight matrix's singular value during spectral normalization.
+        spec_norm_bound: Multiplicative constant to threshold the spectral
+            normalization. Usually under normalization, the singular value will
+            converge to this value.
+
         crop_pct: Crop percentage for ImageNet evaluation.
         interpolation: Interpolation method for ImageNet evaluation.
         mean: Defines preprocessing function. If ``x`` is an image with pixel values
@@ -129,6 +137,10 @@ class ConvNeXtConfig(ModelConfig):
     norm_layer: str = "layer_norm_eps_1e-6"
     act_layer: str = "gelu"
     init_scale: float = 1e-6
+    # Spectral normalization
+    use_spec_norm: bool = False
+    spec_norm_nb_iterations: int = 1
+    spec_norm_bound: float = 0.95
     # Parameters for inference
     crop_pct: float = 0.875
     interpolation: str = "bicubic"
@@ -138,10 +150,6 @@ class ConvNeXtConfig(ModelConfig):
     # Weight transfer
     first_conv: str = "stem/0"
     classifier: str = "head/fc"
-    # Spectral normalization, gaussian process (SNGP)
-    use_spec_norm: bool = False
-    spec_norm_nb_iterations: int = 1
-    spec_norm_bound: float = 0.95
 
 
 def _weight_initializers(seed=42):
