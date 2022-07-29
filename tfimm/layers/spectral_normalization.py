@@ -40,7 +40,7 @@ class SpectralNormalization(tf.keras.layers.Wrapper):
         training=True,
         aggregation=tf.VariableAggregation.MEAN,
         inhere_layer_name=False,
-        **kwargs
+        **kwargs,
     ):
         """Initializer.
         Args:
@@ -70,8 +70,7 @@ class SpectralNormalization(tf.keras.layers.Wrapper):
 
         if not isinstance(layer, tf.keras.layers.Layer):
             raise ValueError(
-                "`layer` must be a `tf.keras.layer.Layer`. "
-                "Observed `{}`".format(layer)
+                f"`layer` must be a `tf.keras.layer.Layer`. Observed `{layer}`"
             )
         super(SpectralNormalization, self).__init__(layer, name=wrapper_name, **kwargs)
 
@@ -169,7 +168,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
         aggregation=tf.VariableAggregation.MEAN,
         inhere_layer_name=False,
         legacy_mode=False,
-        **kwargs
+        **kwargs,
     ):
         """Initializer.
         Args:
@@ -203,9 +202,7 @@ class SpectralNormalizationConv2D(tf.keras.layers.Wrapper):
 
         if not isinstance(layer, tf.keras.layers.Conv2D):
             raise ValueError(
-                "layer must be a `tf.keras.layer.Conv2D` instance. You passed: {input}".format(
-                    input=layer
-                )
+                f"`layer` must be a `tf.keras.layers.Conv2D`. Observed `{layer}`"
             )
         # call __init__ of tf.keras.layers.Wrapper
         super(SpectralNormalizationConv2D, self).__init__(
@@ -335,7 +332,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
         aggregation=tf.VariableAggregation.MEAN,
         inhere_layer_name=False,
         legacy_mode=False,
-        **kwargs
+        **kwargs,
     ):
         """Initializer.
         Args:
@@ -369,9 +366,7 @@ class SpectralNormalizationDepthwiseConv2D(tf.keras.layers.Wrapper):
 
         if not isinstance(layer, tf.keras.layers.DepthwiseConv2D):
             raise ValueError(
-                "layer must be a `tf.keras.layer.DepthwiseConv2D` instance. You passed: {input}".format(
-                    input=layer
-                )
+                f"`layer` must be a `tf.keras.layer.DepthwiseConv2D`. Observed `{layer}`"
             )
         # call __init__ of tf.keras.layers.Wrapper
         super(SpectralNormalizationDepthwiseConv2D, self).__init__(
