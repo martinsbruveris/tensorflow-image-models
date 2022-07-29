@@ -37,6 +37,7 @@ from tfimm.layers import (
     ClassifierHead,
     DropPath,
     SpectralNormalizationConv2D,
+    SpectralNormalizationDepthwiseConv2D,
     act_layer_factory,
     attn_layer_factory,
     norm_layer_factory,
@@ -122,11 +123,6 @@ class BasicBlock(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.conv_layer = create_conv2d(
-            use_spec_norm=cfg.use_spec_norm,
-            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
-            spec_norm_bound=cfg.spec_norm_bound,
-        )
 
         # Num channels after first conv
         first_planes = nb_channels // cfg.block_reduce_first
@@ -134,7 +130,10 @@ class BasicBlock(tf.keras.layers.Layer):
         use_aa = cfg.aa_layer and stride == 2
 
         self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv1 = self.conv_layer(
+        self.conv1 = create_conv2d(
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
             filters=first_planes,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -147,7 +146,10 @@ class BasicBlock(tf.keras.layers.Layer):
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = self.conv_layer(
+        self.conv2 = create_conv2d(
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
             filters=out_planes,
             kernel_size=3,
             use_bias=False,
@@ -215,11 +217,6 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.conv_layer = create_conv2d(
-            use_spec_norm=cfg.use_spec_norm,
-            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
-            spec_norm_bound=cfg.spec_norm_bound,
-        )
 
         # Number of channels after second convolution
         width = int(math.floor(nb_channels * (cfg.base_width / 64)) * cfg.cardinality)
@@ -229,7 +226,10 @@ class Bottleneck(tf.keras.layers.Layer):
         out_planes = nb_channels * self.expansion
         use_aa = cfg.aa_layer and stride == 2
 
-        self.conv1 = self.conv_layer(
+        self.conv1 = create_conv2d(
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
             filters=first_planes,
             kernel_size=1,
             use_bias=False,
@@ -239,7 +239,10 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act1 = self.act_layer()
 
         self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = self.conv_layer(
+        self.conv2 = create_conv2d(
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
             filters=width,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -252,7 +255,10 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act2 = self.act_layer()
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
-        self.conv3 = self.conv_layer(
+        self.conv3 = create_conv2d(
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
             filters=out_planes,
             kernel_size=1,
             use_bias=False,
@@ -604,21 +610,32 @@ class ResNet(tf.keras.Model):
 
 
 def create_conv2d(
+    *,
+    depthwise: bool = False,
     use_spec_norm: bool,
     spec_norm_nb_iterations: int,
     spec_norm_bound: float,
+    **kwargs,
 ):
-    """Apply spectral normalization to Conv2D layer if requested."""
-
-    def Conv2DNormed(*conv_args, **conv_kwargs):  # pylint: disable=invalid-name
-        return SpectralNormalizationConv2D(
-            tf.keras.layers.Conv2D(*conv_args, **conv_kwargs),
-            iteration=spec_norm_nb_iterations,
-            norm_multiplier=spec_norm_bound,
-            inhere_layer_name=True,
-        )
-
-    return Conv2DNormed if use_spec_norm else tf.keras.layers.Conv2D
+    if not depthwise:
+        conv = tf.keras.layers.Conv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    else:  # Depthwise convolution
+        conv = tf.keras.layers.DepthwiseConv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationDepthwiseConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    return conv
 
 
 @register_model
