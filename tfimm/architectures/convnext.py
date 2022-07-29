@@ -182,7 +182,6 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        cfg: ConvNeXtConfig,
         embed_dim: int,
         mlp_ratio: float,
         conv_mlp_block: bool,
@@ -191,10 +190,12 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         norm_layer: str,
         act_layer: str,
         init_scale: float,
+        use_spec_norm: bool,
+        spec_norm_nb_iterations: int,
+        spec_norm_bound: float,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.cfg = cfg
         self.embed_dim = embed_dim
         self.mlp_ratio = mlp_ratio
         self.conv_mlp_block = conv_mlp_block
@@ -203,6 +204,9 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         self.norm_layer = norm_layer
         self.act_layer = act_layer
         self.init_scale = init_scale
+        self.use_spec_norm = use_spec_norm
+        self.spec_norm_nb_iterations = spec_norm_nb_iterations
+        self.spec_norm_bound = spec_norm_bound
 
         mlp_layer = ConvMLP if conv_mlp_block else MLP
         norm_layer = norm_layer_factory(norm_layer)
@@ -210,7 +214,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
 
         self.pad = tf.keras.layers.ZeroPadding2D(padding=3)
         self.conv_dw = spectral_normalize_depthwise_conv2d(
-            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
+            self.use_spec_norm, self.spec_norm_nb_iterations, self.spec_norm_bound
         )(
             kernel_size=7,
             depthwise_initializer=kernel_initializer,
@@ -258,7 +262,6 @@ class ConvNeXtStage(tf.keras.layers.Layer):
 
     def __init__(
         self,
-        cfg: ConvNeXtConfig,
         stride: int,
         embed_dim: int,
         nb_blocks: int,
@@ -269,10 +272,12 @@ class ConvNeXtStage(tf.keras.layers.Layer):
         norm_layer: str,
         act_layer: str,
         init_scale: float,
+        use_spec_norm: bool,
+        spec_norm_nb_iterations: int,
+        spec_norm_bound: float,
         **kwargs,
     ):
         super().__init__(**kwargs)
-        self.cfg = cfg
         self.norm_layer = norm_layer
 
         norm_layer = norm_layer_factory(norm_layer)
@@ -294,7 +299,6 @@ class ConvNeXtStage(tf.keras.layers.Layer):
 
         self.blocks = [
             ConvNeXtBlock(
-                cfg=cfg,
                 embed_dim=embed_dim,
                 mlp_ratio=mlp_ratio,
                 conv_mlp_block=conv_mlp_block,
@@ -303,6 +307,9 @@ class ConvNeXtStage(tf.keras.layers.Layer):
                 norm_layer=self.norm_layer,
                 act_layer=act_layer,
                 init_scale=init_scale,
+                use_spec_norm=use_spec_norm,
+                spec_norm_nb_iterations=spec_norm_nb_iterations,
+                spec_norm_bound=spec_norm_bound,
                 name=f"blocks/{idx}",
             )
             for idx in range(nb_blocks)
@@ -360,7 +367,6 @@ class ConvNeXt(tf.keras.Model):
         for j in range(nb_stages):
             self.stages.append(
                 ConvNeXtStage(
-                    cfg=cfg,
                     stride=2 if j > 0 else 1,
                     embed_dim=cfg.embed_dim[j],
                     nb_blocks=cfg.nb_blocks[j],
@@ -371,6 +377,9 @@ class ConvNeXt(tf.keras.Model):
                     norm_layer=cfg.norm_layer,
                     act_layer=cfg.act_layer,
                     init_scale=cfg.init_scale,
+                    use_spec_norm=cfg.use_spec_norm,
+                    spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+                    spec_norm_bound=cfg.spec_norm_bound,
                     name=f"stages/{j}",
                 )
             )
