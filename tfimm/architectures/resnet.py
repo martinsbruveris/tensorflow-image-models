@@ -37,7 +37,6 @@ from tfimm.layers import (
     ClassifierHead,
     DropPath,
     SpectralNormalizationConv2D,
-    SpectralNormalizationDepthwiseConv2D,
     act_layer_factory,
     attn_layer_factory,
     norm_layer_factory,
@@ -124,7 +123,6 @@ class BasicBlock(tf.keras.layers.Layer):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
         self.conv_layer = create_conv2d(
-            depthwise=False,
             use_spec_norm=cfg.use_spec_norm,
             spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
             spec_norm_bound=cfg.spec_norm_bound,
@@ -218,7 +216,6 @@ class Bottleneck(tf.keras.layers.Layer):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
         self.conv_layer = create_conv2d(
-            depthwise=False,
             use_spec_norm=cfg.use_spec_norm,
             spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
             spec_norm_bound=cfg.spec_norm_bound,
@@ -607,32 +604,21 @@ class ResNet(tf.keras.Model):
 
 
 def create_conv2d(
-    *args,
-    depthwise: bool = False,
     use_spec_norm: bool,
     spec_norm_nb_iterations: int,
     spec_norm_bound: float,
-    **kwargs,
 ):
-    if not depthwise:
-        conv = tf.keras.layers.Conv2D(*args, **kwargs)
-        if use_spec_norm:
-            conv = SpectralNormalizationConv2D(
-                conv,
-                iteration=spec_norm_nb_iterations,
-                norm_multiplier=spec_norm_bound,
-                inhere_layer_name=True,
-            )
-    else:  # Depthwise convolution
-        conv = tf.keras.layers.DepthwiseConv2D(*args, **kwargs)
-        if use_spec_norm:
-            conv = SpectralNormalizationDepthwiseConv2D(
-                conv,
-                iteration=spec_norm_nb_iterations,
-                norm_multiplier=spec_norm_bound,
-                inhere_layer_name=True,
-            )
-    return conv
+    """Apply spectral normalization to Conv2D layer if requested."""
+
+    def Conv2DNormed(*conv_args, **conv_kwargs):  # pylint: disable=invalid-name
+        return SpectralNormalizationConv2D(
+            tf.keras.layers.Conv2D(*conv_args, **conv_kwargs),
+            iteration=spec_norm_nb_iterations,
+            norm_multiplier=spec_norm_bound,
+            inhere_layer_name=True,
+        )
+
+    return Conv2DNormed if use_spec_norm else tf.keras.layers.Conv2D
 
 
 @register_model
