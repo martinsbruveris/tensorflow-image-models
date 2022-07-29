@@ -36,10 +36,11 @@ from tfimm.layers import (
     BlurPool2D,
     ClassifierHead,
     DropPath,
+    SpectralNormalizationConv2D,
+    SpectralNormalizationDepthwiseConv2D,
     act_layer_factory,
     attn_layer_factory,
     norm_layer_factory,
-    spectral_normalize_conv2d,
 )
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
@@ -122,8 +123,11 @@ class BasicBlock(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.conv_layer = spectral_normalize_conv2d(
-            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
+        self.conv_layer = create_conv2d(
+            depthwise=False,
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
         )
 
         # Num channels after first conv
@@ -213,8 +217,11 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act_layer = act_layer_factory(cfg.act_layer)
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.attn_layer = attn_layer_factory(cfg.attn_layer)
-        self.conv_layer = spectral_normalize_conv2d(
-            cfg.use_spec_norm, cfg.spec_norm_nb_iterations, cfg.spec_norm_bound
+        self.conv_layer = create_conv2d(
+            depthwise=False,
+            use_spec_norm=cfg.use_spec_norm,
+            spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+            spec_norm_bound=cfg.spec_norm_bound,
         )
 
         # Number of channels after second convolution
@@ -597,6 +604,35 @@ class ResNet(tf.keras.Model):
         x = self.head(x, training=training)
         features["logits"] = x
         return (x, features) if return_features else x
+
+
+def create_conv2d(
+    *,
+    depthwise: bool = False,
+    use_spec_norm: bool,
+    spec_norm_nb_iterations: int,
+    spec_norm_bound: float,
+    **kwargs,
+):
+    if not depthwise:
+        conv = tf.keras.layers.Conv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    else:  # Depthwise convolution
+        conv = tf.keras.layers.DepthwiseConv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationDepthwiseConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    return conv
 
 
 @register_model

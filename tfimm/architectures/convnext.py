@@ -59,8 +59,9 @@ from tfimm.layers import (
     MLP,
     ConvMLP,
     DropPath,
+    SpectralNormalizationConv2D,
+    SpectralNormalizationDepthwiseConv2D,
     norm_layer_factory,
-    spectral_normalize_depthwise_conv2d,
 )
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
@@ -213,8 +214,11 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         kernel_initializer, bias_initializer = _weight_initializers()
 
         self.pad = tf.keras.layers.ZeroPadding2D(padding=3)
-        self.conv_dw = spectral_normalize_depthwise_conv2d(
-            self.use_spec_norm, self.spec_norm_nb_iterations, self.spec_norm_bound
+        self.conv_dw = create_conv2d(
+            depthwise=True,
+            use_spec_norm=self.use_spec_norm,
+            spec_norm_nb_iterations=self.spec_norm_nb_iterations,
+            spec_norm_bound=self.spec_norm_bound,
         )(
             kernel_size=7,
             depthwise_initializer=kernel_initializer,
@@ -470,6 +474,35 @@ class ConvNeXt(tf.keras.Model):
         x = self.fc(x)
         features["logits"] = x
         return (x, features) if return_features else x
+
+
+def create_conv2d(
+    *,
+    depthwise: bool = False,
+    use_spec_norm: bool,
+    spec_norm_nb_iterations: int,
+    spec_norm_bound: float,
+    **kwargs,
+):
+    if not depthwise:
+        conv = tf.keras.layers.Conv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    else:  # Depthwise convolution
+        conv = tf.keras.layers.DepthwiseConv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationDepthwiseConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    return conv
 
 
 @register_model
