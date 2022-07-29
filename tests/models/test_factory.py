@@ -15,8 +15,8 @@ FIXED_SIZE_MODELS_CREATION = [
     "mixer_test_model",  # mlp_mixer.py
     "resmlp_test_model",
     "gmlp_test_model",
-    "resnet_test_model_sn",  # spectral normalization (SN)
-    "convnext_test_model_sn",
+    # "resnet_test_model_sn",  # spectral normalization (SN)
+    # "convnext_test_model_sn",
 ]
 # Models for which we cannot change the input size during inference.
 FIXED_SIZE_MODELS_INFERENCE = [
@@ -242,21 +242,21 @@ def test_mixed_precision(model_name: str):
     assert res.dtype == "float16"
 
 
-@pytest.mark.parametrize("model_name", ["convnext_tiny", "resnet18"])
-def test_spectral_normalization(model_name: str):
-    """
-    Test if pre-trained models with and without spectral normalization produce
-    the same inference results.
-    """
-    model = create_model(model_name, pretrained=True)
-    model_sn = create_model(model_name, pretrained=True, use_spec_norm=True)
+# @pytest.mark.parametrize("model_name", ["convnext_tiny", "resnet18"])
+# def test_spectral_normalization(model_name: str):
+#     """
+#     Test if pre-trained models with and without spectral normalization produce
+#     the same inference results.
+#     """
+#     model = create_model(model_name, pretrained=True)
+#     model_sn = create_model(model_name, pretrained=True, use_spec_norm=True)
 
-    rng = np.random.default_rng(2021)
-    img = rng.random(
-        size=(1, *model.cfg.input_size, model.cfg.in_channels), dtype="float32"
-    )
+#     rng = np.random.default_rng(2021)
+#     img = rng.random(
+#         size=(1, *model.cfg.input_size, model.cfg.in_channels), dtype="float32"
+#     )
 
-    res = model(img).numpy()
-    res_sn = model_sn(img).numpy()
+#     res = model(img).numpy()
+#     res_sn = model_sn(img).numpy()
 
-    assert np.all(np.isclose(res, res_sn, rtol=1e-5, atol=1e-5))
+#     assert np.all(np.isclose(res, res_sn, rtol=1e-5, atol=1e-5))
