@@ -29,7 +29,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<3.10"
+python = ">=3.7,<4.0"
 markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
 tensorflow = "^2.5"
