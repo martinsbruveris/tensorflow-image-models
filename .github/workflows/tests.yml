@@ -12,7 +12,8 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: ['3.7']
+        # We cannot test on 3.10 as long as PyTorch doesn't support 3.10
+        python: ['3.7', '3.8', '3.9']
         poetry: ['1.1.6']
     runs-on: ${{ matrix.os }}
 
@@ -46,7 +47,7 @@ jobs:
         poetry config virtualenvs.path ~/.virtualenvs
 
     - name: Install Dependencies
-      run: poetry install -E timm -E train
+      run: poetry install -E timm
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Run tests

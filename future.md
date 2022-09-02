@@ -44,7 +44,7 @@ Finetuning
 - [ ] (must) Set weight decay in loaded model
 - [ ] (must) Fine-tune pretrained model on CIFAR-100
 - [ ] (must) Evaluate model on CIFAR-100
-- [ ] (optional) Load weights from file to model with `in_chans != 3`
+- [ ] (optional) Load weights from file to model with `in_channels != 3`
 - [ ] (optional) Fine-tune model on MNIST (and variants)
 - [ ] (optional) Evaluate model on MNIST (and variants)
 
@@ -54,8 +54,10 @@ To Do
 - [ ] Add no weight_decay rule for certain layers
 - [ ] Fix weight initialisation
 - [ ] Test that `nb_features` is set correctly for all models
-- [ ] Sort out ViT, DeiT, etc. weight naming + prefixes
+- [x] Sort out ViT, DeiT, etc. weight naming + prefixes
       Add unit test checking that all weights have correct prefix
+- [ ] Speed up unit tests by introducing (small) test architectures
+- [ ] Convert feature dicts to ordered dicts.
 
 Future
 
@@ -71,3 +73,6 @@ Future
 - [ ] RepVGG https://github.com/DingXiaoH/RepVGG
 - [ ] FaceX model zoo https://github.com/JDAI-CV/FaceX-Zoo
 
+- [x] Add flexible in_channels
+- [x] Add unit tests to in_channels
+- [ ] Write documentation for create_model
