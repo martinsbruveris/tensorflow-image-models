@@ -47,7 +47,7 @@ jobs:
         poetry config virtualenvs.path ~/.virtualenvs
 
     - name: Install Dependencies
-      run: poetry install -E timm -E train
+      run: poetry install -E timm
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Run tests
