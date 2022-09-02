@@ -29,17 +29,13 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.7,<4.0"
+python = ">=3.7,<3.11"
 markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
-tensorflow = "^2.5"
+tensorflow = "^2.8"
 
-pandas = { version = "*", optional = true }
 pyyaml = { version = "*", optional = true }
-tensorflow-datasets = { version="*", optional = true }
-timm = { version = "*", optional = true }
-tqdm = { version = "*", optional = true }
-wandb = { version = "*", optional = true }
+timm = { version = "*", optional = true, python = "<3.10" }
 
 # Documentation
 sphinx = { version = "*", optional = true }
@@ -49,19 +45,15 @@ sphinx-rtd-theme = { version = "*", optional = true }
 black = { version = "*", allow-prereleases = true }
 flake8 = "*"
 isort = "*"
-jupyter = "*"
 pytest = "*"
 pytest-timeout = "*"
 pytest-xdist = "*"
-seaborn = "*"
 
 [tool.poetry.extras]
 # To compile documentation
 docs = ["sphinx", "sphinx-rtd-theme"]
 # To load pretrained models from timm; will install PyTorch
 timm = ["pyyaml", "timm"]
-# To train and evaluate models
-train = ["pandas", "pyyaml", "tensorflow-datasets", "tqdm", "wandb"]
 
 [tool.pytest.ini_options]
 timeout = 60  # We need tests to be not too slow, because of GitHub limits
