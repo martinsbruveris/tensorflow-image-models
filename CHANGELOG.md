@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.8 - 2022-09-05
+
+- `tfimm` now supports python 3.10.
+
 ## v0.2.7 - 2022-06-14
 
 - Added EfficinentNet and MobileNet-V2 models.
