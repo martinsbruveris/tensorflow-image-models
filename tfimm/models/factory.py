@@ -8,6 +8,7 @@ from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
 from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
+from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
 
 
 def create_model(
@@ -267,3 +268,30 @@ def _transform_first_conv(weight, in_channels):
         weight = weight[:, :, :in_channels, :]
         weight *= tf.cast(src_channels / in_channels, tf.float32)
     return weight
+
+def load_user_timm_weights(model: tf.keras.Model, pt_model):
+    """Loads weights from pytorch in TF model."""
+    pt_state_dict = pt_model.state_dict()
+    load_pytorch_weights_in_tf2_model(model, pt_state_dict)
+ 
+def load_timm_model(
+        model_name: str,
+        nb_classes: int,
+        pt_model
+    ) -> tf.keras.Model:
+    if is_model(model_name):
+        cls = model_class(model_name)
+        cfg = model_config(model_name)
+        setattr(cfg, 'nb_classes', nb_classes)
+    else:
+        raise RuntimeError(f"Unknown model {model_name}.")
+ 
+    loaded_model = cls(cfg)
+    loaded_model(loaded_model.dummy_inputs)
+    load_user_timm_weights(loaded_model, pt_model)
+ 
+    # If we have loaded a model and the model has the correct config, then we are done.
+    if loaded_model is not None and loaded_model.cfg == cfg:
+        return loaded_model
+
+
