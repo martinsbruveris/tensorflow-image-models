@@ -145,7 +145,7 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
         self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
         self.proj_drop = tf.keras.layers.Dropout(rate=drop_rate)
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_attention=False):
         # B (batch size), N (sequence length), D (embedding dimension),
         # H (number of heads)
         batch_size, seq_length = tf.unstack(tf.shape(x)[:2])
@@ -164,7 +164,7 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
 
         x = self.proj(x)
         x = self.proj_drop(x, training=training)
-        return x
+        return (x, attn) if return_attention else x
 
 
 class ViTBlock(tf.keras.layers.Layer):
@@ -212,10 +212,14 @@ class ViTBlock(tf.keras.layers.Layer):
             name="mlp",
         )
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_attention=False):
         shortcut = x
         x = self.norm1(x, training=training)
-        x = self.attn(x, training=training)
+        x = self.attn(x, training=training, return_attention=return_attention)
+
+        if return_attention:
+            x, attn = x
+
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -224,7 +228,7 @@ class ViTBlock(tf.keras.layers.Layer):
         x = self.mlp(x, training=training)
         x = self.drop_path(x, training=training)
         x = x + shortcut
-        return x
+        return (x, attn) if return_attention else x
 
 
 class HybridEmbeddings(tf.keras.layers.Layer):
@@ -436,7 +440,12 @@ class ViT(tf.keras.Model):
         features["patch_embedding"] = x
 
         for j, block in enumerate(self.blocks):
-            x = block(x, training=training)
+            x = block(x, training=training, return_attention=return_features)
+
+            if return_features:
+                x, attn = x
+                features[f"block_{j}_attn"] = attn
+
             features[f"block_{j}"] = x
         x = self.norm(x, training=training)
         features["features_all"] = x
