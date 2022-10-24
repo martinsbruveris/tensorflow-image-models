@@ -6,6 +6,7 @@ Based on transformers/models/vit by HuggingFace
 
 Copyright 2021 Martins Bruveris
 """
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
@@ -145,7 +146,9 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
         self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
         self.proj_drop = tf.keras.layers.Dropout(rate=drop_rate)
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_features=False):
+        features = OrderedDict()
+
         # B (batch size), N (sequence length), D (embedding dimension),
         # H (number of heads)
         batch_size, seq_length = tf.unstack(tf.shape(x)[:2])
@@ -157,6 +160,7 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
         attn = self.scale * tf.linalg.matmul(q, k, transpose_b=True)  # (B, H, N, N)
         attn = tf.nn.softmax(attn, axis=-1)  # (B, H, N, N)
         attn = self.attn_drop(attn, training=training)
+        features["attn"] = attn
 
         x = tf.linalg.matmul(attn, v)  # (B, H, N, D/H)
         x = tf.transpose(x, (0, 2, 1, 3))  # (B, N, H, D/H)
@@ -164,7 +168,7 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
 
         x = self.proj(x)
         x = self.proj_drop(x, training=training)
-        return x
+        return (x, features) if return_features else x
 
 
 class ViTBlock(tf.keras.layers.Layer):
@@ -212,10 +216,14 @@ class ViTBlock(tf.keras.layers.Layer):
             name="mlp",
         )
 
-    def call(self, x, training=False):
+    def call(self, x, training=False, return_features=False):
+        features = OrderedDict()
         shortcut = x
         x = self.norm1(x, training=training)
-        x = self.attn(x, training=training)
+        x = self.attn(x, training=training, return_features=return_features)
+        if return_features:
+            x, mha_features = x
+            features["attn"] = mha_features["attn"]
         x = self.drop_path(x, training=training)
         x = x + shortcut
 
@@ -224,7 +232,7 @@ class ViTBlock(tf.keras.layers.Layer):
         x = self.mlp(x, training=training)
         x = self.drop_path(x, training=training)
         x = x + shortcut
-        return x
+        return (x, features) if return_features else x
 
 
 class HybridEmbeddings(tf.keras.layers.Layer):
@@ -397,11 +405,11 @@ class ViT(tf.keras.Model):
 
     @property
     def feature_names(self) -> List[str]:
-        return (
-            ["patch_embedding"]
-            + [f"block_{j}" for j in range(self.cfg.nb_blocks)]
-            + ["features_all", "features", "logits"]
-        )
+        """
+        Names of features, returned when calling ``call`` with ``return_features=True``.
+        """
+        _, features = self(self.dummy_inputs, return_features=True)
+        return list(features.keys())
 
     def transform_pos_embed(self, target_cfg: ViTConfig):
         return interpolate_pos_embeddings(
@@ -412,7 +420,7 @@ class ViT(tf.keras.Model):
         )
 
     def forward_features(self, x, training=False, return_features=False):
-        features = {}
+        features = OrderedDict()
         batch_size = tf.shape(x)[0]
 
         x, grid_size = self.patch_embed(x, return_shape=True)
@@ -436,7 +444,10 @@ class ViT(tf.keras.Model):
         features["patch_embedding"] = x
 
         for j, block in enumerate(self.blocks):
-            x = block(x, training=training)
+            x = block(x, training=training, return_features=return_features)
+            if return_features:
+                x, block_features = x
+                features[f"block_{j}/attn"] = block_features["attn"]
             features[f"block_{j}"] = x
         x = self.norm(x, training=training)
         features["features_all"] = x
