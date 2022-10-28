@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.9 - 22-10-28
+
+- Exposed attention map in ViT models.
+
 ## v0.2.8 - 2022-09-05
 
 - `tfimm` now supports python 3.10.
