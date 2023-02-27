@@ -1,6 +1,10 @@
 # Change Log
 
-## v0.2.9 - 22-10-28
+## v0.2.10 - 2023-02-27
+
+- Added post-pooling features for ConvNeXt in feature dictionary.
+
+## v0.2.9 - 2022-10-28
 
 - Exposed attention map in ViT models.
 
