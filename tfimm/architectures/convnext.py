@@ -404,6 +404,8 @@ class ConvNeXt(tf.keras.Model):
                 x, stage_features = x
                 for key, val in stage_features.items():
                     features[f"stage_{stage_idx}/{key}"] = val
+        features["conv_features"] = x
+
         return (x, features) if return_features else x
 
     def call(self, x, training: bool = False, return_features: bool = False):
@@ -431,6 +433,7 @@ class ConvNeXt(tf.keras.Model):
         x = self.pool(x)
         x = self.norm(x, training=training)
         x = self.flatten(x)
+        features["features"] = x
         x = self.drop(x, training=training)
         x = self.fc(x)
         features["logits"] = x
