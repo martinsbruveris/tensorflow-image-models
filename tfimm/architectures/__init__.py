@@ -1,3 +1,4 @@
+from . import segment_anything  # noqa: F401
 from .cait import *  # noqa: F401
 from .convmixer import *  # noqa: F401
 from .convnext import *  # noqa: F401
