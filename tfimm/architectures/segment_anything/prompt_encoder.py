@@ -153,7 +153,7 @@ class PromptEncoder(tf.keras.Model):
             Sparse embeddings of shape (N, L, embed_dim), where L is determined by the
                 number of input points and boxes: L = M1 + 1, if M2 = 0 (no boxes) and
                 L = M1 + 2*M2, if M2 > 0 (boxes provided).
-            Dense mask embeddings of shape (N, embed_dim, *grid_size).
+            Dense mask embeddings of shape (N, *grid_size, embed_dim).
         """
         points = inputs["points"]
         labels = inputs["labels"]
