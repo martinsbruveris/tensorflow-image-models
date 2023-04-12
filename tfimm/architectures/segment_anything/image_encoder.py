@@ -4,6 +4,7 @@ from typing import Tuple
 import tensorflow as tf
 
 from tfimm.layers import DropPath, PatchEmbeddings, norm_layer_factory
+
 from .common import MLPBlock
 
 
@@ -30,7 +31,7 @@ def window_partition(
     x = tf.cond(
         (pad_h > 0) | (pad_w > 0),
         lambda: tf.pad(x, [(0, 0), (0, pad_h), (0, pad_w), (0, 0)]),
-        lambda: x
+        lambda: x,
     )
     _, hp, wp, _ = tf.unstack(tf.shape(x))
 
@@ -96,9 +97,11 @@ def get_rel_pos(
 
     if interpolate_pos:
         # Interpolate positional embeddings if needed.
-        rel_pos = tf.reshape(rel_pos, (1, m, -1))   # (1, M, C)
+        rel_pos = tf.reshape(rel_pos, (1, m, -1))  # (1, M, C)
         rel_pos = tf.image.resize(
-            rel_pos, size=(1, max_rel_dist), method="bilinear",
+            rel_pos,
+            size=(1, max_rel_dist),
+            method="bilinear",
         )
         rel_pos = tf.reshape(rel_pos, (max_rel_dist, -1))  # (M', C)
 
@@ -151,7 +154,7 @@ def add_decomposed_rel_pos(
     q = tf.reshape(q, (n, q_h, q_w, c))  # (N, H, W, C)
 
     r_h = get_rel_pos(q_h, k_h, rel_pos_h, interpolate_pos)  # (H, H, C)
-    r_h = tf.einsum("nhwc,hkc->nhwk", q, r_h) # (N, H, W, H)
+    r_h = tf.einsum("nhwc,hkc->nhwk", q, r_h)  # (N, H, W, H)
     r_h = tf.expand_dims(r_h, axis=-1)  # (N, H, W, H, 1)
 
     r_w = get_rel_pos(q_w, k_w, rel_pos_w, interpolate_pos)  # (W, W, C)
@@ -177,7 +180,7 @@ class Attention(tf.keras.layers.Layer):
         use_rel_pos: bool,
         drop_rate: float,
         attn_drop_rate: float,
-        **kwargs
+        **kwargs,
     ):
         """
         Args:
@@ -198,7 +201,7 @@ class Attention(tf.keras.layers.Layer):
         self.attn_drop_rate = attn_drop_rate
 
         self.head_dim = self.embed_dim // self.nb_heads
-        self.scale = self.head_dim ** -0.5
+        self.scale = self.head_dim**-0.5
 
         self.qkv = tf.keras.layers.Dense(embed_dim * 3, use_bias=qkv_bias, name="qkv")
         self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
@@ -234,7 +237,7 @@ class Attention(tf.keras.layers.Layer):
         qkv = tf.reshape(qkv, (3, n * self.nb_heads, h * w, -1))  # (3, N*Hd, H*W, C/Hd)
         q, k, v = qkv[0], qkv[1], qkv[2]
 
-        attn = tf.linalg.matmul(q, k, transpose_b=True) # (N*Hd, H*W, H*W)
+        attn = tf.linalg.matmul(q, k, transpose_b=True)  # (N*Hd, H*W, H*W)
         attn *= self.scale
 
         if self.use_rel_pos:
@@ -264,6 +267,7 @@ class Block(tf.keras.layers.Layer):
     """
     Transformer blocks with support for window attention and residual propagation.
     """
+
     def __init__(
         self,
         fixed_input_size: bool,
@@ -458,10 +462,7 @@ class ImageEncoder(tf.keras.Model):
         neck_norm_layer = norm_layer_factory("layer_norm_eps_1e-6")
         self.neck = [
             tf.keras.layers.Conv2D(
-                filters=self.out_channels,
-                kernel_size=1,
-                use_bias=False,
-                name="neck/0"
+                filters=self.out_channels, kernel_size=1, use_bias=False, name="neck/0"
             ),
             neck_norm_layer(name="neck/1"),
             tf.keras.layers.Conv2D(

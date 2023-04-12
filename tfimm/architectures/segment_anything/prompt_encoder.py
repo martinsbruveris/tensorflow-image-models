@@ -128,7 +128,7 @@ class PromptEncoder(tf.keras.Model):
             tf.shape(masks)[-1] == 0,
             lambda: tf.broadcast_to(
                 input=tf.reshape(self.no_mask_embed, (1, 1, 1, -1)),
-                shape=(tf.shape(masks)[0], *self.grid_size, self.embed_dim)
+                shape=(tf.shape(masks)[0], *self.grid_size, self.embed_dim),
             ),
             lambda: self.mask_downscaling(masks, training=training),
         )
@@ -176,7 +176,7 @@ class MaskDownscaling(tf.keras.Model):
         mask_channels: int,
         act_layer: str,
         **kwargs,
-     ):
+    ):
         super().__init__(**kwargs)
         self.embed_dim = embed_dim
         self.mask_channels = mask_channels
@@ -238,7 +238,7 @@ class PositionalEmbeddingRandom(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.positional_encoding_gaussian_matrix = self.add_weight(
             shape=(2, self.embed_dim // 2),
-            initializer=tf.keras.initializers.RandomNormal(mean=0., stddev=self.scale),
+            initializer=tf.keras.initializers.RandomNormal(mean=0.0, stddev=self.scale),
             trainable=False,
             name="positional_encoding_gaussian_matrix",
         )

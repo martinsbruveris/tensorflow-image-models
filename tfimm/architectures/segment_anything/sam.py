@@ -5,6 +5,7 @@ import tensorflow as tf
 
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+
 from .image_encoder import ImageEncoder
 
 # model_registry will add each entrypoint fn to this
@@ -54,6 +55,7 @@ class SegmentAnythingModelConfig(ModelConfig):
             :func:`~tfimm.create_model` to adapt the number in input channels when
             loading pretrained weights.
     """
+
     in_channels: int = 3
     input_size: Tuple[int, int] = (1024, 1024)
     fixed_input_size: bool = True
@@ -113,7 +115,6 @@ class SegmentAnythingModel(tf.keras.Model):
             window_size=cfg.encoder_window_size,
             global_attn_indices=cfg.encoder_global_attn_indices,
         )
-
 
     @property
     def dummy_inputs(self):

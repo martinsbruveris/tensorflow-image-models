@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 from tfimm.layers import norm_layer_factory
+
 from .common import MLPBlock
 
 
@@ -33,7 +34,7 @@ class TwoWayTransformer(tf.keras.Model):
                 attention_downsample_rate=self.attention_downsample_rate,
                 skip_first_layer_pe=j == 0,
                 act_layer=self.act_layer,
-                name=f"layers/{j}"
+                name=f"layers/{j}",
             )
             for j in range(self.nb_heads)
         ]
@@ -84,7 +85,7 @@ class TwoWayTransformer(tf.keras.Model):
         # Apply final attention layer from the points to the image
         attn = self.final_attn_token_to_image(
             {"q": queries + point_embedding, "k": keys + image_pe, "v": keys},
-            training=training
+            training=training,
         )
         queries = queries + attn
         queries = self.norm_final_attn(queries, training=training)
@@ -221,9 +222,7 @@ class Attention(tf.keras.layers.Layer):
 
     def _separate_heads(self, x: tf.Tensor):
         b, m, c = tf.shape(x)  # (B, M, C)
-        x = tf.reshape(
-            x, (b, m, self.nb_heads, c // self.nb_heads)
-        )  # (B, M, Hd, C/Hd)
+        x = tf.reshape(x, (b, m, self.nb_heads, c // self.nb_heads))  # (B, M, Hd, C/Hd)
         x = tf.transpose(x, (0, 2, 1, 3))  # (B, Hd, M, C/Hd)
         return x
 
