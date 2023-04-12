@@ -17,11 +17,17 @@ from tfimm.architectures.segment_anything.image_encoder import (
 from tfimm.architectures.segment_anything.image_encoder import (
     window_unpartition as tf_window_unpartition,
 )
+from tfimm.architectures.segment_anything.mask_decoder import (
+    MaskDecoder as TFMaskDecoder,
+)
 from tfimm.architectures.segment_anything.prompt_encoder import (
     PositionalEmbeddingRandom as TFPositionalEmbeddingRandom,
 )
 from tfimm.architectures.segment_anything.prompt_encoder import (
     PromptEncoder as TFPromptEncoder,
+)
+from tfimm.architectures.segment_anything.torch.modeling import (
+    MaskDecoder as PTMaskDecoder,
 )
 from tfimm.architectures.segment_anything.torch.modeling.image_encoder import (
     add_decomposed_rel_pos as pt_add_decomposed_rel_pos,
@@ -302,8 +308,8 @@ def test_two_way_transformer():
         tf_transformer,
         pt_transformer.state_dict(),
         tf_inputs={
-            "point_embedding": tf.zeros((1, 1, 12)),
-            "image_embedding": tf.zeros((1, 1, 1, 12)),
+            "point_embeddings": tf.zeros((1, 1, 12)),
+            "image_embeddings": tf.zeros((1, 1, 1, 12)),
             "image_pe": tf.zeros((1, 1, 1, 12)),
         },
     )
@@ -319,8 +325,8 @@ def test_two_way_transformer():
     pt_k = pt_k.reshape(img_emb.shape)
     tf_q, tf_k = tf_transformer(
         {
-            "point_embedding": tf.constant(pts_emb),
-            "image_embedding": tf.constant(img_emb),
+            "point_embeddings": tf.constant(pts_emb),
+            "image_embeddings": tf.constant(img_emb),
             "image_pe": tf.constant(img_pe),
         }
     )
@@ -329,4 +335,69 @@ def test_two_way_transformer():
 
 
 def test_mask_decoder():
-    ...
+    pt_mask_decoder = PTMaskDecoder(
+        num_multimask_outputs=3,
+        transformer=PTTwoWayTransformer(
+            depth=2,
+            embedding_dim=12,
+            mlp_dim=3,
+            num_heads=3,
+        ),
+        transformer_dim=12,
+        iou_head_depth=3,
+        iou_head_hidden_dim=7,
+    )
+    tf_mask_decoder = TFMaskDecoder(
+        transformer=TFTwoWayTransformer(
+            embed_dim=12,
+            nb_blocks=2,
+            nb_heads=3,
+            mlp_dim=3,
+            attention_downsample_rate=2,
+            act_layer="relu",
+            name="transformer",
+        ),
+        embed_dim=12,
+        nb_multimask_outputs=3,
+        act_layer="gelu",
+        iou_head_depth=3,
+        iou_head_hidden_dim=7,
+    )
+    load_pytorch_weights_in_tf2_model(
+        tf_mask_decoder,
+        pt_mask_decoder.state_dict(),
+        tf_inputs={
+            "image_embeddings": tf.zeros((1, 8, 16, 12)),
+            "image_pe": tf.zeros((1, 8, 16, 12)),
+            "sparse_embeddings": tf.zeros((1, 1, 12)),
+            "dense_embeddings": tf.zeros((1, 8, 16, 12)),
+        },
+    )
+
+    img_emb = np.random.rand(1, 8, 16, 12).astype(np.float32)
+    img_pe = np.random.rand(1, 8, 16, 12).astype(np.float32)
+    sparse_emb = np.random.rand(1, 2, 12).astype(np.float32)
+    dense_emb = np.random.rand(1, 8, 16, 12).astype(np.float32)
+
+    pt_masks, pt_prob = pt_mask_decoder(
+        image_embeddings=torch.Tensor(img_emb).permute((0, 3, 1, 2)),
+        image_pe=torch.Tensor(img_pe).permute((0, 3, 1, 2)),
+        sparse_prompt_embeddings=torch.Tensor(sparse_emb),
+        dense_prompt_embeddings=torch.Tensor(dense_emb).permute((0, 3, 1, 2)),
+        multimask_output=True,
+    )
+    pt_masks = pt_masks.permute((0, 2, 3, 1))
+
+    tf_masks, tf_prob = tf_mask_decoder(
+        inputs={
+            "image_embeddings": tf.constant(img_emb),
+            "image_pe": tf.constant(img_pe),
+            "sparse_embeddings": tf.constant(sparse_emb),
+            "dense_embeddings": tf.constant(dense_emb),
+        },
+        multimask_output=True,
+    )
+    np.testing.assert_almost_equal(
+        tf_masks.numpy(), pt_masks.detach().numpy(), decimal=5
+    )
+    np.testing.assert_almost_equal(tf_prob.numpy(), pt_prob.detach().numpy(), decimal=5)

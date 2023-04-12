@@ -36,7 +36,7 @@ class TwoWayTransformer(tf.keras.Model):
                 act_layer=self.act_layer,
                 name=f"layers/{j}",
             )
-            for j in range(self.nb_heads)
+            for j in range(self.nb_blocks)
         ]
         self.final_attn_token_to_image = Attention(
             embed_dim=self.embed_dim,
@@ -50,9 +50,9 @@ class TwoWayTransformer(tf.keras.Model):
         """
         Args:
             inputs: Dictionary with the following entries.
-                point_embedding: Point embedding, should have shape (B, N, embed_dim)
+                point_embeddings: Point embedding, should have shape (B, N, embed_dim)
                         for any N.
-                image_embedding: Image to attend to. Should have the shape
+                image_embeddings: Image to attend to. Should have the shape
                     (B, H, W, embed_dim) for any (H, W).
                 image_pe: Positional encoding to add to the image. Must have the same
                     shape as image_embedding.
@@ -63,28 +63,28 @@ class TwoWayTransformer(tf.keras.Model):
             The processed image_embedding, same shape as input. Note that this differs
                 from PyTorch, where the output has shape (B, H*W, embed_dim).
         """
-        image_embedding = inputs["image_embedding"]
+        image_embeddings = inputs["image_embeddings"]
         image_pe = inputs["image_pe"]
-        point_embedding = inputs["point_embedding"]
-        b, h, w, c = tf.unstack(tf.shape(image_embedding))
+        point_embeddings = inputs["point_embeddings"]
+        b, h, w, c = tf.unstack(tf.shape(image_embeddings))
 
-        image_embedding = tf.reshape(image_embedding, (b, -1, c))  # (B, H*W, C)
+        image_embedding = tf.reshape(image_embeddings, (b, -1, c))  # (B, H*W, C)
         image_pe = tf.reshape(image_pe, (b, -1, c))  # (B, H*W, C)
 
         # Prepare queries
-        queries = point_embedding
+        queries = point_embeddings
         keys = image_embedding
 
         # Apply transformer blocks
         for block in self.blocks:
             queries, keys = block(
-                {"q": queries, "k": keys, "q_pe": point_embedding, "k_pe": image_pe},
+                {"q": queries, "k": keys, "q_pe": point_embeddings, "k_pe": image_pe},
                 training=training,
             )
 
         # Apply final attention layer from the points to the image
         attn = self.final_attn_token_to_image(
-            {"q": queries + point_embedding, "k": keys + image_pe, "v": keys},
+            {"q": queries + point_embeddings, "k": keys + image_pe, "v": keys},
             training=training,
         )
         queries = queries + attn
