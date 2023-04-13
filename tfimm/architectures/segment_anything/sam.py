@@ -7,8 +7,8 @@ from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 from .image_encoder import ImageEncoder
-from .prompt_encoder import PromptEncoder
 from .mask_decoder import MaskDecoder
+from .prompt_encoder import PromptEncoder
 from .transformer import TwoWayTransformer
 
 # model_registry will add each entrypoint fn to this

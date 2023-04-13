@@ -175,7 +175,7 @@ class PromptEncoder(tf.keras.Model):
                 input=tf.expand_dims(self.not_a_point_embed, axis=0),
                 multiples=(n, 1, 1),
             ),
-            lambda: tf.zeros((n, 0, self.embed_dim))
+            lambda: tf.zeros((n, 0, self.embed_dim)),
         )
 
         sparse_embeddings = tf.concat(
