@@ -94,10 +94,10 @@ class MaskDecoder(tf.keras.Model):
                 the number determined by `nb_multimask_outputs`.
 
         Returns:
-            An (N, H', W', M) tensor of predicted segmentation masks, where M is either
+            An (N, K, H', W') tensor of predicted segmentation masks, where K is either
                 1 or nb_multimask_outputs. (H', W') is the spatial resolution of the
                 segmentation mask (usually image_size / 4).
-            An (N, M) tensor of mask quality predictions.
+            An (N, K) tensor of mask quality predictions.
         """
         image_embeddings = inputs["image_embeddings"]
         image_pe = inputs["image_pe"]
@@ -114,9 +114,9 @@ class MaskDecoder(tf.keras.Model):
 
         # Select the correct mask or masks for returning
         if multimask_output:
-            return masks[..., 1:], iou_pred[..., 1:]
+            return masks[:, 1:], iou_pred[:, 1:]
         else:
-            return masks[..., 0:1], iou_pred[..., 0:1]
+            return masks[:, 0:1], iou_pred[:, 0:1]
 
     def predict_masks(
         self,
@@ -160,7 +160,6 @@ class MaskDecoder(tf.keras.Model):
         upscaled_embeddings = tf.reshape(upscaled_embeddings, (n, h * w, c))
         masks = tf.matmul(hyper_in, upscaled_embeddings, transpose_b=True)
         masks = tf.reshape(masks, (n, -1, h, w))
-        masks = tf.transpose(masks, (0, 2, 3, 1))
 
         # Generate mask quality predictions
         iou_pred = self.iou_prediction_head(iou_token)

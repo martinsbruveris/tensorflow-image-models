@@ -12,7 +12,7 @@ class PromptEncoder(tf.keras.Model):
         input_size: Tuple[int, int],
         grid_size: Tuple[int, int],
         embed_dim: int,
-        mask_channels: int,
+        mask_hidden_dim: int,
         act_layer: str = "gelu",
         **kwargs,
     ) -> None:
@@ -24,14 +24,14 @@ class PromptEncoder(tf.keras.Model):
                 (H, W). Used to normalize point and bounding box coordinates.
             grid_size: The spatial size of the image embedding as (H, W).
             embed_dim: The prompts' embedding dimension.
-            mask_channels: The number of hidden channels for encoding input masks.
+            mask_hidden_dim: The number of hidden channels for encoding input masks.
             act_layer: Activation layer.
         """
         super().__init__(**kwargs)
         self.input_size = input_size
         self.grid_size = grid_size
         self.embed_dim = embed_dim
-        self.mask_channels = mask_channels
+        self.mask_hidden_dim = mask_hidden_dim
         self.act_layer = act_layer
 
         self.pe_layer = PositionalEmbeddingRandom(
@@ -42,7 +42,7 @@ class PromptEncoder(tf.keras.Model):
 
         self.mask_downscaling = MaskDownscaling(
             embed_dim=self.embed_dim,
-            mask_channels=self.mask_channels,
+            mask_hidden_dim=self.mask_hidden_dim,
             act_layer=self.act_layer,
             name="mask_downscaling",
         )
@@ -144,16 +144,19 @@ class PromptEncoder(tf.keras.Model):
                 labels: An (N, M1) tensor of point labels. 1 indicates a foreground
                     point and 0 indicates a background point.
                 boxes: An (N, M2, 4) tensor of bounding box coordinates.
-                masks: An (N, H, W, M3) tensor for masks, where M3 is either 0 (no mask
-                    to embed, tensor is empty) or 1 (mask given). The spatial input
-                    size (H, W) should be self.mask_size.
+                masks: An (N, M3, H', W') tensor for masks, where M3 can be 0 (no mask
+                    to embed, tensor is empty). The spatial input size (H, W) should be
+                    self.mask_size.
             training: Training or inference phase?
 
         Returns:
-            Sparse embeddings of shape (N, L, embed_dim), where L is determined by the
-                number of input points and boxes: L = M1 + 1, if M2 = 0 (no boxes) and
-                L = M1 + 2*M2, if M2 > 0 (boxes provided).
-            Dense mask embeddings of shape (N, *grid_size, embed_dim).
+            Sparse embeddings of shape (N, M, D), where M is determined by the number
+                of input points and boxes:
+                 - M = 2*M2, if M1 = 0 (no points)
+                 - M = M1 + 1, if M1 > 0 and M2 = 0 (points, no boxes) and
+                 - M = M1 + 2*M2, if M1 > 0 and M2 > 0 (points and boxes)
+            Dense mask embeddings of shape (N, H'', W'', D), where (H'', W'') is given
+                by grid_size and D is embed_dim.
         """
         points = inputs["points"]
         labels = inputs["labels"]
@@ -162,36 +165,61 @@ class PromptEncoder(tf.keras.Model):
 
         point_embeddings = self._embed_points(points, labels)
         box_embeddings = self._embed_boxes(boxes)
-        sparse_embeddings = tf.concat([point_embeddings, box_embeddings], axis=1)
 
+        # If we have points, but no boxes, we append one `not_a_point_embed` embedding.
+        # This is done in PyTorch via `pad=True` in `_embed_points()`.
+        n = tf.shape(points)[0]
+        pad_token = tf.cond(
+            (tf.shape(points)[1] > 0) & (tf.shape(boxes)[1] == 0),
+            lambda: tf.tile(  # We need this to get the right batch size
+                input=tf.expand_dims(self.not_a_point_embed, axis=0),
+                multiples=(n, 1, 1),
+            ),
+            lambda: tf.zeros((n, 0, self.embed_dim))
+        )
+
+        sparse_embeddings = tf.concat(
+            [point_embeddings, pad_token, box_embeddings], axis=1
+        )
         dense_embeddings = self._embed_masks(masks, training=training)
 
         return sparse_embeddings, dense_embeddings
+
+    def get_dense_pe(self) -> tf.Tensor:
+        """
+        Returns the positional encoding used to encode point prompts, applied to a
+        dense set of points the shape of the image encoding.
+
+        Returns:
+          Positional encoding with shape (*grid_size, embed_dim).
+        """
+        image_pe = self.pe_layer.embed_grid(self.grid_size)
+        return image_pe
 
 
 class MaskDownscaling(tf.keras.Model):
     def __init__(
         self,
         embed_dim: int,
-        mask_channels: int,
+        mask_hidden_dim: int,
         act_layer: str,
         **kwargs,
     ):
         super().__init__(**kwargs)
         self.embed_dim = embed_dim
-        self.mask_channels = mask_channels
+        self.mask_hidden_dim = mask_hidden_dim
         self.act_layer = act_layer
 
         norm_layer = norm_layer_factory("layer_norm_eps_1e-6")
         act_layer = act_layer_factory(self.act_layer)
 
         self.conv1 = tf.keras.layers.Conv2D(
-            filters=self.mask_channels // 4, kernel_size=2, strides=2, name="0"
+            filters=self.mask_hidden_dim // 4, kernel_size=2, strides=2, name="0"
         )
         self.norm1 = norm_layer(name="1")
         self.act1 = act_layer(name="2")
         self.conv2 = tf.keras.layers.Conv2D(
-            filters=self.mask_channels, kernel_size=2, strides=2, name="3"
+            filters=self.mask_hidden_dim, kernel_size=2, strides=2, name="3"
         )
         self.norm2 = norm_layer(name="4")
         self.act2 = act_layer(name="5")
@@ -200,14 +228,25 @@ class MaskDownscaling(tf.keras.Model):
         )
 
     def call(self, inputs, training=False):
-        x = inputs
+        x = inputs  # (N, M3, H', W')
+
+        n, m, h, w = tf.unstack(tf.shape(x))
+        x = tf.reshape(x, (n * m, h, w))  # (N*M3, H', W')
+        x = tf.expand_dims(x, axis=-1)  # (N*M3, H', W', 1)
+
         x = self.conv1(x)
         x = self.norm1(x, training=training)
         x = self.act1(x)
         x = self.conv2(x)
         x = self.norm2(x, training=training)
         x = self.act2(x)
-        x = self.conv3(x)
+        x = self.conv3(x)  # (N*M3, H'', W'', D)
+
+        _, h, w, d = tf.unstack(tf.shape(x))
+        x = tf.reshape(x, (n, m, h, w, d))  # (N, M3, H'', W'', D)
+        # If we are given multiple input masks, we sum the corresponding embeddings.
+        x = tf.reduce_sum(x, axis=1)  # (N, H'', W'', D)
+
         return x
 
 

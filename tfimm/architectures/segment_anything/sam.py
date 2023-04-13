@@ -7,6 +7,9 @@ from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
 from .image_encoder import ImageEncoder
+from .prompt_encoder import PromptEncoder
+from .mask_decoder import MaskDecoder
+from .transformer import TwoWayTransformer
 
 # model_registry will add each entrypoint fn to this
 __all__ = ["SegmentAnythingModel", "SegmentAnythingModelConfig"]
@@ -59,6 +62,7 @@ class SegmentAnythingModelConfig(ModelConfig):
     in_channels: int = 3
     input_size: Tuple[int, int] = (1024, 1024)
     fixed_input_size: bool = True
+    mask_threshold: float = 0.0
     # Image encoder
     encoder_patch_size: int = 16
     encoder_embed_dim: int = 768
@@ -72,20 +76,19 @@ class SegmentAnythingModelConfig(ModelConfig):
     encoder_window_size: int = 14
     # Prompt encoder
     prompt_embed_dim: int = 256
-    prompt_mask_in_channels: int = 16
+    prompt_mask_hidden_dim: int = 16
     # Mask decoder
     decoder_nb_multimask_outputs: int = 3
     decoder_nb_blocks: int = 2
     decoder_nb_heads: int = 8
     decoder_mlp_channels: int = 2048
     decoder_iou_head_depth: int = 3
-    decoder_iou_head_channels: int = 256
+    decoder_iou_hidden_dim: int = 256
     # Preprocessing
     mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN
     std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD
     # Weight transfer
-    first_conv: str = "stem/0"
-    classifier: str = "head/fc"
+    first_conv: str = "stem/0"  # TODO: Set right value here
 
 
 @keras_serializable
@@ -114,21 +117,57 @@ class SegmentAnythingModel(tf.keras.Model):
             use_rel_pos=True,
             window_size=cfg.encoder_window_size,
             global_attn_indices=cfg.encoder_global_attn_indices,
+            name="image_encoder",
         )
+        self.prompt_encoder = PromptEncoder(
+            input_size=cfg.input_size,
+            grid_size=self.grid_size,
+            embed_dim=cfg.prompt_embed_dim,
+            mask_hidden_dim=cfg.prompt_mask_hidden_dim,
+            act_layer="gelu",
+            name="prompt_encoder",
+        )
+        self.mask_decoder = MaskDecoder(
+            transformer=TwoWayTransformer(
+                embed_dim=cfg.prompt_embed_dim,
+                nb_blocks=cfg.decoder_nb_blocks,
+                nb_heads=cfg.decoder_nb_heads,
+                mlp_dim=cfg.decoder_mlp_channels,
+                attention_downsample_rate=2,
+                act_layer="relu",
+                name="transformer",
+            ),
+            embed_dim=cfg.prompt_embed_dim,
+            nb_multimask_outputs=cfg.decoder_nb_multimask_outputs,
+            iou_head_depth=cfg.decoder_iou_head_depth,
+            iou_head_hidden_dim=cfg.decoder_iou_hidden_dim,
+            act_layer="gelu",
+            name="mask_decoder",
+        )
+
+    @property
+    def grid_size(self):
+        return (
+            self.cfg.input_size[0] // self.cfg.encoder_patch_size,
+            self.cfg.input_size[1] // self.cfg.encoder_patch_size,
+        )
+
+    @property
+    def mask_size(self):
+        return 4 * self.grid_size[0], 4 * self.grid_size[1]
 
     @property
     def dummy_inputs(self):
         inputs = {
             "images": tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels)),
-            "original_size": tf.convert_to_tensor([self.cfg.input_size]),
-            "point_coords": tf.zeros((1, 0, 2)),
-            "point_labels": tf.zeros((1, 0)),
-            "boxes": tf.zeros((1, 0, 4)),
-            "mask_inputs": tf.zeros((1, 0, *self.cfg.input_size)),
+            "points": tf.zeros((1, 1, 2)),
+            "labels": tf.zeros((1, 1)),
+            "boxes": tf.zeros((1, 1, 4)),
+            "masks": tf.zeros((1, 1, *self.mask_size)),
         }
         return inputs
 
-    # TODO: Add all other input bits to preprocessing
+    # TODO: Add all other input bits to preprocessing (this needs to go to predict)
     def preprocess(self, img, dtype=None):
         """Normalize pixel values and pad to a square input."""
         if dtype is not None:
@@ -155,30 +194,64 @@ class SegmentAnythingModel(tf.keras.Model):
         Args:
             inputs: A dictionary with the following entries
                 images: An (N, H, W, C) tensor of preprocessed input images.
-                original_size: An (N, 2) tensor of original image sizes before padding.
-                point_coords: An (N, B1, 2) tensor of point prompts.
-                point_labels: An (N, B1) tensor of labels for point prompts
-                boxes: An (N, B2, 4) tensor of box prompts, transformed to the input
-                    frame of the model.
-                mask_inputs: An (N, B3, H, W) tensor of mask inputs.
+                points: An (N, M1, 2) tensor of point prompts with coordinates in pixel
+                    space, i.e., values between 0 and H or W.
+                labels: An (N, M1) tensor of labels for point prompts. 1 indicates a
+                    foreground point and 0 indicates a background point.
+                boxes: An (N, M2, 4) tensor of box prompts of form (left, top, right,
+                    bottom) with coordinates in pixel space.
+                masks: An (N, M3, H', W') tensor of mask inputs, where M3 is
+                    either 1 or 0 (no mask provided).
             training: Training or inference phase?
             multimask_output: If True, we return multiple nested masks for each prompt.
 
         Returns:
-            masks: An (N, B, C, H, W) tensor of binary masked predictions, where
-                B=B1+B2+B3 is the total number of input prompts, and C is determined
-                by the multimask_output parameter.
-            iou_predictions: An (N, B, C) tensor with the model's predictions of mask
-                quality.
-            low_res_logits: An (N, B, C, H', W') tensor with low resoulution logits,
-                with H'=W'=256 by default. This can be passed as mask input to
-                subsequent iterations of prediction.
+            masks: An (N, K, H, W) bool tensor of binary masked predictions, where K is
+                determined by the multimask_output parameter.
+            quality: An (N, K) tensor with the model's predictions of mask quality.
+            logits: An (N, K, H', W') tensor with low resoulution logits, where usually
+                H'=H/4 and W'=W/4. This can be passed as mask input to subsequent
+                iterations of prediction.
         """
-        # TODO: Customize resolution of low_res_logits
-        img = inputs["images"]
-        image_embeddings = self.image_encoder(img, training=training)
+        # Shape (N, H'', W'', D), where H'' = H / 16 (grid size).
+        image_embeddings = self.image_encoder(inputs["images"], training=training)
 
-        return image_embeddings, None, None
+        # Sparse shape: (N, M, D); Dense shape: (N, H'', W'', D).
+        sparse_embeddings, dense_embeddings = self.prompt_encoder(
+            inputs={
+                "points": inputs["points"],
+                "labels": inputs["labels"],
+                "boxes": inputs["boxes"],
+                "masks": inputs["masks"],
+            },
+            training=training,
+        )
+
+        n = tf.shape(image_embeddings)[0]
+        image_pe = self.prompt_encoder.get_dense_pe()  # (H'', W'', D)
+        image_pe = tf.expand_dims(image_pe, axis=0)  # (1, H'', W'', D)
+        image_pe = tf.tile(image_pe, (n, 1, 1, 1))  # (N, H'', W'', D)
+
+        # Logits shape: (N, K, H', W'); Quality shape: (N, K).
+        logits, quality = self.mask_decoder(
+            inputs={
+                "image_embeddings": image_embeddings,
+                "image_pe": image_pe,
+                "sparse_embeddings": sparse_embeddings,
+                "dense_embeddings": dense_embeddings,
+            },
+            training=training,
+            multimask_output=multimask_output,
+        )
+
+        masks = tf.transpose(logits, (0, 2, 3, 1))  # (N, H', W', K)
+        masks = tf.image.resize(
+            masks, size=self.cfg.input_size, method=tf.image.ResizeMethod.BILINEAR
+        )  # (N, H, W, K)
+        masks = tf.transpose(masks, (0, 3, 1, 2))  # (N, K, H, W)
+        masks = masks > self.cfg.mask_threshold
+
+        return masks, quality, logits
 
 
 @register_model
