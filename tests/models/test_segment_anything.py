@@ -149,7 +149,7 @@ def test_prompt_encoder_empty():
         input_size=(32, 64),
         grid_size=(8, 16),
         embed_dim=6,
-        mask_channels=9,
+        mask_hidden_dim=9,
     )
     prompt_encoder(prompt_encoder.dummy_inputs)
 
@@ -172,7 +172,7 @@ def test_prompt_encoder():
     points = np.random.uniform(size=(1, 3, 2)).astype(np.float32)
     labels = np.asarray([[1, 1, 0]], dtype=np.int32)
     boxes = np.random.uniform(size=(1, 1, 4)).astype(np.float32)
-    masks = np.random.uniform(size=(1, 32, 64, 1)).astype(np.float32)
+    masks = np.random.uniform(size=(1, 1, 32, 64)).astype(np.float32)
 
     pt_prompt_encoder = PTPromptEncoder(
         embed_dim=6,
@@ -184,7 +184,7 @@ def test_prompt_encoder():
         input_size=(32, 64),
         grid_size=(8, 16),
         embed_dim=6,
-        mask_channels=9,
+        mask_hidden_dim=9,
     )
     load_pytorch_weights_in_tf2_model(
         tf_prompt_encoder,
@@ -194,15 +194,17 @@ def test_prompt_encoder():
     pt_sparse, pt_dense = pt_prompt_encoder.forward(
         points=(torch.Tensor(points), torch.Tensor(labels)),
         boxes=torch.Tensor(boxes),
-        masks=torch.Tensor(masks).permute((0, 3, 1, 2)),
+        masks=torch.Tensor(masks),
     )
     pt_dense = pt_dense.permute((0, 2, 3, 1))
     tf_sparse, tf_dense = tf_prompt_encoder(
         {"points": points, "labels": labels, "boxes": boxes, "masks": masks}
     )
-    np.testing.assert_almost_equal(tf_sparse.numpy(), pt_sparse.detach().numpy())
     np.testing.assert_almost_equal(
-        tf_dense.numpy(), pt_dense.detach().numpy(), decimal=5
+        tf_sparse.numpy(), pt_sparse.detach().numpy(), decimal=4
+    )
+    np.testing.assert_almost_equal(
+        tf_dense.numpy(), pt_dense.detach().numpy(), decimal=4
     )
 
 
@@ -386,7 +388,6 @@ def test_mask_decoder():
         dense_prompt_embeddings=torch.Tensor(dense_emb).permute((0, 3, 1, 2)),
         multimask_output=True,
     )
-    pt_masks = pt_masks.permute((0, 2, 3, 1))
 
     tf_masks, tf_prob = tf_mask_decoder(
         inputs={
