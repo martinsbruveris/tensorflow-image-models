@@ -66,13 +66,13 @@ class MaskDecoder(tf.keras.Model):
             shape=(1, self.embed_dim),
             initializer=tf.keras.initializers.RandomNormal(),
             trainable=True,
-            name=f"iou_token/weight",
+            name="iou_token/weight",
         )
         self.mask_tokens = self.add_weight(
             shape=(self.nb_mask_tokens, self.embed_dim),
             initializer=tf.keras.initializers.RandomNormal(),
             trainable=True,
-            name=f"mask_tokens/weight",
+            name="mask_tokens/weight",
         )
 
     def call(self, inputs, training=False, multimask_output: bool = False):

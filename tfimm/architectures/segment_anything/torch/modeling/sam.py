@@ -36,8 +36,8 @@ class Sam(nn.Module):
           prompt_encoder (PromptEncoder): Encodes various types of input prompts.
           mask_decoder (MaskDecoder): Predicts masks from the image embeddings
             and encoded prompts.
-          pixel_mean (list(float)): Mean values for normalizing pixels in the input image.
-          pixel_std (list(float)): Std values for normalizing pixels in the input image.
+          pixel_mean (list(float)): Mean values for normalizing pixels in input image.
+          pixel_std (list(float)): Std values for normalizing pixels in input image.
         """
         super().__init__()
         self.image_encoder = image_encoder

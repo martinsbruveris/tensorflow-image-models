@@ -4,7 +4,6 @@ Script to convert Meta's Segment Anything Models from PyTorch to TensorFlow
 import numpy as np
 import tensorflow as tf
 import torch
-from torch.hub import load_state_dict_from_url
 
 import tfimm
 import tfimm.architectures.segment_anything.torch as pt_sam

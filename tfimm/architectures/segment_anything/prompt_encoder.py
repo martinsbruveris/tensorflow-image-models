@@ -20,8 +20,8 @@ class PromptEncoder(tf.keras.Model):
         Encodes prompts for input to SAM's mask decoder.
 
         Arguments:
-            input_size: The padded size of the image that is input to the image encoder as
-                (H, W). Used to normalize point and bounding box coordinates.
+            input_size: The padded size of the image that is input to the image encoder
+                as (H, W). Used to normalize point and bounding box coordinates.
             grid_size: The spatial size of the image embedding as (H, W).
             embed_dim: The prompts' embedding dimension.
             mask_hidden_dim: The number of hidden channels for encoding input masks.

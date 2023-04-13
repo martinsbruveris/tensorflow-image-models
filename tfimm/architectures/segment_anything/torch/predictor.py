@@ -81,7 +81,7 @@ class SamPredictor:
             len(transformed_image.shape) == 4
             and transformed_image.shape[1] == 3
             and max(*transformed_image.shape[2:]) == self.model.image_encoder.img_size
-        ), f"set_torch_image input must be BCHW with long side {self.model.image_encoder.img_size}."
+        ), f"set_torch_image input must be BCHW with long side {self.model.image_encoder.img_size}."  # noqa: E501
         self.reset_image()
 
         self.original_size = original_image_size

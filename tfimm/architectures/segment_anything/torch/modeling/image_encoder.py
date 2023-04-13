@@ -47,8 +47,10 @@ class ImageEncoderViT(nn.Module):
             norm_layer (nn.Module): Normalization layer.
             act_layer (nn.Module): Activation layer.
             use_abs_pos (bool): If True, use absolute positional embeddings.
-            use_rel_pos (bool): If True, add relative positional embeddings to the attention map.
-            rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
+            use_rel_pos (bool): If True, add relative positional embeddings to the
+                attention map.
+            rel_pos_zero_init (bool): If True, zero initialize relative positional
+                parameters.
             window_size (int): Window size for window attention blocks.
             global_attn_indexes (list): Indexes for blocks using global attention.
         """
@@ -119,7 +121,9 @@ class ImageEncoderViT(nn.Module):
 
 
 class Block(nn.Module):
-    """Transformer blocks with support of window attention and residual propagation blocks"""
+    """
+    Transformer blocks with support of window attention and residual propagation blocks.
+    """
 
     def __init__(
         self,
@@ -142,12 +146,14 @@ class Block(nn.Module):
             qkv_bias (bool): If True, add a learnable bias to query, key, value.
             norm_layer (nn.Module): Normalization layer.
             act_layer (nn.Module): Activation layer.
-            use_rel_pos (bool): If True, add relative positional embeddings to the attention map.
-            rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
-            window_size (int): Window size for window attention blocks. If it equals 0, then
-                use global attention.
-            input_size (int or None): Input resolution for calculating the relative positional
-                parameter size.
+            use_rel_pos (bool): If True, add relative positional embeddings to the
+                attention map.
+            rel_pos_zero_init (bool): If True, zero initialize relative positional
+                parameters.
+            window_size (int): Window size for window attention blocks. If it equals 0,
+                then use global attention.
+            input_size (int or None): Input resolution for calculating the relative
+                positional parameter size.
         """
         super().__init__()
         self.norm1 = norm_layer(dim)
@@ -203,10 +209,12 @@ class Attention(nn.Module):
             dim (int): Number of input channels.
             num_heads (int): Number of attention heads.
             qkv_bias (bool:  If True, add a learnable bias to query, key, value.
-            rel_pos (bool): If True, add relative positional embeddings to the attention map.
-            rel_pos_zero_init (bool): If True, zero initialize relative positional parameters.
-            input_size (int or None): Input resolution for calculating the relative positional
-                parameter size.
+            rel_pos (bool): If True, add relative positional embeddings to the
+                attention map.
+            rel_pos_zero_init (bool): If True, zero initialize relative positional
+                parameters.
+            input_size (int or None): Input resolution for calculating the relative
+                positional parameter size.
         """
         super().__init__()
         self.num_heads = num_heads
@@ -263,7 +271,8 @@ def window_partition(
         window_size (int): window size.
 
     Returns:
-        windows: windows after partition with [B * num_windows, window_size, window_size, C].
+        windows: windows after partition with [B * num_windows, window_size,
+            window_size, C].
         (Hp, Wp): padded height and width before partition
     """
     B, H, W, C = x.shape

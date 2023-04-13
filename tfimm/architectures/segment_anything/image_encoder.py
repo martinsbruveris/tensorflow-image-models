@@ -510,6 +510,6 @@ class ImageEncoder(tf.keras.Model):
 
         for j, layer in enumerate(self.neck):
             x = layer(x, training=training)
-        features[f"neck"] = x
+        features["neck"] = x
 
         return (x, features) if return_features else x

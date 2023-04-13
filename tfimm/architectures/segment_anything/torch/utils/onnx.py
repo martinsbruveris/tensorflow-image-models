@@ -103,8 +103,8 @@ class SamOnnxModel(nn.Module):
     def select_masks(
         self, masks: torch.Tensor, iou_preds: torch.Tensor, num_points: int
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # Determine if we should return the multiclick mask or not from the number of points.
-        # The reweighting is used to avoid control flow.
+        # Determine if we should return the multiclick mask or not from the number of
+        # points. The reweighting is used to avoid control flow.
         score_reweight = torch.tensor(
             [[1000] + [0] * (self.model.mask_decoder.num_mask_tokens - 1)]
         ).to(iou_preds.device)
