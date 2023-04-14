@@ -7,14 +7,8 @@ import torch
 
 from tfimm.architectures.segment_anything.image_encoder import (
     add_decomposed_rel_pos as tf_add_decomposed_rel_pos,
-)
-from tfimm.architectures.segment_anything.image_encoder import (
     get_rel_pos as tf_get_rel_pos,
-)
-from tfimm.architectures.segment_anything.image_encoder import (
     window_partition as tf_window_partition,
-)
-from tfimm.architectures.segment_anything.image_encoder import (
     window_unpartition as tf_window_unpartition,
 )
 from tfimm.architectures.segment_anything.mask_decoder import (
@@ -22,45 +16,30 @@ from tfimm.architectures.segment_anything.mask_decoder import (
 )
 from tfimm.architectures.segment_anything.prompt_encoder import (
     PositionalEmbeddingRandom as TFPositionalEmbeddingRandom,
-)
-from tfimm.architectures.segment_anything.prompt_encoder import (
     PromptEncoder as TFPromptEncoder,
 )
+from tfimm.architectures.segment_anything.predictor import ResizeLongestSide
 from tfimm.architectures.segment_anything.torch.modeling import (
     MaskDecoder as PTMaskDecoder,
 )
 from tfimm.architectures.segment_anything.torch.modeling.image_encoder import (
     add_decomposed_rel_pos as pt_add_decomposed_rel_pos,
-)
-from tfimm.architectures.segment_anything.torch.modeling.image_encoder import (
     get_rel_pos as pt_get_rel_pos,
-)
-from tfimm.architectures.segment_anything.torch.modeling.image_encoder import (
     window_partition as pt_window_partiton,
-)
-from tfimm.architectures.segment_anything.torch.modeling.image_encoder import (
     window_unpartition as pt_window_unpartition,
 )
 from tfimm.architectures.segment_anything.torch.modeling.prompt_encoder import (
     PositionEmbeddingRandom as PTPositionalEmbeddingRandom,
-)
-from tfimm.architectures.segment_anything.torch.modeling.prompt_encoder import (
     PromptEncoder as PTPromptEncoder,
 )
 from tfimm.architectures.segment_anything.torch.modeling.transformer import (
     Attention as PTAttention,
-)
-from tfimm.architectures.segment_anything.torch.modeling.transformer import (
     TwoWayAttentionBlock as PTTwoWayAttentionBlock,
-)
-from tfimm.architectures.segment_anything.torch.modeling.transformer import (
     TwoWayTransformer as PTTwoWayTransformer,
 )
-from tfimm.architectures.segment_anything.transformer import Attention as TFAttention
 from tfimm.architectures.segment_anything.transformer import (
+    Attention as TFAttention,
     TwoWayAttentionBlock as TFTwoWayAttentionBlock,
-)
-from tfimm.architectures.segment_anything.transformer import (
     TwoWayTransformer as TFTwoWayTransformer,
 )
 from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
@@ -160,19 +139,29 @@ def test_prompt_encoder_empty():
     tf.ensure_shape(embeddings, (3, 0, 6))
 
     embeddings = prompt_encoder._embed_boxes(boxes=tf.ones((3, 0, 4), dtype=tf.float32))
-    tf.ensure_shape(embeddings, (3, 1, 6))
+    tf.ensure_shape(embeddings, (3, 0, 6))
 
     embeddings = prompt_encoder._embed_masks(
-        masks=tf.ones((3, *prompt_encoder.mask_size, 0), dtype=tf.float32)
+        masks=tf.ones((3, 0, *prompt_encoder.mask_size), dtype=tf.float32)
     )
     tf.ensure_shape(embeddings, (3, 8, 16, 6))
 
 
-def test_prompt_encoder():
-    points = np.random.uniform(size=(1, 3, 2)).astype(np.float32)
-    labels = np.asarray([[1, 1, 0]], dtype=np.int32)
-    boxes = np.random.uniform(size=(1, 1, 4)).astype(np.float32)
-    masks = np.random.uniform(size=(1, 1, 32, 64)).astype(np.float32)
+@pytest.mark.parametrize(
+    "m1, m2, m3",
+    [
+        (3, 1, 1),  # All types of prompts
+        (3, 0, 0),  # Points only
+        (0, 1, 0),  # Boxes only
+        (0, 0, 1),  # Masks only
+    ]
+)
+def test_prompt_encoder(m1, m2, m3):
+    points = np.random.uniform(size=(1, m1, 2)).astype(np.float32)
+    labels = [[1, 1, 0]] if m1 == 3 else [[]]
+    labels = np.asarray(labels, dtype=np.int32)
+    boxes = np.random.uniform(size=(1, m2, 4)).astype(np.float32)
+    masks = np.random.uniform(size=(1, m3, 32, 64)).astype(np.float32)
 
     pt_prompt_encoder = PTPromptEncoder(
         embed_dim=6,
@@ -192,9 +181,9 @@ def test_prompt_encoder():
     )
 
     pt_sparse, pt_dense = pt_prompt_encoder.forward(
-        points=(torch.Tensor(points), torch.Tensor(labels)),
-        boxes=torch.Tensor(boxes),
-        masks=torch.Tensor(masks),
+        points=(torch.Tensor(points), torch.Tensor(labels)) if m1 > 0 else None,
+        boxes=torch.Tensor(boxes) if m2 > 0 else None,
+        masks=torch.Tensor(masks) if m3 > 0 else None,
     )
     pt_dense = pt_dense.permute((0, 2, 3, 1))
     tf_sparse, tf_dense = tf_prompt_encoder(
@@ -402,3 +391,21 @@ def test_mask_decoder():
         tf_masks.numpy(), pt_masks.detach().numpy(), decimal=5
     )
     np.testing.assert_almost_equal(tf_prob.numpy(), pt_prob.detach().numpy(), decimal=5)
+
+
+def test_resize_longest_side():
+    resizer = ResizeLongestSide(src_size=(20, 10), dst_size=(30, 40))
+    assert resizer.scale == 1.5
+    assert resizer.rescaled_size == (30, 15)
+
+    resizer = ResizeLongestSide(src_size=(10, 20), dst_size=(30, 40))
+    assert resizer.scale == 2
+    assert resizer.rescaled_size == (20, 40)
+
+    resizer = ResizeLongestSide(src_size=(10, 20), dst_size=(20, 10))
+    assert resizer.scale == 0.5
+    assert resizer.rescaled_size == (5, 10)
+
+    resizer = ResizeLongestSide(src_size=(20, 10), dst_size=(4, 4))
+    assert resizer.scale == 0.2
+    assert resizer.rescaled_size == (4, 2)
