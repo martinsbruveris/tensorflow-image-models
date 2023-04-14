@@ -2,8 +2,6 @@
 # TODO: Add "Open in Colab" badge to notebook (see SAM)
 # TODO: Test mixed precision behaviour
 
-# TODO: Add module-level docstring to predictor.py
-# TODO: Check docstring for predictor.__call__
 # TODO: Add documentation for sam.py, compile documentation
 
 # TODO: Convert PT models to TF and upload to GitHub
