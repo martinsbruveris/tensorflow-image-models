@@ -130,52 +130,79 @@ class SAMPredictor:
         if not self.image_set:
             raise ValueError("Need to set image before calling predict().")
 
+        batch_shape = self._batch_shape(points, labels, boxes, masks)
+
         if points is None:
-            points = np.zeros((0, 2), dtype=np.float32)
+            points = np.zeros(batch_shape + (0, 2), dtype=np.float32)
         if labels is None:
-            labels = np.zeros((0,), dtype=np.int32)
+            labels = np.zeros(batch_shape + (0,), dtype=np.int32)
         if boxes is None:
-            boxes = np.zeros((0, 4), dtype=np.float32)
+            boxes = np.zeros(batch_shape + (0, 4), dtype=np.float32)
         if masks is None:
-            masks = np.zeros((0, *self.mask_size), dtype=np.float32)
+            masks = np.zeros(batch_shape + (0, *self.mask_size), dtype=np.float32)
+
+        # Check that batch shapes are compatible
+        if (
+                points.shape[:-2] != batch_shape
+                or labels.shape[:-1] != batch_shape
+                or boxes.shape[:-2] != batch_shape
+                or masks.shape[:-3] != batch_shape
+        ):
+            raise ValueError("All prompts must have the same batch shape.")
+
+        # Add batch dimension if needed
+        if batch_shape == ():
+            points = points[np.newaxis]
+            labels = labels[np.newaxis]
+            boxes = boxes[np.newaxis]
+            masks = masks[np.newaxis]
 
         points = self.resizer.scale_points(points)
         boxes = self.resizer.scale_boxes(boxes)
 
-        points = tf.convert_to_tensor(points[np.newaxis])
-        labels = tf.convert_to_tensor(labels[np.newaxis])
-        boxes = tf.convert_to_tensor(boxes[np.newaxis])
-        masks = tf.convert_to_tensor(masks[np.newaxis])
+        points = tf.convert_to_tensor(points)
+        labels = tf.convert_to_tensor(labels)
+        boxes = tf.convert_to_tensor(boxes)
+        masks = tf.convert_to_tensor(masks)
 
-        masks, quality, logits = self._predict_tf(
+        masks, scores, logits = self._predict_tf(
             points, labels, boxes, masks, multimask_output
         )
 
-        masks = masks[0].numpy()
-        quality = quality[0].numpy()
-        logits = logits[0].numpy()
+        masks = masks.numpy()
+        scores = scores.numpy()
+        logits = logits.numpy()
 
-        # Transform masks back to image size
+        # Transform masks back to image size.
         masks = self.resizer.postprocess_mask(masks)
+
+        # Remove batch dimension, if input didn't have it.
+        if batch_shape == ():
+            masks = masks[0]
+            scores = scores[0]
+            logits = logits[0]
 
         # We apply the threshold only at the very end
         if not return_logits:
-            masks = masks > self.model.cfg.mask_threshold
+            masks = masks > self.model.mask_threshold
 
-        return masks, quality, logits
+        return masks, scores, logits
 
     def _predict_tf(
         self, points, labels, boxes, masks, multimask_output
     ):
+        n = tf.shape(points)[0]
+        image_embedding = tf.tile(self.image_embedding, (n, 1, 1, 1))
+
         sparse_embeddings, dense_embeddings = self.model.prompt_encoder(
             inputs={"points": points, "labels": labels, "boxes": boxes, "masks": masks},
             training=False,
         )
 
-        logits, quality = self.model.mask_decoder(
+        logits, scores = self.model.mask_decoder(
             inputs={
-                "image_embeddings": self.image_embedding,
-                "image_pe": self.model.get_image_pe(batch_size=1),
+                "image_embeddings": image_embedding,
+                "image_pe": self.model.get_image_pe(batch_size=n),
                 "sparse_embeddings": sparse_embeddings,
                 "dense_embeddings": dense_embeddings,
             },
@@ -184,7 +211,21 @@ class SAMPredictor:
         )
 
         masks = self.model._postprocess_logits(logits, return_logits=True)
-        return masks, quality, logits
+        return masks, scores, logits
+
+    @staticmethod
+    def _batch_shape(points, labels, boxes, masks):
+        """Returns (), if there is no batch dimension and (n,) if there is."""
+        if points is not None:
+            return points.shape[:-2]
+        elif labels is not None:
+            return labels.shape[:-1]
+        elif boxes is not None:
+            return boxes.shape[:-2]
+        elif masks is not None:
+            return masks.shape[:-3]
+        else:
+            return ()
 
 
 class ResizeLongestSide:
@@ -225,14 +266,11 @@ class ResizeLongestSide:
         size: Tuple[int, int],
         channels_last: bool,
     ) -> np.ndarray:
-        two_dim = image.ndim == 2  # This is the case for segmentation masks
-        if two_dim:
-            image = image[..., np.newaxis]  # TF resize needs at least 3D tensor
-            # In a 2D tensor there is no channel dimension, so we can ignore whatever
-            # the user provided.
-            channels_last = True
+        no_batch_dim = image.ndim == 3  # Image without batch dimension
+        if no_batch_dim:
+            image = image[np.newaxis]  # Add batch dimension
         if not channels_last:  # TF resize expects HWC format.
-            image = np.transpose(image, (1, 2, 0))
+            image = np.transpose(image, (0, 2, 3, 1))
 
         # TF resize converts everything to floats, so we remember the dtype
         dtype = image.dtype
@@ -247,9 +285,9 @@ class ResizeLongestSide:
         image = image.numpy().astype(dtype)
 
         if not channels_last:
-            image = np.transpose(image, (2, 0, 1))
-        if two_dim:
-            image = image[..., 0]
+            image = np.transpose(image, (0, 3, 1, 2))
+        if no_batch_dim:
+            image = image[0]
 
         return image
 
@@ -262,25 +300,24 @@ class ResizeLongestSide:
         return self.scale_to_size(image, self.src_size, channels_last)
 
     def pad_image(self, image: np.ndarray, channels_last: bool = True) -> np.ndarray:
-        two_dim = image.ndim == 2  # This is the case for segmentation masks
-        if two_dim:
-            image = image[..., np.newaxis]  # Add channel axis
-            channels_last = True
+        no_batch_dim = image.ndim == 3  # Image without batch dimension
+        if no_batch_dim:
+            image = image[np.newaxis]  # Add batch dimension
         if not channels_last:  # TF resize expects HWC format.
-            image = np.transpose(image, (1, 2, 0))
+            image = np.transpose(image, (0, 2, 3, 1))
 
         # Pad shorter edge to model input size.
-        pad_h = self.dst_size[0] - image.shape[0]
-        pad_w = self.dst_size[1] - image.shape[1]
+        pad_h = self.dst_size[0] - image.shape[1]
+        pad_w = self.dst_size[1] - image.shape[2]
         if pad_h < 0 or pad_w < 0:
             raise ValueError("Cannot pad an image that is larger than dst_size.")
 
-        image = np.pad(image, [[0, pad_h], [0, pad_w], [0, 0]])
+        image = np.pad(image, [[0, 0], [0, pad_h], [0, pad_w], [0, 0]])
 
         if not channels_last:
-            image = np.transpose(image, (2, 0, 1))
-        if two_dim:
-            image = image[..., 0]
+            image = np.transpose(image, (0, 3, 1, 2))
+        if no_batch_dim:
+            image = image[0]
 
         return image
 
