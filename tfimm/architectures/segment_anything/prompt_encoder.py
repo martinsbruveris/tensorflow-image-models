@@ -88,7 +88,7 @@ class PromptEncoder(tf.keras.Model):
 
     def _embed_points(self, points: tf.Tensor, labels: tf.Tensor):
         """Embed point prompts."""
-        points = points + tf.cast(0.5, tf.float32)  # Shift to center of pixel
+        points = points + 0.5  # Shift to center of pixel
         labels = tf.expand_dims(labels, axis=-1)  # (N, 1)
         embeddings = self.pe_layer.embed_points(points, self.input_size)
         embeddings += tf.where(
@@ -99,33 +99,24 @@ class PromptEncoder(tf.keras.Model):
     def _embed_boxes(self, boxes: tf.Tensor):
         """Embed box promts."""
         # Shape of boxes is (N, M, 4)
-        boxes = boxes + tf.cast(0.5, tf.float32)  # Shift to center of pixel
-        corners = tf.reshape(boxes, (-1, 2, 2))  # (N*M, 2, 2)
+        n, m, _ = tf.unstack(tf.shape(boxes))
+        boxes = boxes + 0.5  # Shift to center of pixel
+        corners = tf.reshape(boxes, (n * m, 2, 2))  # (N*M, 2, 2)
         embeddings = self.pe_layer.embed_points(
             corners, self.input_size  # (N*M, 2, embed_dim)
         )
         embeddings += tf.stack(
             [self.point_embeddings[2], self.point_embeddings[3]], axis=1
         )
-
-        # If we have no boxes, we return one `not_a_point_embed` embedding. This is done
-        # in PyTorch via `pad=True` in `_embed_points()`. Note that if we have no boxes
-        # the above code will work, but produce an empty tensor.
-        embeddings = tf.cond(
-            tf.shape(boxes)[1] == 0,
-            lambda: tf.tile(  # We need this to get the right batch size
-                input=tf.expand_dims(self.not_a_point_embed, axis=0),
-                multiples=(tf.shape(boxes)[0], 1, 1),
-            ),
-            lambda: embeddings,
-        )
+        embeddings = tf.reshape(embeddings, (n, m, 2, self.embed_dim))  # (N, M, 2, embed_dim)
+        embeddings = tf.reshape(embeddings, (n, 2 * m, self.embed_dim))  # (N, 2*M, embed_dim)
         return embeddings
 
     def _embed_masks(self, masks, training: bool = False):
         # If we have no masks, we return `no_mask_embed` broadcast across batch and
         # spatial dimensions.
         embeddings = tf.cond(
-            tf.shape(masks)[-1] == 0,
+            tf.shape(masks)[1] == 0,
             lambda: tf.broadcast_to(
                 input=tf.reshape(self.no_mask_embed, (1, 1, 1, -1)),
                 shape=(tf.shape(masks)[0], *self.grid_size, self.embed_dim),

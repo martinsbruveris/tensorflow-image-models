@@ -146,6 +146,10 @@ class SegmentAnythingModel(tf.keras.Model):
         )
 
     @property
+    def input_size(self):
+        return self.cfg.input_size
+
+    @property
     def grid_size(self):
         return (
             self.cfg.input_size[0] // self.cfg.encoder_patch_size,
@@ -157,9 +161,13 @@ class SegmentAnythingModel(tf.keras.Model):
         return 4 * self.grid_size[0], 4 * self.grid_size[1]
 
     @property
+    def mask_threshold(self):
+        return self.cfg.mask_threshold
+
+    @property
     def dummy_inputs(self):
         inputs = {
-            "images": tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels)),
+            "images": tf.zeros((1, *self.input_size, self.cfg.in_channels)),
             "points": tf.zeros((1, 1, 2)),
             "labels": tf.zeros((1, 1)),
             "boxes": tf.zeros((1, 1, 4)),
@@ -167,25 +175,25 @@ class SegmentAnythingModel(tf.keras.Model):
         }
         return inputs
 
-    # TODO: Add all other input bits to preprocessing (this needs to go to predict)
-    def preprocess(self, img, dtype=None):
-        """Normalize pixel values and pad to a square input."""
-        if dtype is not None:
-            img = tf.cast(img, dtype)
+    def get_image_pe(self, batch_size: int):
+        image_pe = self.prompt_encoder.get_dense_pe()  # (H'', W'', D)
+        image_pe = tf.expand_dims(image_pe, axis=0)  # (1, H'', W'', D)
+        image_pe = tf.tile(image_pe, (batch_size, 1, 1, 1))  # (N, H'', W'', D)
+        return image_pe
 
-        img = img / 255.0
-        # TODO: Adapt mean and std to number of channels
-        img = (img - self.cfg.mean) / self.cfg.std
-
-        h, w = tf.unstack(tf.shape(img)[1:3])
-        pad_h = self.cfg.input_size[0] - h
-        pad_w = self.cfg.input_size[1] - w
-        img = tf.pad(img, [[0, 0], [0, pad_h], [0, pad_w], [0, 0]])
-
-        return img
+    def _postprocess_logits(self, logits, return_logits: bool):
+        # Shape of logits (N, K, H', W')
+        masks = tf.transpose(logits, (0, 2, 3, 1))  # (N, H', W', K)
+        masks = tf.image.resize(
+            masks, size=self.cfg.input_size, method=tf.image.ResizeMethod.BILINEAR
+        )  # (N, H, W, K)
+        masks = tf.transpose(masks, (0, 3, 1, 2))  # (N, K, H, W)
+        if not return_logits:
+            masks = masks > self.mask_threshold
+        return masks
 
     # TODO: Add return_features
-    def call(self, inputs, training=False, multimask_output=False):
+    def call(self, inputs, training=False, multimask_output=False, return_logits=False):
         """
         Predicts masks end-to-end from provided images and prompts. If prompts are not
         known in advance, using SamPredictor is recommended over calling the model
@@ -204,6 +212,9 @@ class SegmentAnythingModel(tf.keras.Model):
                     either 1 or 0 (no mask provided).
             training: Training or inference phase?
             multimask_output: If True, we return multiple nested masks for each prompt.
+            return_logits: If True, we don't threshold the upscaled mask. This is useful
+                if we want to resize the mask back to original image size first and
+                then apply the threshold.
 
         Returns:
             masks: An (N, K, H, W) bool tensor of binary masked predictions, where K is
@@ -227,16 +238,12 @@ class SegmentAnythingModel(tf.keras.Model):
             training=training,
         )
 
+        # Logits shape: (N, K, H', W'); Scores shape: (N, K).
         n = tf.shape(image_embeddings)[0]
-        image_pe = self.prompt_encoder.get_dense_pe()  # (H'', W'', D)
-        image_pe = tf.expand_dims(image_pe, axis=0)  # (1, H'', W'', D)
-        image_pe = tf.tile(image_pe, (n, 1, 1, 1))  # (N, H'', W'', D)
-
-        # Logits shape: (N, K, H', W'); Quality shape: (N, K).
-        logits, quality = self.mask_decoder(
+        logits, scores = self.mask_decoder(
             inputs={
                 "image_embeddings": image_embeddings,
-                "image_pe": image_pe,
+                "image_pe": self.get_image_pe(batch_size=n),
                 "sparse_embeddings": sparse_embeddings,
                 "dense_embeddings": dense_embeddings,
             },
@@ -244,14 +251,8 @@ class SegmentAnythingModel(tf.keras.Model):
             multimask_output=multimask_output,
         )
 
-        masks = tf.transpose(logits, (0, 2, 3, 1))  # (N, H', W', K)
-        masks = tf.image.resize(
-            masks, size=self.cfg.input_size, method=tf.image.ResizeMethod.BILINEAR
-        )  # (N, H, W, K)
-        masks = tf.transpose(masks, (0, 3, 1, 2))  # (N, K, H, W)
-        masks = masks > self.cfg.mask_threshold
-
-        return masks, quality, logits
+        masks = self._postprocess_logits(logits, return_logits=return_logits)
+        return masks, scores, logits
 
 
 @register_model
