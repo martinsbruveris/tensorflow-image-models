@@ -1,4 +1,3 @@
-# TODO: Add sample notebook
 # TODO: Test notebook with Colab
 # TODO: Add "Open in Colab" badge to notebook (see SAM)
 # TODO: Test mixed precision behaviour
