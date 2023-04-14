@@ -20,6 +20,18 @@ class SAMPredictor:
     def __init__(
         self, model: SegmentAnythingModel, preprocessing: Optional[Callable] = None
     ):
+        """
+        Uses SAM to calculate the image embedding for an image, and then allows
+        repeated, efficient mask prediction given prompts.
+
+        While internally TF is used for inference, the inputs and return values in this
+        class are numpy arrays for ease of use.
+
+        Arguments:
+            model: The model used for mask prediction.
+            preprocessing: Preprocessing function for the model. If not provided we
+                will query ``tfimm`` using the model name.
+        """
         if preprocessing is None:
             preprocessing = create_preprocessing(
                 model.cfg.name, in_channels=model.cfg.in_channels, dtype=tf.float32
@@ -35,10 +47,19 @@ class SAMPredictor:
 
     @property
     def input_size(self):
+        """
+        The image input size for the segmentation model. Images are resized and padded
+        to this size before computing embeddings.
+        """
         return self.model.input_size
 
     @property
     def mask_size(self):
+        """
+        The required input size for segmentation mask prompts and return size for
+        logits. The ```preprocess_masks`` function can be used to convert masks to this
+        size.
+        """
         return self.model.mask_size
 
     def set_image(self, image: np.ndarray):
@@ -66,6 +87,7 @@ class SAMPredictor:
         self.image_set = True
 
     def clear_image(self):
+        """Unsets the image and forgets the embedding."""
         self.resizer = None
         self.image_embedding = None
         self.image_set = False
@@ -75,6 +97,14 @@ class SAMPredictor:
         Preprocesses a mask from the pixel space of the original image (H0, W0), to the
         correct input size to the model. Note that the mask should be a mask of
         logits and *not* the thresholded version.
+
+        Args:
+            mask: An array of shape (M, H0, W0) or (N, M, H0, W0), where (H0, W0) is the
+                original size of the input image.
+
+        Returns:
+            Preprocessed mask of shape (M, H', W') or (N, M, H', W') as given by
+                ``mask_size``.
         """
         # First we convert mask to full mask at input_size resolution
         mask = self.resizer.scale_image(mask, channels_last=False)
@@ -100,11 +130,17 @@ class SAMPredictor:
         already been set.
 
         The original image size is (H0, W0). After resizing and padding the image size
-        becomes (H, W) as given by `input_size` (usually (1024, 1024). Mask input and
+        becomes (H, W) as given by `input_size` (usually (1024, 1024)). Mask input and
         logit output will have shape (H', W') given by `mask_size` (usually H'=H/4).
 
         One can use `preprocess_masks` to transform an input mask from (H0, W0) to
         (H', W').
+
+        Prompts can also be batched, i.e., have the shape (N, M1, 2) for points;
+        (N, M1) for point labels; (N, M2, 4) for boxes; and (N, M3, H', W') for mask
+        prompts. Note that in this case we number and type of prompts is the same for
+        each batch element. The return values will have the same batch dimension, i.e.,
+        (N, K, H, W) for predicted masks, etc.
 
         Args:
             points: An (M1, 2) array of point prompts with coordinates in pixel
@@ -119,9 +155,11 @@ class SAMPredictor:
             return_logits: If True, we don't threshold the upscaled mask.
 
         Returns:
-            masks: An (K, H, W) bool tensor of binary masked predictions, where K is
-                determined by the multimask_output parameter.
-            quality: An (K,) array with the model's predictions of mask quality.
+            masks: A (K, H, W) bool tensor of binary masked predictions, where K is
+                determined by the multimask_output parameter. It is either 1, if
+                ``multimask_output=False`` or given by the ``nb_multimask_outputs``
+                parameter in the model configuration.
+            scores: An (K,) array with the model's predictions of mask quality.
             logits: An (K, H', W') array with low resoulution logits, where usually
                 H'=H/4 and W'=W/4. This can be passed as mask input to subsequent
                 iterations of prediction.
