@@ -29,7 +29,7 @@ class SAMPredictor:
         self.preprocessing = preprocessing
 
         # These attributes are set when calling `set_image()`.
-        self.resizer : Optional[ResizeLongestSide] = None
+        self.resizer : Optional[ImageResizer] = None
         self.image_embedding = None
         self.image_set = False
 
@@ -49,7 +49,7 @@ class SAMPredictor:
         Args:
             image: An array of shape (H, W, C) with pixel values in [0, 255].
         """
-        self.resizer = ResizeLongestSide(
+        self.resizer = ImageResizer(
             src_size=image.shape[:2], dst_size=self.input_size
         )
 
@@ -227,20 +227,29 @@ class SAMPredictor:
             return ()
 
 
-class ResizeLongestSide:
+class ImageResizer:
     """
-    Utility class to resize images to the largest side fits in a given shape while
+    Utility class to resize images to the largest side that fits in a given shape while
     preserving the aspect ratio. It also provides methods to resize coordinates and
-    bounding boxes.
+    bounding boxes and pad images.
     """
 
     def __init__(self, src_size: Tuple[int, int], dst_size: Tuple[int, int]):
+        """
+        Creates an ``ImageResizer`` object.
+
+        Args:
+            src_size: Size of image before resizing. The resize object is image
+                specific, i.e., for each source image size it is recommended to create
+                a new ``ImageResizer`` object.
+            dst_size: The target size after resizing (and padding).
+        """
         self.src_size = src_size
         self.dst_size = dst_size
 
-        self.scale, self.rescaled_size = self.get_scale()
+        self.scale, self.rescaled_size = self._get_scale()
 
-    def get_scale(self):
+    def _get_scale(self):
         """Calculate rescaling parameters."""
         h_scale = self.dst_size[0] / self.src_size[0]
         w_scale = self.dst_size[1] / self.src_size[1]
@@ -265,6 +274,20 @@ class ResizeLongestSide:
         size: Tuple[int, int],
         channels_last: bool,
     ) -> np.ndarray:
+        """
+        Scales an image to a given size. In this method we ignore ``dst_size`` and do
+        not attempt to preserve the aspect ratio.
+
+        Args:
+            image: Image to be resized. Can be a 3D array (H, W, C) or a 4D array
+                (N, H, W, C). We also accept channels first ordering (used for
+                segmentation masks, i.e., (C, H, W) or (N, C, H, W).
+            size: Target size.
+            channels_last: If True, images are in HWC format and if False in CHW format.
+
+        Returns:
+            Resized image array.
+        """
         no_batch_dim = image.ndim == 3  # Image without batch dimension
         if no_batch_dim:
             image = image[np.newaxis]  # Add batch dimension
@@ -291,14 +314,49 @@ class ResizeLongestSide:
         return image
 
     def scale_image(self, image: np.ndarray, channels_last: bool = True) -> np.ndarray:
-        """Applies scaling to an image."""
+        """
+        Applies aspect-ratio preserving scaling to an image.
+
+        Args:
+            image: Image to be resized. Can be a 3D array (H, W, C) or a 4D array
+                (N, H, W, C). We also accept channels first ordering (used for
+                segmentation masks, i.e., (C, H, W) or (N, C, H, W).
+            channels_last: If True, images are in HWC format and if False in CHW format.
+
+        Returns:
+            Resized image with spatial dimensions given by ``rescaled_size``. The
+            longest edge of the image will be equal to ``dst_size``.
+        """
         return self.scale_to_size(image, self.rescaled_size, channels_last)
 
     def unscale_image(self, image: np.ndarray, channels_last: bool = True) -> np.ndarray:
-        """Reverses the scaling operation."""
+        """
+        Reverses the scaling operation.
+
+        Args:
+            image: Image to be rescaled back to original size given by ``src_size``. We
+                assume that image has size ``rescaled_size``, otherwise aspect ratio
+                will not be preserved. Image can be 3D or 4D with channels before or
+                after spatial dimension.
+            channels_last: If True, images are in HWC format and if False in CHW format.
+
+        Returns:
+            Resized image with size ``src_size``.
+        """
         return self.scale_to_size(image, self.src_size, channels_last)
 
     def pad_image(self, image: np.ndarray, channels_last: bool = True) -> np.ndarray:
+        """
+        Apply zero padding to an image to size ``dst_size``.
+
+        Args:
+            image: Image to be padded. Can be 3D or 4D tensor with channel dimension
+                before or after spatial dimensions.
+            channels_last: If True, images are in HWC format and if False in CHW format.
+
+        Returns:
+            Zero padded image of size ``dst_size``.
+        """
         no_batch_dim = image.ndim == 3  # Image without batch dimension
         if no_batch_dim:
             image = image[np.newaxis]  # Add batch dimension
@@ -321,12 +379,43 @@ class ResizeLongestSide:
         return image
 
     def scale_points(self, points):
+        """
+        Scale points by the same factor as the image.
+
+        Args:
+            points: Points to be scaled.
+
+        Returns:
+            Scaled points.
+        """
         return self.scale * points
 
     def scale_boxes(self, boxes):
+        """
+        Scale bounding boxes by the same factor as the image.
+
+        Args:
+            boxes: Boxes to be scaled.
+
+        Returns:
+            Scaled boxes.
+        """
         return self.scale * boxes
 
     def postprocess_mask(self, mask, threshold: Optional[float] = None):
+        """
+        Convert an upscaled segmentation mask from ``dst_size`` back to ``src_size``
+        by removing padding and unscaling.
+
+        Args:
+            mask: Segmentation mask, i.e., image with channels_first ordering, of size
+                ``dst_size``. Should be a logit-mask, i.e., before thresholding.
+            threshold: Optionally, we can apply thresholding after resizing to obtain
+                a boolean mask.
+
+        Returns:
+            Mask of size ``src_size``.
+        """
         mask = mask[..., :self.rescaled_size[0], :self.rescaled_size[1]]
         mask = self.unscale_image(mask, channels_last=False)
         if threshold is not None:

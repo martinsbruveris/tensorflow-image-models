@@ -18,7 +18,7 @@ from tfimm.architectures.segment_anything.prompt_encoder import (
     PositionalEmbeddingRandom as TFPositionalEmbeddingRandom,
     PromptEncoder as TFPromptEncoder,
 )
-from tfimm.architectures.segment_anything.predictor import ResizeLongestSide
+from tfimm.architectures.segment_anything.predictor import ImageResizer
 from tfimm.architectures.segment_anything.torch.modeling import (
     MaskDecoder as PTMaskDecoder,
 )
@@ -394,18 +394,18 @@ def test_mask_decoder():
 
 
 def test_resize_longest_side():
-    resizer = ResizeLongestSide(src_size=(20, 10), dst_size=(30, 40))
+    resizer = ImageResizer(src_size=(20, 10), dst_size=(30, 40))
     assert resizer.scale == 1.5
     assert resizer.rescaled_size == (30, 15)
 
-    resizer = ResizeLongestSide(src_size=(10, 20), dst_size=(30, 40))
+    resizer = ImageResizer(src_size=(10, 20), dst_size=(30, 40))
     assert resizer.scale == 2
     assert resizer.rescaled_size == (20, 40)
 
-    resizer = ResizeLongestSide(src_size=(10, 20), dst_size=(20, 10))
+    resizer = ImageResizer(src_size=(10, 20), dst_size=(20, 10))
     assert resizer.scale == 0.5
     assert resizer.rescaled_size == (5, 10)
 
-    resizer = ResizeLongestSide(src_size=(20, 10), dst_size=(4, 4))
+    resizer = ImageResizer(src_size=(20, 10), dst_size=(4, 4))
     assert resizer.scale == 0.2
     assert resizer.rescaled_size == (4, 2)
