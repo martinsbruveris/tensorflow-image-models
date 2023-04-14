@@ -1,3 +1,18 @@
+"""
+We provide an implementation and pretrained weights for the Segment Anything Models.
+
+Paper: Segment Anything.
+`[arXiv:2304.02643] <https://arxiv.org/abs/2304.02643>`_.
+
+Original pytorch code and weights from
+`Facebook Research <https://github.com/facebookresearch/segment-anything>`_.
+
+The following models are available.
+
+* `sam_vit_b`
+* `sam_vit_l`
+* `sam_vit_h`
+"""
 from dataclasses import dataclass
 from typing import Tuple
 
