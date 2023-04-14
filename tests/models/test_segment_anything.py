@@ -14,11 +14,11 @@ from tfimm.architectures.segment_anything.image_encoder import (
 from tfimm.architectures.segment_anything.mask_decoder import (
     MaskDecoder as TFMaskDecoder,
 )
+from tfimm.architectures.segment_anything.predictor import ImageResizer
 from tfimm.architectures.segment_anything.prompt_encoder import (
     PositionalEmbeddingRandom as TFPositionalEmbeddingRandom,
     PromptEncoder as TFPromptEncoder,
 )
-from tfimm.architectures.segment_anything.predictor import ImageResizer
 from tfimm.architectures.segment_anything.torch.modeling import (
     MaskDecoder as PTMaskDecoder,
 )
@@ -154,7 +154,7 @@ def test_prompt_encoder_empty():
         (3, 0, 0),  # Points only
         (0, 1, 0),  # Boxes only
         (0, 0, 1),  # Masks only
-    ]
+    ],
 )
 def test_prompt_encoder(m1, m2, m3):
     points = np.random.uniform(size=(1, m1, 2)).astype(np.float32)

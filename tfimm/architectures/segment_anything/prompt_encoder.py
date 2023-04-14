@@ -108,8 +108,12 @@ class PromptEncoder(tf.keras.Model):
         embeddings += tf.stack(
             [self.point_embeddings[2], self.point_embeddings[3]], axis=1
         )
-        embeddings = tf.reshape(embeddings, (n, m, 2, self.embed_dim))  # (N, M, 2, embed_dim)
-        embeddings = tf.reshape(embeddings, (n, 2 * m, self.embed_dim))  # (N, 2*M, embed_dim)
+        embeddings = tf.reshape(
+            embeddings, (n, m, 2, self.embed_dim)
+        )  # (N, M, 2, embed_dim)
+        embeddings = tf.reshape(
+            embeddings, (n, 2 * m, self.embed_dim)
+        )  # (N, 2*M, embed_dim)
         return embeddings
 
     def _embed_masks(self, masks, training: bool = False):

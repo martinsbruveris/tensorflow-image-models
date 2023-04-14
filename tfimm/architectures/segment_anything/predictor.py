@@ -14,6 +14,7 @@ from tfimm.models.factory import create_preprocessing
 
 from .sam import SegmentAnythingModel
 
+
 class SAMPredictor:
     def __init__(
         self, model: SegmentAnythingModel, preprocessing: Optional[Callable] = None
@@ -39,7 +40,7 @@ class SAMPredictor:
         self.preprocessing = preprocessing
 
         # These attributes are set when calling `set_image()`.
-        self.resizer : Optional[ImageResizer] = None
+        self.resizer: Optional[ImageResizer] = None
         self.image_embedding = None
         self.image_set = False
 
@@ -68,9 +69,7 @@ class SAMPredictor:
         Args:
             image: An array of shape (H, W, C) with pixel values in [0, 255].
         """
-        self.resizer = ImageResizer(
-            src_size=image.shape[:2], dst_size=self.input_size
-        )
+        self.resizer = ImageResizer(src_size=image.shape[:2], dst_size=self.input_size)
 
         # We scale the image to the largest size possible that fits input_size.
         image = self.resizer.scale_image(image)
@@ -178,10 +177,10 @@ class SAMPredictor:
 
         # Check that batch shapes are compatible
         if (
-                points.shape[:-2] != batch_shape
-                or labels.shape[:-1] != batch_shape
-                or boxes.shape[:-2] != batch_shape
-                or masks.shape[:-3] != batch_shape
+            points.shape[:-2] != batch_shape
+            or labels.shape[:-1] != batch_shape
+            or boxes.shape[:-2] != batch_shape
+            or masks.shape[:-3] != batch_shape
         ):
             raise ValueError("All prompts must have the same batch shape.")
 
@@ -223,9 +222,7 @@ class SAMPredictor:
 
         return masks, scores, logits
 
-    def _predict_tf(
-        self, points, labels, boxes, masks, multimask_output
-    ):
+    def _predict_tf(self, points, labels, boxes, masks, multimask_output):
         n = tf.shape(points)[0]
         image_embedding = tf.tile(self.image_embedding, (n, 1, 1, 1))
 
@@ -337,9 +334,7 @@ class ImageResizer:
         # as a dependency and I don't want to introduce it just because of the one
         # resizing operation.
         image = tf.convert_to_tensor(image)
-        image = tf.image.resize(
-            image, size=size, method=tf.image.ResizeMethod.AREA
-        )
+        image = tf.image.resize(image, size=size, method=tf.image.ResizeMethod.AREA)
         image = image.numpy().astype(dtype)
 
         if not channels_last:
@@ -365,7 +360,9 @@ class ImageResizer:
         """
         return self.scale_to_size(image, self.rescaled_size, channels_last)
 
-    def unscale_image(self, image: np.ndarray, channels_last: bool = True) -> np.ndarray:
+    def unscale_image(
+        self, image: np.ndarray, channels_last: bool = True
+    ) -> np.ndarray:
         """
         Reverses the scaling operation.
 
@@ -452,7 +449,7 @@ class ImageResizer:
         Returns:
             Mask of size ``src_size``.
         """
-        mask = mask[..., :self.rescaled_size[0], :self.rescaled_size[1]]
+        mask = mask[..., : self.rescaled_size[0], : self.rescaled_size[1]]
         mask = self.unscale_image(mask, channels_last=False)
         if threshold is not None:
             mask = mask > threshold
