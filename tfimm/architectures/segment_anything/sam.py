@@ -12,6 +12,35 @@ The following models are available.
 * `sam_vit_b`
 * `sam_vit_l`
 * `sam_vit_h`
+
+In the code we are trying to follow this convention in comments and docstrings.
+
+* ``N`` is the batch dimension
+* ``(H0, W0)`` is the dimension of the input image to ``SAMPRedictor``. There are no
+  constraints to this size as the image will be resized and padded to the model input
+  dimensions.
+* ``(H, W)`` is the model input size. This is (1024, 1024) for the pretrained models.
+* ``(H', W')`` is the input size for mask prompts and the output size for predicted
+  mask logits. For the pretrained models this is (256, 256). To be precise, this is
+  calculated as ``H'=4*H''` and same for ``W'``.
+* ``(H'', W'')`` is the spatial dimension of image embeddings. For pretrained models
+  this is (64, 64). This is calculated as ``H''=H/patch_size`` with
+  ``patch_size=16``.
+* ``C`` is the number of image input channels. Usually ``C=3``.
+* ``M1`` is the number of point prompts given to the model.
+* ``M2`` is the number of box prompts given to the model. The PyTorch code only
+    supports ``M2 in {0, 1}``, so the accuracy with multiple box prompts might be
+    limited.
+* ``M3`` is the number of mask prompts given to the model. The PyTorch code only
+   supports ``M3 in {0, 1}``, so the accuracy with multiple mask prompts might be
+   limited.
+* ``M`` is the number of tokens in the sparse embeddings returned by the prompt
+   embedder. The number depends on ``M1`` and ``M2``.
+* ``D`` is the embedding dimension, which is shared by both image, sparse and dense
+  prompt embeddings. For the pretrained models this is 256.
+* ``K`` is the number of masks returned by the model. This number is controlled by
+  the model parameter ``nb_multimask_outputs`` (set to 3 in pretrained models). And
+  also by the parameter ``multimask_output`` when calling ``SAMPredictor``.
 """
 from dataclasses import dataclass
 from typing import Tuple
@@ -26,12 +55,10 @@ from .mask_decoder import MaskDecoder
 from .prompt_encoder import PromptEncoder
 from .transformer import TwoWayTransformer
 
-# model_registry will add each entrypoint fn to this
+# Model registry will add each entrypoint fn to this
 __all__ = ["SegmentAnythingModel", "SegmentAnythingModelConfig"]
 
 
-# TODO: Add dropout parameters to config
-# TODO: Fix documentation of parameters
 @dataclass
 class SegmentAnythingModelConfig(ModelConfig):
     """
@@ -42,29 +69,43 @@ class SegmentAnythingModelConfig(ModelConfig):
         url: URL for pretrained weights.
         in_channels: Number of input image channels.
         input_size: Input image size (height, width)
+        fixed_input_size: If True, the model only accepts inputs of size ``input_size``.
+            If False, the models accepts arbitrary input sizes by interpolating the
+            positional encodings to account for the new input size.
+        embed_dim: The shared embedding dimension of image and prompt embeddings.
+        nb_multimask_outputs: Number of masks predicted by the model for each prompt.
+        mask_threshold: Threshold for thresholding mask logits to a boolean mask.
 
-        patch_size: Patchifying the image is implemented via a convolutional layer with
-            kernel size and stride equal to ``patch_size``.
-        embed_dim: Feature dimensions at each stage.
-        nb_blocks: Number of blocks at each stage.
-        mlp_ratio: Ratio of mlp hidden dim to embedding dim
-        conv_mlp_block: There are two equivalent implementations of the ConvNeXt block,
-            using either (1) 1x1 convolutions or (2) fully connected layers. In PyTorch
-            option (2) also requires permuting channels, which is not needed in
-            TensorFlow. We offer both implementations here, because some ``timm`` models
-            use (1) while others use (2).
+        encoder_patch_size: Patchifying the image is implemented via a convolutional
+            layer with kernel size and stride equal to ``patch_size``.
+        encoder_embed_dim: Feature dimensions at each stage. These are hidden feature
+            dimensions. The output dimension (which has to be compatible with the
+            prompt embedding dimension) is given by ``embed_dim``.
+        encoder_nb_blocks: Number of attention blocks in the image encoder.
+        encoder_nb_heads: Number of self-attention heads in the image encoder.
+        encoder_mlp_ratio: Ratio of mlp hidden dim to embedding dim
 
-        drop_rate: Dropout rate.
-        drop_path_rate: Dropout rate for stochastic depth.
+        encoder_drop_rate: Dropout rate
+        encoder_attn_drop_rate: Attention dropout rate
+        encoder_drop_path_rate: Dropout rate for stochastic depth
 
-        norm_layer: Normalization layer. See :func:`~norm_layer_factory` for possible
-            values.
-        act_layer: Activation function. See :func:`~act_layer_factory` for possible
-            values.
-        init_scale: Inital value for layer scale weights.
+        encoder_norm_layer: Normalization layer. See :func:`~norm_layer_factory` for
+            possible values.
+        encoder_act_layer: Activation function. See :func:`~act_layer_factory` for
+            possible values.
+        encoder_qkv_bias: If True, add bias for qkv projection layers.
+        encoder_global_attn_indices: Indexes for blocks using global attention. All
+            other blocks use window attention.
+        encoder_window_size: Window size for window attention blocks.
 
-        crop_pct: Crop percentage for ImageNet evaluation.
-        interpolation: Interpolation method for ImageNet evaluation.
+        prompt_mask_hidden_dim: Hidden dimension in the mask encoder network.
+
+        decoder_nb_blocks: Number of attention blocks in the mask decoder.
+        decoder_nb_heads: Number of self-attention heads in the mask decoder.
+        decoder_mlp_channels: Number of channels in mlp layers.
+        decoder_iou_head_depth: Number of layers in score predictor network.
+        decoder_iou_hidden_dim: Number of hidden dimensions in score predictor network.
+
         mean: Defines preprocessing function. If ``x`` is an image with pixel values
             in (0, 1), the preprocessing function is ``(x - mean) / std``.
         std: Defines preprpocessing function.
@@ -77,33 +118,43 @@ class SegmentAnythingModelConfig(ModelConfig):
     in_channels: int = 3
     input_size: Tuple[int, int] = (1024, 1024)
     fixed_input_size: bool = True
+    embed_dim: int = 256
+    nb_multimask_outputs: int = 3
     mask_threshold: float = 0.0
+
     # Image encoder
     encoder_patch_size: int = 16
     encoder_embed_dim: int = 768
     encoder_nb_blocks: int = 12
     encoder_nb_heads: int = 12
     encoder_mlp_ratio: float = 4.0
+
+    encoder_drop_rate: float = 0.0
+    encoder_attn_drop_rate: float = 0.0
+    encoder_drop_path_rate: float = 0.0
+
     encoder_norm_layer: str = "layer_norm_eps_1e-6"
     encoder_act_layer: str = "gelu"
     encoder_qkv_bias: bool = True
     encoder_global_attn_indices: Tuple = (2, 5, 8, 11)
     encoder_window_size: int = 14
+
     # Prompt encoder
-    prompt_embed_dim: int = 256
     prompt_mask_hidden_dim: int = 16
+
     # Mask decoder
-    decoder_nb_multimask_outputs: int = 3
     decoder_nb_blocks: int = 2
     decoder_nb_heads: int = 8
     decoder_mlp_channels: int = 2048
     decoder_iou_head_depth: int = 3
     decoder_iou_hidden_dim: int = 256
+
     # Preprocessing
     mean: Tuple[float, float, float] = IMAGENET_DEFAULT_MEAN
     std: Tuple[float, float, float] = IMAGENET_DEFAULT_STD
+
     # Weight transfer
-    first_conv: str = "stem/0"  # TODO: Set right value here
+    first_conv: str = "image_encoder/patch_embed/proj"
 
 
 @keras_serializable
@@ -124,7 +175,7 @@ class SegmentAnythingModel(tf.keras.Model):
             nb_blocks=cfg.encoder_nb_blocks,
             nb_heads=cfg.encoder_nb_heads,
             mlp_ratio=cfg.encoder_mlp_ratio,
-            out_channels=cfg.prompt_embed_dim,
+            out_channels=cfg.embed_dim,
             qkv_bias=cfg.encoder_qkv_bias,
             norm_layer=cfg.encoder_norm_layer,
             act_layer=cfg.encoder_act_layer,
@@ -132,19 +183,22 @@ class SegmentAnythingModel(tf.keras.Model):
             use_rel_pos=True,
             window_size=cfg.encoder_window_size,
             global_attn_indices=cfg.encoder_global_attn_indices,
+            drop_rate=cfg.encoder_drop_rate,
+            attn_drop_rate=cfg.encoder_attn_drop_rate,
+            drop_path_rate=cfg.encoder_drop_path_rate,
             name="image_encoder",
         )
         self.prompt_encoder = PromptEncoder(
             input_size=cfg.input_size,
             grid_size=self.grid_size,
-            embed_dim=cfg.prompt_embed_dim,
+            embed_dim=cfg.embed_dim,
             mask_hidden_dim=cfg.prompt_mask_hidden_dim,
             act_layer="gelu",
             name="prompt_encoder",
         )
         self.mask_decoder = MaskDecoder(
             transformer=TwoWayTransformer(
-                embed_dim=cfg.prompt_embed_dim,
+                embed_dim=cfg.embed_dim,
                 nb_blocks=cfg.decoder_nb_blocks,
                 nb_heads=cfg.decoder_nb_heads,
                 mlp_dim=cfg.decoder_mlp_channels,
@@ -152,8 +206,8 @@ class SegmentAnythingModel(tf.keras.Model):
                 act_layer="relu",
                 name="transformer",
             ),
-            embed_dim=cfg.prompt_embed_dim,
-            nb_multimask_outputs=cfg.decoder_nb_multimask_outputs,
+            embed_dim=cfg.embed_dim,
+            nb_multimask_outputs=cfg.nb_multimask_outputs,
             iou_head_depth=cfg.decoder_iou_head_depth,
             iou_head_hidden_dim=cfg.decoder_iou_hidden_dim,
             act_layer="gelu",

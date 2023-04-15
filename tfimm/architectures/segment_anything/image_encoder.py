@@ -377,8 +377,8 @@ class ImageEncoder(tf.keras.Model):
         act_layer: str = "gelu",
         use_abs_pos: bool = True,
         use_rel_pos: bool = False,
-        window_size: int = 0,
         global_attn_indices: Tuple[int, ...] = (),
+        window_size: int = 0,
         drop_rate: float = 0.0,
         attn_drop_rate: float = 0.0,
         drop_path_rate: float = 0.0,
@@ -402,8 +402,8 @@ class ImageEncoder(tf.keras.Model):
             act_layer: Activation layer.
             use_abs_pos: If True, use absolute positional embeddings.
             use_rel_pos: If True, add relative positional embeddings to attention.
-            window_size: Window size for window attention blocks.
             global_attn_indices: Indexes for blocks using global attention.
+            window_size: Window size for window attention blocks.
             drop_rate: Dropout rate
             attn_drop_rate: Attention dropout rate
             drop_path_rate: Dropout rate for stochastic depth
@@ -423,8 +423,8 @@ class ImageEncoder(tf.keras.Model):
         self.act_layer = act_layer
         self.use_abs_pos = use_abs_pos
         self.use_rel_pos = use_rel_pos
-        self.window_size = window_size
         self.global_attn_indices = global_attn_indices
+        self.window_size = window_size
         self.drop_rate = drop_rate
         self.attn_drop_rate = attn_drop_rate
         self.drop_path_rate = drop_path_rate
