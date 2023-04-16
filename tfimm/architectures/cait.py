@@ -380,7 +380,7 @@ class CaiT(tf.keras.Model):
             + ["features_all", "features", "logits"]
         )
 
-    def transform_pos_embed(self, target_cfg: CaiTConfig):
+    def transform_pos_embed(self, src_weights, target_cfg: CaiTConfig):
         return interpolate_pos_embeddings(
             pos_embed=self.pos_embed,
             src_grid_size=self.cfg.grid_size,

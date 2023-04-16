@@ -171,8 +171,14 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     """
     dst_first_conv = dst_model.cfg.first_conv
 
-    keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
-    dst_classifier = dst_model.cfg.classifier
+    if hasattr(src_model.cfg, "nb_classes") and hasattr(dst_model.cfg, "nb_classes"):
+        keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
+    else:
+        # It doesn't really matter what we set this to, since if a model doesn't have
+        # a nb_classes parameter, it most likely won't have a classifier parameter
+        # set either
+        keep_classifier = True
+    dst_classifier = getattr(dst_model.cfg, "classifier", [])
     if isinstance(dst_classifier, str):  # Some models have multiple classifier heads
         dst_classifier = [dst_classifier]
 
@@ -183,34 +189,37 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     # Some weights should not be transferred as they are created during building
     weights_to_ignore = getattr(dst_model, "keys_to_ignore_on_load_missing", [])
 
-    src_weights = {_strip_prefix(w.name): w.numpy() for w in src_model.weights}
+    src_weights = {_get_weight_name(w.name): w.numpy() for w in src_model.weights}
     weight_value_tuples = []
     for dst_weight in dst_model.weights:
         # We store human-friendly names in the model config.
-        var_name = _get_layer_name(dst_weight.name)
-        w_name = _strip_prefix(dst_weight.name)
+        layer_name = _get_layer_name(dst_weight.name)
+        w_name = _get_weight_name(dst_weight.name)
 
         if any(re.search(pat, w_name) is not None for pat in weights_to_ignore):
             # Weights that don't need to be transferred
             pass
 
-        elif var_name in dst_classifier:
+        elif layer_name in dst_classifier:
             if keep_classifier:
                 # We only keep the classifier if the number of classes is the same
                 # Otherwise the classifier is not copied over, i.e., we keep the
                 # initialization of dst_model.
                 weight_value_tuples.append((dst_weight, src_weights[w_name]))
 
-        elif var_name == dst_first_conv:
+        elif layer_name == dst_first_conv:
             src_weight = _transform_first_conv(
                 src_weights[w_name], dst_model.cfg.in_channels
             )
             weight_value_tuples.append((dst_weight, src_weight))
 
-        elif var_name in transform_weights:
-            # We check if we need to apply a transform. In that case the weight
-            # taken from the model, it is *not* passed to the transform function.
-            src_weight = transform_weights[var_name](src_model, dst_model.cfg)
+        elif w_name in transform_weights:
+            # We check if we need to apply a transform. In that case we call the
+            # transform function passing the source model, source weight and target
+            # config.
+            src_weight = transform_weights[w_name](
+                src_model, src_weights[w_name], dst_model.cfg
+            )
             weight_value_tuples.append((dst_weight, src_weight))
 
         else:
@@ -219,14 +228,6 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
 
     # This modifies weights in place
     K.batch_set_value(weight_value_tuples)
-
-
-def _strip_prefix(name):
-    """
-    The model name prefix is made unique by TF, i.e., two ResNets will have variables
-    'res_net/var:0' and 'res_net_1/var:0'. Here we return 'var:0'.
-    """
-    return name.split("/", 1)[-1]
 
 
 def _get_layer_name(name):
@@ -238,8 +239,23 @@ def _get_layer_name(name):
     """
     name = name.replace(":0", "")  # Remove device IDs
     name = name.replace("/remove/", "/")  # Auxiliary intermediate levels
+    # The model name prefix is made unique by TF, i.e., two ResNets will have variables
+    # 'res_net/var:0' and 'res_net_1/var:0'. Here we remove the prefix.
     name = name.split("/", 1)[-1]  # Remove prefix, e.g., "res_net"
     name = name.rsplit("/", 1)[0]  # Remove last part, e.g., "kernel"
+    return name
+
+
+def _get_weight_name(name):
+    """
+    Extracts the name of the weight, which is compared against the config values for
+    `transfer_weights`. The difference with `_get_weights_name` is that we preserve
+    the last part.
+
+    The input is, e.g., name="res_net/fc/kernel:0". We want to extract "fc/kernel".
+    """
+    name = name.replace(":0", "")  # Remove device IDs
+    name = name.split("/", 1)[-1]  # Remove prefix, e.g., "res_net"
     return name
 
 

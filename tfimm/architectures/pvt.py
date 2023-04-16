@@ -348,7 +348,7 @@ class PyramidVisionTransformer(tf.keras.Model):
     #     return {'cls_token'}
 
     def transform_pos_embed(
-        self, target_cfg: PyramidVisionTransformerConfig, stage: int
+        self, src_weights, target_cfg: PyramidVisionTransformerConfig, stage: int
     ):
         return interpolate_pos_embeddings(
             pos_embed=self.pos_embed[stage],
