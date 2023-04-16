@@ -294,7 +294,7 @@ class PoolingVisionTransformer(tf.keras.Model):
         return list(features.keys())
 
     def transform_pos_embed(
-            self, src_weights, target_cfg: PoolingVisionTransformerConfig
+        self, src_weights, target_cfg: PoolingVisionTransformerConfig
     ):
         """
         Transforms the position embedding weights in accordance with `target_cfg` and
