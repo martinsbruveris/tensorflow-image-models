@@ -1,10 +1,15 @@
-from typing import Tuple
+from typing import Tuple, cast
 
 import numpy as np
 import pytest
 import tensorflow as tf
 import torch
 
+from tfimm.architectures.segment_anything import (
+    ImageResizer,
+    SegmentAnythingModel,
+    SegmentAnythingModelConfig,
+)
 from tfimm.architectures.segment_anything.image_encoder import (
     add_decomposed_rel_pos as tf_add_decomposed_rel_pos,
     get_rel_pos as tf_get_rel_pos,
@@ -14,7 +19,6 @@ from tfimm.architectures.segment_anything.image_encoder import (
 from tfimm.architectures.segment_anything.mask_decoder import (
     MaskDecoder as TFMaskDecoder,
 )
-from tfimm.architectures.segment_anything.predictor import ImageResizer
 from tfimm.architectures.segment_anything.prompt_encoder import (
     PositionalEmbeddingRandom as TFPositionalEmbeddingRandom,
     PromptEncoder as TFPromptEncoder,
@@ -42,7 +46,28 @@ from tfimm.architectures.segment_anything.transformer import (
     TwoWayAttentionBlock as TFTwoWayAttentionBlock,
     TwoWayTransformer as TFTwoWayTransformer,
 )
+from tfimm.models import create_model, register_model, transfer_weights
 from tfimm.utils.timm import load_pytorch_weights_in_tf2_model
+
+
+@register_model
+def sam_vit_test_model():
+    cfg = SegmentAnythingModelConfig(
+        name="sam_vit_test_model",
+        input_size=(32, 32),
+        fixed_input_size=False,
+        embed_dim=12,
+        encoder_patch_size=4,
+        encoder_embed_dim=12,
+        encoder_nb_blocks=3,
+        encoder_nb_heads=2,
+        encoder_global_attn_indices=(1,),
+        encoder_window_size=2,
+        decoder_nb_heads=2,
+        decoder_mlp_channels=14,
+        decoder_iou_hidden_dim=18,
+    )
+    return SegmentAnythingModel, cfg
 
 
 @pytest.mark.parametrize("shape", [(2, 8, 7, 3), (2, 3, 6, 4)])
@@ -409,3 +434,22 @@ def test_resize_longest_side():
     resizer = ImageResizer(src_size=(20, 10), dst_size=(4, 4))
     assert resizer.scale == 0.2
     assert resizer.rescaled_size == (4, 2)
+
+
+def test_transfer_weights():
+    # Create two models with different input_sizes
+    model_1 = create_model("sam_vit_test_model", fixed_input_size=False)
+    model_2 = create_model("sam_vit_test_model", input_size=(48, 48))
+
+    model_1 = cast(SegmentAnythingModel, model_1)
+    model_2 = cast(SegmentAnythingModel, model_2)
+
+    # Transfer weights from one to another
+    transfer_weights(model_1, model_2)
+
+    # The only thing that changes is the image encoder, so we only test this part.
+    img = np.random.rand(1, 48, 48, 3).astype(np.float32)
+    res_1 = model_1.image_encoder(img, training=False).numpy()
+    res_2 = model_2.image_encoder(img, training=False).numpy()
+
+    np.testing.assert_almost_equal(res_1, res_2, decimal=5)

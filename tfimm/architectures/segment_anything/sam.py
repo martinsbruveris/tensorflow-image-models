@@ -43,6 +43,7 @@ In the code we are trying to follow this convention in comments and docstrings.
   also by the parameter ``multimask_output`` when calling ``SAMPredictor``.
 """
 from dataclasses import dataclass
+from functools import partial
 from typing import Tuple
 
 import tensorflow as tf
@@ -155,6 +156,40 @@ class SegmentAnythingModelConfig(ModelConfig):
 
     # Weight transfer
     first_conv: str = "image_encoder/patch_embed/proj"
+
+    @property
+    def transform_weights(self):
+        transforms = {"image_encoder/pos_embed": transform_pos_embed}
+        # Only attention blocks that use global attention need to be transformed. For
+        # the other blocks, rel_pos depends on the window size, which we assume is
+        # constant
+        for j in self.encoder_global_attn_indices:
+            prefix = f"image_encoder/blocks/{j}/attn/rel_pos"
+            transforms[prefix + "_h"] = partial(transform_rel_pos, axis=0)
+            transforms[prefix + "_w"] = partial(transform_rel_pos, axis=1)
+        return transforms
+
+
+def transform_rel_pos(
+    model, rel_pos, target_cfg: SegmentAnythingModelConfig, axis: int
+):
+    grid_dim = target_cfg.input_size[axis] // target_cfg.encoder_patch_size
+    new_size = 2 * grid_dim - 1
+
+    # rel_pos has shape (L, D), but tf.image.resize needs a 3D tensor.
+    rel_pos = tf.expand_dims(rel_pos, axis=0)
+    rel_pos = tf.image.resize(rel_pos, size=(1, new_size), method="bilinear")
+    rel_pos = rel_pos[0]
+    return rel_pos
+
+
+def transform_pos_embed(model, pos_embed, target_cfg: SegmentAnythingModelConfig):
+    grid_size = (
+        target_cfg.input_size[0] // target_cfg.encoder_patch_size,
+        target_cfg.input_size[1] // target_cfg.encoder_patch_size,
+    )
+    pos_embed = tf.image.resize(pos_embed, size=grid_size, method="bilinear")
+    return pos_embed
 
 
 @keras_serializable

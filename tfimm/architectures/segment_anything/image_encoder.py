@@ -495,7 +495,7 @@ class ImageEncoder(tf.keras.Model):
         features = OrderedDict()
         x = self.patch_embed(x, training=training)
         if self.use_abs_pos:
-            if self.fixed_input_size:
+            if not self.fixed_input_size:
                 pos_embed = tf.image.resize(
                     self.pos_embed, size=tf.shape(x)[1:3], method="bilinear"
                 )
