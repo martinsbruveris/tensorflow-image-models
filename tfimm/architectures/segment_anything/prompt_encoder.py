@@ -9,8 +9,6 @@ from tfimm.layers import act_layer_factory, norm_layer_factory
 class PromptEncoder(tf.keras.Model):
     def __init__(
         self,
-        input_size: Tuple[int, int],
-        grid_size: Tuple[int, int],
         embed_dim: int,
         mask_hidden_dim: int,
         act_layer: str = "gelu",
@@ -20,16 +18,11 @@ class PromptEncoder(tf.keras.Model):
         Encodes prompts for input to SAM's mask decoder.
 
         Arguments:
-            input_size: The padded size of the image that is input to the image encoder
-                as (H, W). Used to normalize point and bounding box coordinates.
-            grid_size: The spatial size of the image embedding as (H, W).
             embed_dim: The prompts' embedding dimension.
             mask_hidden_dim: The number of hidden channels for encoding input masks.
             act_layer: Activation layer.
         """
         super().__init__(**kwargs)
-        self.input_size = input_size
-        self.grid_size = grid_size
         self.embed_dim = embed_dim
         self.mask_hidden_dim = mask_hidden_dim
         self.act_layer = act_layer
@@ -54,13 +47,8 @@ class PromptEncoder(tf.keras.Model):
             "points": tf.zeros((1, 1, 2), dtype=tf.float32),
             "labels": tf.zeros((1, 1), dtype=tf.int32),
             "boxes": tf.zeros((1, 1, 4), dtype=tf.float32),
-            "masks": tf.zeros((1, *self.mask_size, 1), dtype=tf.float32),
+            "masks": tf.zeros((1, 8, 8, 1), dtype=tf.float32),
         }
-
-    @property
-    def mask_size(self):
-        """The expected spatial size of the input mask."""
-        return 4 * self.grid_size[0], 4 * self.grid_size[1]
 
     def build(self, input_shape):
         nb_point_embeddings = 4  # foreground/background point + 2 box corners
@@ -86,24 +74,24 @@ class PromptEncoder(tf.keras.Model):
             name="no_mask_embed/weight",
         )
 
-    def _embed_points(self, points: tf.Tensor, labels: tf.Tensor):
+    def _embed_points(self, points: tf.Tensor, labels: tf.Tensor, input_size):
         """Embed point prompts."""
         points = points + 0.5  # Shift to center of pixel
         labels = tf.expand_dims(labels, axis=-1)  # (N, 1)
-        embeddings = self.pe_layer.embed_points(points, self.input_size)
+        embeddings = self.pe_layer.embed_points(points, input_size)
         embeddings += tf.where(
             labels == 0, self.point_embeddings[0], self.point_embeddings[1]
         )
         return embeddings
 
-    def _embed_boxes(self, boxes: tf.Tensor):
+    def _embed_boxes(self, boxes: tf.Tensor, input_size):
         """Embed box promts."""
         # Shape of boxes is (N, M, 4)
         n, m, _ = tf.unstack(tf.shape(boxes))
         boxes = boxes + 0.5  # Shift to center of pixel
         corners = tf.reshape(boxes, (n * m, 2, 2))  # (N*M, 2, 2)
         embeddings = self.pe_layer.embed_points(
-            corners, self.input_size  # (N*M, 2, embed_dim)
+            corners, input_size  # (N*M, 2, embed_dim)
         )
         embeddings += tf.stack(
             [self.point_embeddings[2], self.point_embeddings[3]], axis=1
@@ -117,17 +105,18 @@ class PromptEncoder(tf.keras.Model):
         return embeddings
 
     def _embed_masks(self, masks, training: bool = False):
+        n, _, h, w = tf.unstack(tf.shape(masks))  # (N, M3, H', W')
         # If we have no masks, we return `no_mask_embed` broadcast across batch and
         # spatial dimensions.
         embeddings = tf.cond(
             tf.shape(masks)[1] == 0,
             lambda: tf.broadcast_to(
                 input=tf.reshape(self.no_mask_embed, (1, 1, 1, -1)),
-                shape=(tf.shape(masks)[0], *self.grid_size, self.embed_dim),
+                shape=(n, h // 4, w // 4, self.embed_dim),
             ),
             lambda: self.mask_downscaling(masks, training=training),
         )
-        return embeddings
+        return embeddings  # (N, H'', W'', D)
 
     def call(self, inputs, training=False):
         """
@@ -158,8 +147,11 @@ class PromptEncoder(tf.keras.Model):
         boxes = inputs["boxes"]
         masks = inputs["masks"]
 
-        point_embeddings = self._embed_points(points, labels)
-        box_embeddings = self._embed_boxes(boxes)
+        _, _, h, w = tf.unstack(tf.shape(masks))  # (N, M3, H', W')
+        input_size = (4 * h, 4 * w)  # (H, W)
+
+        point_embeddings = self._embed_points(points, labels, input_size)
+        box_embeddings = self._embed_boxes(boxes, input_size)
 
         # If we have points, but no boxes, we append one `not_a_point_embed` embedding.
         # This is done in PyTorch via `pad=True` in `_embed_points()`.
@@ -180,7 +172,7 @@ class PromptEncoder(tf.keras.Model):
 
         return sparse_embeddings, dense_embeddings
 
-    def get_dense_pe(self) -> tf.Tensor:
+    def get_dense_pe(self, grid_size) -> tf.Tensor:
         """
         Returns the positional encoding used to encode point prompts, applied to a
         dense set of points the shape of the image encoding.
@@ -188,7 +180,7 @@ class PromptEncoder(tf.keras.Model):
         Returns:
           Positional encoding with shape (*grid_size, embed_dim).
         """
-        image_pe = self.pe_layer.embed_grid(self.grid_size)
+        image_pe = self.pe_layer.embed_grid(grid_size)
         return image_pe
 
 

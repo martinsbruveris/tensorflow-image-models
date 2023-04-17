@@ -2,9 +2,9 @@
 # TODO: Add "Open in Colab" badge to notebook (see SAM)
 # TODO: Test mixed precision behaviour
 
-# TODO: Add documentation for sam.py, compile documentation
-
+# TODO: Compile documentation
 # TODO: Convert PT models to TF and upload to GitHub
+import math
 from typing import Callable, Optional, Tuple
 
 import numpy as np
@@ -69,7 +69,21 @@ class SAMPredictor:
         Args:
             image: An array of shape (H, W, C) with pixel values in [0, 255].
         """
-        self.resizer = ImageResizer(src_size=image.shape[:2], dst_size=self.input_size)
+        if self.model.cfg.fixed_input_size:
+            self.resizer = ImageResizer(
+                src_size=image.shape[:2], dst_size=self.input_size
+            )
+        else:
+            # If the model allows flexible input sizes, we simply pad the image to
+            # the nearest multiple of patch_size.
+            patch_size = self.model.cfg.encoder_patch_size
+            dst_size = (
+                patch_size * math.ceil(image.shape[0] / patch_size),
+                patch_size * math.ceil(image.shape[1] / patch_size),
+            )
+            self.resizer = ImageResizer(
+                src_size=image.shape[:2], dst_size=dst_size, pad_only=True
+            )
 
         # We scale the image to the largest size possible that fits input_size.
         image = self.resizer.scale_image(image)
@@ -108,9 +122,8 @@ class SAMPredictor:
         mask = self.resizer.pad_image(mask, channels_last=False)
 
         # Then we rescale to mask_size
-        mask = self.resizer.scale_to_size(
-            mask, size=self.mask_size, channels_last=False
-        )
+        mask_size = (self.resizer.dst_size[0] // 4, self.resizer.dst_size[1] // 4)
+        mask = self.resizer.scale_to_size(mask, size=mask_size, channels_last=False)
         return mask
 
     def __call__(
@@ -173,7 +186,8 @@ class SAMPredictor:
         if boxes is None:
             boxes = np.zeros(batch_shape + (0, 4), dtype=np.float32)
         if masks is None:
-            masks = np.zeros(batch_shape + (0, *self.mask_size), dtype=np.float32)
+            mask_size = (self.resizer.dst_size[0] // 4, self.resizer.dst_size[1] // 4)
+            masks = np.zeros(batch_shape + (0, *mask_size), dtype=np.float32)
 
         # Check that batch shapes are compatible
         if (
@@ -234,7 +248,7 @@ class SAMPredictor:
         logits, scores = self.model.mask_decoder(
             inputs={
                 "image_embeddings": image_embedding,
-                "image_pe": self.model.get_image_pe(batch_size=n),
+                "image_pe": self.model.get_image_pe(image_embedding),
                 "sparse_embeddings": sparse_embeddings,
                 "dense_embeddings": dense_embeddings,
             },
@@ -267,7 +281,12 @@ class ImageResizer:
     bounding boxes and pad images.
     """
 
-    def __init__(self, src_size: Tuple[int, int], dst_size: Tuple[int, int]):
+    def __init__(
+        self,
+        src_size: Tuple[int, int],
+        dst_size: Tuple[int, int],
+        pad_only: bool = False,
+    ):
         """
         Creates an ``ImageResizer`` object.
 
@@ -276,14 +295,21 @@ class ImageResizer:
                 specific, i.e., for each source image size it is recommended to create
                 a new ``ImageResizer`` object.
             dst_size: The target size after resizing (and padding).
+            pad_only: If True, we don't do any resizing and only pad the image to
+                ``dst_size``.
         """
         self.src_size = src_size
         self.dst_size = dst_size
+        self.pad_only = pad_only
 
         self.scale, self.rescaled_size = self._get_scale()
 
     def _get_scale(self):
         """Calculate rescaling parameters."""
+        if self.pad_only:
+            # If we only pad, then scale is 1 and the rescaled size equal input size.
+            return 1.0, self.src_size
+
         h_scale = self.dst_size[0] / self.src_size[0]
         w_scale = self.dst_size[1] / self.src_size[1]
 

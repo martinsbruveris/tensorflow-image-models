@@ -150,8 +150,6 @@ def test_add_decomposed_rel_pos(qh, qw, kh, kw):
 def test_prompt_encoder_empty():
     """We test that the prompt encoder behaves correctly for empty prompts."""
     prompt_encoder = TFPromptEncoder(
-        input_size=(32, 64),
-        grid_size=(8, 16),
         embed_dim=6,
         mask_hidden_dim=9,
     )
@@ -160,14 +158,17 @@ def test_prompt_encoder_empty():
     embeddings = prompt_encoder._embed_points(
         points=tf.ones((3, 0, 2), dtype=tf.float32),
         labels=tf.ones((3, 0), dtype=tf.int32),
+        input_size=(16, 16),
     )
     tf.ensure_shape(embeddings, (3, 0, 6))
 
-    embeddings = prompt_encoder._embed_boxes(boxes=tf.ones((3, 0, 4), dtype=tf.float32))
+    embeddings = prompt_encoder._embed_boxes(
+        boxes=tf.ones((3, 0, 4), dtype=tf.float32), input_size=(16, 16)
+    )
     tf.ensure_shape(embeddings, (3, 0, 6))
 
     embeddings = prompt_encoder._embed_masks(
-        masks=tf.ones((3, 0, *prompt_encoder.mask_size), dtype=tf.float32)
+        masks=tf.ones((3, 0, 32, 64), dtype=tf.float32)
     )
     tf.ensure_shape(embeddings, (3, 8, 16, 6))
 
@@ -186,17 +187,15 @@ def test_prompt_encoder(m1, m2, m3):
     labels = [[1, 1, 0]] if m1 == 3 else [[]]
     labels = np.asarray(labels, dtype=np.int32)
     boxes = np.random.uniform(size=(1, m2, 4)).astype(np.float32)
-    masks = np.random.uniform(size=(1, m3, 32, 64)).astype(np.float32)
+    masks = np.random.uniform(size=(1, m3, 8, 16)).astype(np.float32)
 
     pt_prompt_encoder = PTPromptEncoder(
         embed_dim=6,
-        image_embedding_size=(8, 16),
+        image_embedding_size=(2, 4),
         input_image_size=(32, 64),
         mask_in_chans=9,
     )
     tf_prompt_encoder = TFPromptEncoder(
-        input_size=(32, 64),
-        grid_size=(8, 16),
         embed_dim=6,
         mask_hidden_dim=9,
     )

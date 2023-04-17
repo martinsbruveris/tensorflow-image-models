@@ -224,8 +224,6 @@ class SegmentAnythingModel(tf.keras.Model):
             name="image_encoder",
         )
         self.prompt_encoder = PromptEncoder(
-            input_size=cfg.input_size,
-            grid_size=self.grid_size,
             embed_dim=cfg.embed_dim,
             mask_hidden_dim=cfg.prompt_mask_hidden_dim,
             act_layer="gelu",
@@ -279,17 +277,18 @@ class SegmentAnythingModel(tf.keras.Model):
         }
         return inputs
 
-    def get_image_pe(self, batch_size: int):
-        image_pe = self.prompt_encoder.get_dense_pe()  # (H'', W'', D)
+    def get_image_pe(self, image_embeddings):
+        n, h, w, _ = tf.unstack(tf.shape(image_embeddings))
+        image_pe = self.prompt_encoder.get_dense_pe((h, w))  # (H'', W'', D)
         image_pe = tf.expand_dims(image_pe, axis=0)  # (1, H'', W'', D)
-        image_pe = tf.tile(image_pe, (batch_size, 1, 1, 1))  # (N, H'', W'', D)
+        image_pe = tf.tile(image_pe, (n, 1, 1, 1))  # (N, H'', W'', D)
         return image_pe
 
     def _postprocess_logits(self, logits, return_logits: bool):
-        # Shape of logits (N, K, H', W')
+        _, _, h, w = tf.unstack(tf.shape(logits))  # (N, K, H', W')
         masks = tf.transpose(logits, (0, 2, 3, 1))  # (N, H', W', K)
         masks = tf.image.resize(
-            masks, size=self.cfg.input_size, method=tf.image.ResizeMethod.BILINEAR
+            masks, size=(4 * h, 4 * w), method=tf.image.ResizeMethod.BILINEAR
         )  # (N, H, W, K)
         masks = tf.transpose(masks, (0, 3, 1, 2))  # (N, K, H, W)
         if not return_logits:
@@ -343,11 +342,10 @@ class SegmentAnythingModel(tf.keras.Model):
         )
 
         # Logits shape: (N, K, H', W'); Scores shape: (N, K).
-        n = tf.shape(image_embeddings)[0]
         logits, scores = self.mask_decoder(
             inputs={
                 "image_embeddings": image_embeddings,
-                "image_pe": self.get_image_pe(batch_size=n),
+                "image_pe": self.get_image_pe(image_embeddings),
                 "sparse_embeddings": sparse_embeddings,
                 "dense_embeddings": dense_embeddings,
             },
