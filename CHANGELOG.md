@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.12 - 20230-04-17
+
+- Fixing small bugs in SAM.
+
 ## v0.2.11 - 2023-04-17
 
 - Added Segment Aything models.
