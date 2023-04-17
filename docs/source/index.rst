@@ -36,6 +36,7 @@ Contents
    content/efficientnet
    content/pit
    content/poolformer
+   content/segment_anything
 
 .. toctree::
    :maxdepth: 2

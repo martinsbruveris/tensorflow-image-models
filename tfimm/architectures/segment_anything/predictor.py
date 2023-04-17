@@ -16,21 +16,22 @@ from .sam import SegmentAnythingModel
 
 
 class SAMPredictor:
+    """
+    Uses SAM to calculate the image embedding for an image, and then allows
+    repeated, efficient mask prediction given prompts.
+
+    While internally TF is used for inference, the inputs and return values in this
+    class are numpy arrays for ease of use.
+
+    Args:
+        model: The model used for mask prediction.
+        preprocessing: Preprocessing function for the model. If not provided we
+            will query ``tfimm`` using the model name.
+    """
+
     def __init__(
         self, model: SegmentAnythingModel, preprocessing: Optional[Callable] = None
     ):
-        """
-        Uses SAM to calculate the image embedding for an image, and then allows
-        repeated, efficient mask prediction given prompts.
-
-        While internally TF is used for inference, the inputs and return values in this
-        class are numpy arrays for ease of use.
-
-        Arguments:
-            model: The model used for mask prediction.
-            preprocessing: Preprocessing function for the model. If not provided we
-                will query ``tfimm`` using the model name.
-        """
         if preprocessing is None:
             preprocessing = create_preprocessing(
                 model.cfg.name, in_channels=model.cfg.in_channels, dtype=tf.float32
@@ -44,23 +45,6 @@ class SAMPredictor:
         self.image_embedding = None
         self.image_set = False
 
-    @property
-    def input_size(self):
-        """
-        The image input size for the segmentation model. Images are resized and padded
-        to this size before computing embeddings.
-        """
-        return self.model.input_size
-
-    @property
-    def mask_size(self):
-        """
-        The required input size for segmentation mask prompts and return size for
-        logits. The ```preprocess_masks`` function can be used to convert masks to this
-        size.
-        """
-        return self.model.mask_size
-
     def set_image(self, image: np.ndarray):
         """
         Calculates the image embeddings for the provided image, allowing masks to be
@@ -71,7 +55,7 @@ class SAMPredictor:
         """
         if self.model.cfg.fixed_input_size:
             self.resizer = ImageResizer(
-                src_size=image.shape[:2], dst_size=self.input_size
+                src_size=image.shape[:2], dst_size=self.self.model.cfg.input_size
             )
         else:
             # If the model allows flexible input sizes, we simply pad the image to

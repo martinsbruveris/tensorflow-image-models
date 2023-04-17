@@ -9,9 +9,9 @@ Original pytorch code and weights from
 
 The following models are available.
 
-* `sam_vit_b`
-* `sam_vit_l`
-* `sam_vit_h`
+* ``sam_vit_b``
+* ``sam_vit_l``
+* ``sam_vit_h``
 
 In the code we are trying to follow this convention in comments and docstrings.
 
@@ -29,13 +29,13 @@ In the code we are trying to follow this convention in comments and docstrings.
 * ``C`` is the number of image input channels. Usually ``C=3``.
 * ``M1`` is the number of point prompts given to the model.
 * ``M2`` is the number of box prompts given to the model. The PyTorch code only
-    supports ``M2 in {0, 1}``, so the accuracy with multiple box prompts might be
-    limited.
+  supports ``M2 in {0, 1}``, so the accuracy with multiple box prompts might be
+  limited.
 * ``M3`` is the number of mask prompts given to the model. The PyTorch code only
-   supports ``M3 in {0, 1}``, so the accuracy with multiple mask prompts might be
+  supports ``M3 in {0, 1}``, so the accuracy with multiple mask prompts might be
    limited.
 * ``M`` is the number of tokens in the sparse embeddings returned by the prompt
-   embedder. The number depends on ``M1`` and ``M2``.
+  embedder. The number depends on ``M1`` and ``M2``.
 * ``D`` is the embedding dimension, which is shared by both image, sparse and dense
   prompt embeddings. For the pretrained models this is 256.
 * ``K`` is the number of masks returned by the model. This number is controlled by
@@ -304,15 +304,17 @@ class SegmentAnythingModel(tf.keras.Model):
 
         Args:
             inputs: A dictionary with the following entries
-                images: An (N, H, W, C) tensor of preprocessed input images.
-                points: An (N, M1, 2) tensor of point prompts with coordinates in pixel
-                    space, i.e., values between 0 and H or W.
-                labels: An (N, M1) tensor of labels for point prompts. 1 indicates a
-                    foreground point and 0 indicates a background point.
-                boxes: An (N, M2, 4) tensor of box prompts of form (left, top, right,
-                    bottom) with coordinates in pixel space.
-                masks: An (N, M3, H', W') tensor of mask inputs, where M3 is
-                    either 1 or 0 (no mask provided).
+
+             * images: An (N, H, W, C) tensor of preprocessed input images.
+             * points: An (N, M1, 2) tensor of point prompts with coordinates in pixel
+               space, i.e., values between 0 and H or W.
+             * labels: An (N, M1) tensor of labels for point prompts. 1 indicates a
+               foreground point and 0 indicates a background point.
+             * boxes: An (N, M2, 4) tensor of box prompts of form (left, top, right,
+               bottom) with coordinates in pixel space.
+             * masks: An (N, M3, H', W') tensor of mask inputs, where M3 is
+               either 1 or 0 (no mask provided).
+
             training: Training or inference phase?
             multimask_output: If True, we return multiple nested masks for each prompt.
             return_logits: If True, we don't threshold the upscaled mask. This is useful
@@ -320,12 +322,13 @@ class SegmentAnythingModel(tf.keras.Model):
                 then apply the threshold.
 
         Returns:
-            masks: An (N, K, H, W) bool tensor of binary masked predictions, where K is
-                determined by the multimask_output parameter.
-            quality: An (N, K) tensor with the model's predictions of mask quality.
-            logits: An (N, K, H', W') tensor with low resoulution logits, where usually
-                H'=H/4 and W'=W/4. This can be passed as mask input to subsequent
-                iterations of prediction.
+
+            * Masks, an (N, K, H, W) bool tensor of binary masked predictions, where K
+              is determined by the multimask_output parameter.
+            * Scores, an (N, K) tensor with the model's predictions of mask quality.
+            * Logits, an (N, K, H', W') tensor with low resoulution logits, where
+              usually H'=H/4 and W'=W/4. This can be passed as mask input to subsequent
+              iterations of prediction.
         """
         # Shape (N, H'', W'', D), where H'' = H / 16 (grid size).
         image_embeddings = self.image_encoder(inputs["images"], training=training)
