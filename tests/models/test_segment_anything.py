@@ -7,6 +7,7 @@ import torch
 
 from tfimm.architectures.segment_anything import (
     ImageResizer,
+    SAMPredictor,
     SegmentAnythingModel,
     SegmentAnythingModelConfig,
 )
@@ -452,3 +453,18 @@ def test_transfer_weights():
     res_2 = model_2.image_encoder(img, training=False).numpy()
 
     np.testing.assert_almost_equal(res_1, res_2, decimal=5)
+
+
+@pytest.mark.parametrize("fixed_input_size", [True, False])
+def test_predictor(fixed_input_size):
+    sam = create_model("sam_vit_test_model", fixed_input_size=fixed_input_size)
+    cast(SegmentAnythingModel, sam)
+    predictor = SAMPredictor(model=sam)
+
+    # We use something different from input_size, because the predictor should deal
+    # with resizing.
+    img = np.random.rand(20, 20, 3)
+    predictor.set_image(img)
+    masks, scores, logits = predictor(points=[[10, 10]], multimask_output=False)
+
+    assert masks.shape == (1, *img.shape[:2])
