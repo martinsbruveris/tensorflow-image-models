@@ -22,7 +22,8 @@ vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer mode
 (MLP-Mixer, ResMLP, gMLP, PoolFormer and ConvMixer), various ResNet flavours (ResNet,
 ResNeXt, ECA-ResNet, SE-ResNet), the EfficientNet family (including AdvProp, 
 NoisyStudent, Edge-TPU, V2 and Lite versions), MobileNet-V2, as well as the recent 
-ConvNeXt.
+ConvNeXt. `tfimm` has now expanded beyond classification and also includes Segment 
+Anything.
 
 This work would not have been possible wihout Ross Wightman's `timm` library and the
 work on PyTorch/TensorFlow interoperability in HuggingFace's `transformer` repository.
@@ -196,6 +197,9 @@ The following architectures are currently available:
     [\[arXiv:1912.11370\]](https://arxiv.org/abs/1912.11370)
   - Knowledge distillation: A good teacher is patient and consistent
     [\[arXiv:2106:05237\]](https://arxiv.org/abs/2106.05237)
+- Segment Anything Model (SAM) 
+  [\[github\]](https://github.com/facebookresearch/segment-anything)
+    - Segment Anything [\[arXiv:2304.02643\]](https://arxiv.org/abs/2304.02643)
 
 ## Profiling
 
