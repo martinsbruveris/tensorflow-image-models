@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.11 - 2023-04-17
+
+- Added Segment Aything models.
+
 ## v0.2.10 - 2023-02-27
 
 - Added post-pooling features for ConvNeXt in feature dictionary.

@@ -411,7 +411,7 @@ class ViT(tf.keras.Model):
         _, features = self(self.dummy_inputs, return_features=True)
         return list(features.keys())
 
-    def transform_pos_embed(self, target_cfg: ViTConfig):
+    def transform_pos_embed(self, src_weights, target_cfg: ViTConfig):
         return interpolate_pos_embeddings(
             pos_embed=self.pos_embed,
             src_grid_size=self.cfg.grid_size,
