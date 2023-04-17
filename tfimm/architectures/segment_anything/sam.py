@@ -15,36 +15,34 @@ The following models are available.
 
 In the code we are trying to follow this convention in comments and docstrings.
 
-* ``N`` is the batch dimension
-* ``(H0, W0)`` is the dimension of the input image to ``SAMPRedictor``. There are no
+* N is the batch dimension
+* (H0, W0) is the dimension of the input image to ``SAMPRedictor``. There are no
   constraints to this size as the image will be resized and padded to the model input
   dimensions.
-* ``(H, W)`` is the model input size. This is (1024, 1024) for the pretrained models.
-* ``(H', W')`` is the input size for mask prompts and the output size for predicted
+* (H, W) is the model input size. This is (1024, 1024) for the pretrained models.
+* (H', W') is the input size for mask prompts and the output size for predicted
   mask logits. For the pretrained models this is (256, 256). To be precise, this is
-  calculated as ``H'=4*H''` and same for ``W'``.
-* ``(H'', W'')`` is the spatial dimension of image embeddings. For pretrained models
-  this is (64, 64). This is calculated as ``H''=H/patch_size`` with
-  ``patch_size=16``.
-* ``C`` is the number of image input channels. Usually ``C=3``.
-* ``M1`` is the number of point prompts given to the model.
-* ``M2`` is the number of box prompts given to the model. The PyTorch code only
-  supports ``M2 in {0, 1}``, so the accuracy with multiple box prompts might be
+  calculated as H'=4*H'' and same for W'.
+* (H'', W'') is the spatial dimension of image embeddings. For pretrained models
+  this is (64, 64). This is calculated as H''=H/patch_size with patch_size=16.
+* C is the number of image input channels. Usually C=3.
+* M1 is the number of point prompts given to the model.
+* M2 is the number of box prompts given to the model. The PyTorch code only
+  supports M2={0, 1}, so the accuracy with multiple box prompts might be
   limited.
-* ``M3`` is the number of mask prompts given to the model. The PyTorch code only
-  supports ``M3 in {0, 1}``, so the accuracy with multiple mask prompts might be
-   limited.
-* ``M`` is the number of tokens in the sparse embeddings returned by the prompt
-  embedder. The number depends on ``M1`` and ``M2``.
-* ``D`` is the embedding dimension, which is shared by both image, sparse and dense
+* M3 is the number of mask prompts given to the model. The PyTorch code only
+  supports M3={0, 1}, so the accuracy with multiple mask prompts might be limited.
+* M is the number of tokens in the sparse embeddings returned by the prompt
+  embedder. The number depends on M1 and M2.
+* D is the embedding dimension, which is shared by both image, sparse and dense
   prompt embeddings. For the pretrained models this is 256.
-* ``K`` is the number of masks returned by the model. This number is controlled by
+* K is the number of masks returned by the model. This number is controlled by
   the model parameter ``nb_multimask_outputs`` (set to 3 in pretrained models). And
   also by the parameter ``multimask_output`` when calling ``SAMPredictor``.
 """
 from dataclasses import dataclass
 from functools import partial
-from typing import Tuple
+from typing import Optional, Tuple
 
 import tensorflow as tf
 
@@ -159,6 +157,11 @@ class SegmentAnythingModelConfig(ModelConfig):
 
     @property
     def transform_weights(self):
+        """
+        Returns a dictionary of weights that need a custom transform function when
+        loading to a model with a different input size. Dictionary contains weights
+        and the corresponding transform function.
+        """
         transforms = {"image_encoder/pos_embed": transform_pos_embed}
         # Only attention blocks that use global attention need to be transformed. For
         # the other blocks, rel_pos depends on the window size, which we assume is
@@ -173,6 +176,10 @@ class SegmentAnythingModelConfig(ModelConfig):
 def transform_rel_pos(
     model, rel_pos, target_cfg: SegmentAnythingModelConfig, axis: int
 ):
+    """
+    Transform function to adapt the relative positional encodings from the attention
+    blocks in the image encoder between image resolutions.
+    """
     grid_dim = target_cfg.input_size[axis] // target_cfg.encoder_patch_size
     new_size = 2 * grid_dim - 1
 
@@ -184,6 +191,10 @@ def transform_rel_pos(
 
 
 def transform_pos_embed(model, pos_embed, target_cfg: SegmentAnythingModelConfig):
+    """
+    Transform function to adapt the absolute positional encodings in the image encoder
+    between image resolutions.
+    """
     grid_size = (
         target_cfg.input_size[0] // target_cfg.encoder_patch_size,
         target_cfg.input_size[1] // target_cfg.encoder_patch_size,
@@ -247,48 +258,92 @@ class SegmentAnythingModel(tf.keras.Model):
             name="mask_decoder",
         )
 
-    @property
-    def input_size(self):
-        return self.cfg.input_size
+    def grid_size(
+        self, input_size: Optional[Tuple[int, int]] = None
+    ) -> Tuple[int, int]:
+        """
+        Compute the grid size of image embeddings for the model given an image input
+        size.
 
-    @property
-    def grid_size(self):
+        Args:
+            input_size: Image input size (H, W). If not provided use the input size
+                from the model config.
+
+        Returns:
+            Spatial size of image embeddings (H'', W'').
+        """
+        input_size = input_size or self.cfg.input_size
         return (
-            self.cfg.input_size[0] // self.cfg.encoder_patch_size,
-            self.cfg.input_size[1] // self.cfg.encoder_patch_size,
+            input_size[0] // self.cfg.encoder_patch_size,
+            input_size[1] // self.cfg.encoder_patch_size,
         )
 
-    @property
-    def mask_size(self):
-        return 4 * self.grid_size[0], 4 * self.grid_size[1]
+    def mask_size(
+        self, input_size: Optional[Tuple[int, int]] = None
+    ) -> Tuple[int, int]:
+        """
+        Compute the size of (low res) masks for the model given an image input size.
+
+        Args:
+            input_size: Image input size (H, W). If not provided use the input size
+                from the model config.
+
+        Returns:
+            Spatial size of low resolution masks (H', W').
+        """
+        grid_size = self.grid_size(input_size)
+        return 4 * grid_size[0], 4 * grid_size[1]
 
     @property
     def mask_threshold(self):
+        """Threshold for thresholding logit masks to boolean masks."""
         return self.cfg.mask_threshold
 
     @property
     def dummy_inputs(self):
+        """Returns a (nested) tensor of the correct shape for inference."""
         inputs = {
-            "images": tf.zeros((1, *self.input_size, self.cfg.in_channels)),
+            "images": tf.zeros((1, *self.cfg.input_size, self.cfg.in_channels)),
             "points": tf.zeros((1, 1, 2)),
             "labels": tf.zeros((1, 1)),
             "boxes": tf.zeros((1, 1, 4)),
-            "masks": tf.zeros((1, 1, *self.mask_size)),
+            "masks": tf.zeros((1, 1, *self.mask_size(self.cfg.input_size))),
         }
         return inputs
 
-    def get_image_pe(self, image_embeddings):
+    def get_image_pe(self, image_embeddings: tf.Tensor) -> tf.Tensor:
+        """
+        Returns image positional encodings compatible with the given image embeddings.
+
+        Args:
+            image_embeddings: Image embeddings returned by the image encoder.
+
+        Returns:
+            Image positional encoder to be passed to the mask decoder.
+        """
         n, h, w, _ = tf.unstack(tf.shape(image_embeddings))
         image_pe = self.prompt_encoder.get_dense_pe((h, w))  # (H'', W'', D)
         image_pe = tf.expand_dims(image_pe, axis=0)  # (1, H'', W'', D)
         image_pe = tf.tile(image_pe, (n, 1, 1, 1))  # (N, H'', W'', D)
         return image_pe
 
-    def _postprocess_logits(self, logits, return_logits: bool):
+    def postprocess_logits(self, logits, input_size, return_logits: bool):
+        """
+        Upscales and optionally thresholds logits returned from the mask decoder to
+        segmentation masks.
+
+        Args:
+            logits: Low-resolution logits returned by the mask decoder.
+            input_size: Image input size (H, W).
+            return_logits: If True, we don't apply a threshold.
+
+        Returns:
+            Segmentation mask (thresholded or not) of size (H, W).
+        """
         _, _, h, w = tf.unstack(tf.shape(logits))  # (N, K, H', W')
         masks = tf.transpose(logits, (0, 2, 3, 1))  # (N, H', W', K)
         masks = tf.image.resize(
-            masks, size=(4 * h, 4 * w), method=tf.image.ResizeMethod.BILINEAR
+            masks, size=input_size, method=tf.image.ResizeMethod.BILINEAR
         )  # (N, H, W, K)
         masks = tf.transpose(masks, (0, 3, 1, 2))  # (N, K, H, W)
         if not return_logits:
@@ -356,7 +411,11 @@ class SegmentAnythingModel(tf.keras.Model):
             multimask_output=multimask_output,
         )
 
-        masks = self._postprocess_logits(logits, return_logits=return_logits)
+        masks = self.postprocess_logits(
+            logits,
+            input_size=tf.shape(inputs["images"])[1:3],
+            return_logits=return_logits,
+        )
         return masks, scores, logits
 
 

@@ -55,7 +55,7 @@ class SAMPredictor:
         """
         if self.model.cfg.fixed_input_size:
             self.resizer = ImageResizer(
-                src_size=image.shape[:2], dst_size=self.self.model.cfg.input_size
+                src_size=image.shape[:2], dst_size=self.model.cfg.input_size
             )
         else:
             # If the model allows flexible input sizes, we simply pad the image to
@@ -161,6 +161,11 @@ class SAMPredictor:
         if not self.image_set:
             raise ValueError("Need to set image before calling predict().")
 
+        points = np.asarray(points) if points is not None else None
+        labels = np.asarray(labels) if labels is not None else None
+        boxes = np.asarray(boxes) if boxes is not None else None
+        masks = np.asarray(masks) if masks is not None else None
+
         batch_shape = self._batch_shape(points, labels, boxes, masks)
 
         if points is None:
@@ -170,7 +175,7 @@ class SAMPredictor:
         if boxes is None:
             boxes = np.zeros(batch_shape + (0, 4), dtype=np.float32)
         if masks is None:
-            mask_size = (self.resizer.dst_size[0] // 4, self.resizer.dst_size[1] // 4)
+            mask_size = self.model.mask_size(self.resizer.dst_size)
             masks = np.zeros(batch_shape + (0, *mask_size), dtype=np.float32)
 
         # Check that batch shapes are compatible
@@ -240,7 +245,9 @@ class SAMPredictor:
             multimask_output=multimask_output,
         )
 
-        masks = self.model._postprocess_logits(logits, return_logits=True)
+        masks = self.model.postprocess_logits(
+            logits, input_size=self.resizer.dst_size, return_logits=True
+        )
         return masks, scores, logits
 
     @staticmethod
