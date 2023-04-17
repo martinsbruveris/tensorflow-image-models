@@ -14,3 +14,5 @@ Segment Anything
 .. autoclass:: SAMPredictor
    :members: set_image, clear_image, preprocess_masks, __call__
 .. autoclass:: ImageResizer
+   :members: scale_to_size, scale_image, unscale_image, pad_image, scale_points,
+             scale_boxes, postprocess_mask
