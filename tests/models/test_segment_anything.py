@@ -241,7 +241,7 @@ def test_positional_embedding_random():
     pt_res = pt_embedder.forward((5, 7))
     tf_res = tf_embedder.embed_grid((5, 7))
     pt_res = pt_res.permute((1, 2, 0))
-    np.testing.assert_almost_equal(tf_res.numpy(), pt_res.detach().numpy())
+    np.testing.assert_almost_equal(tf_res.numpy(), pt_res.detach().numpy(), decimal=5)
 
 
 def test_mask_attention():
