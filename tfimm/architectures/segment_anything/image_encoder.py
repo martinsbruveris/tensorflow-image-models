@@ -58,7 +58,7 @@ def window_unpartition(
         x: Unpartitioned tensor of shape (B, H, W, C).
     """
     hp, wp = pad_hw
-    h, w = hw
+    h, w = hw[0], hw[1]
     window_size = tf.shape(windows)[1]
     nb_windows = (hp // window_size) * (wp // window_size)
     n = tf.shape(windows)[0] // nb_windows
@@ -93,7 +93,7 @@ def get_rel_pos(
         Extracted positional embeddings according to relative positions.
     """
     m = tf.shape(rel_pos)[0]
-    max_rel_dist = int(2 * max(q_size, k_size) - 1)
+    max_rel_dist = tf.cast(2 * tf.math.maximum(q_size, k_size) - 1, tf.int32)
 
     if interpolate_pos:
         # Interpolate positional embeddings if needed.
@@ -108,10 +108,10 @@ def get_rel_pos(
     q_coords = tf.expand_dims(tf.range(q_size, dtype=tf.float32), axis=-1)
     k_coords = tf.expand_dims(tf.range(k_size, dtype=tf.float32), axis=0)
     # Scale the coords with short length if shapes for q and k are different.
-    q_coords = q_coords * tf.cast(max(k_size / q_size, 1.0), tf.float32)
-    k_coords = k_coords * tf.cast(max(q_size / k_size, 1.0), tf.float32)
+    q_coords = q_coords * tf.cast(tf.math.maximum(k_size / q_size, 1.0), tf.float32)
+    k_coords = k_coords * tf.cast(tf.math.maximum(q_size / k_size, 1.0), tf.float32)
 
-    lambda_ = tf.cast(max(q_size / k_size, 1.0), tf.float32)
+    lambda_ = tf.cast(tf.math.maximum(q_size / k_size, 1.0), tf.float32)
     offset = tf.cast(k_size - 1, tf.float32) * lambda_
     relative_coords = (q_coords - k_coords) + offset
     relative_coords = tf.cast(relative_coords, tf.int32)
