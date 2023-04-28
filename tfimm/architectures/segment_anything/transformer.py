@@ -221,7 +221,7 @@ class Attention(tf.keras.layers.Layer):
         )
 
     def _separate_heads(self, x: tf.Tensor):
-        b, m, c = tf.shape(x)  # (B, M, C)
+        b, m, c = tf.shape(x)[0], tf.shape(x)[1], tf.shape(x)[2]  # (B, M, C)
         x = tf.reshape(x, (b, m, self.nb_heads, c // self.nb_heads))  # (B, M, Hd, C/Hd)
         x = tf.transpose(x, (0, 2, 1, 3))  # (B, Hd, M, C/Hd)
         return x
