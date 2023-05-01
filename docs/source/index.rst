@@ -37,6 +37,7 @@ Contents
    content/pit
    content/poolformer
    content/segment_anything
+   content/vgg
 
 .. toctree::
    :maxdepth: 2

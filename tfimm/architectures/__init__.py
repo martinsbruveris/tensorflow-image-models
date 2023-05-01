@@ -10,5 +10,6 @@ from .pvt_v2 import *  # noqa: F401
 from .resnet import *  # noqa: F401
 from .resnetv2 import *  # noqa: F401
 from .swin import *  # noqa: F401
+from .vgg import *  # noqa: F401
 from .vit import *  # noqa: F401
 from .vit_hybrid import *  # noqa: F401
