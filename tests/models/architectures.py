@@ -1,4 +1,5 @@
 from tfimm.architectures import (
+    VGG,
     CaiT,
     CaiTConfig,
     ConvMixer,
@@ -23,6 +24,7 @@ from tfimm.architectures import (
     ResNetV2Config,
     SwinTransformer,
     SwinTransformerConfig,
+    VGGConfig,
     ViT,
     ViTConfig,
 )
@@ -45,6 +47,7 @@ TEST_ARCHITECTURES = [
     "resnet_test_model_2",
     "resnetv2_test_model",  # resnetv2.py
     "swin_test_model",  # swin.py
+    "vgg_test_model",  # vgg.py
     "vit_test_model",  # vit.py
     "deit_test_model",
     "vit_r_test_model_1",  # vit_hybrid.py
@@ -279,6 +282,19 @@ def swin_test_model():
         window_size=4,
     )
     return SwinTransformer, cfg
+
+
+@register_model
+def vgg_test_model():
+    cfg = VGGConfig(
+        name="vgg_test_model",
+        nb_classes=12,
+        input_size=(32, 32),
+        layers=(8, "M", 3),
+        nb_features=16,
+        norm_layer="batch_norm",
+    )
+    return VGG, cfg
 
 
 @register_model
