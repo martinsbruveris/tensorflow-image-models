@@ -168,7 +168,7 @@ def add_decomposed_rel_pos(
     return attn
 
 
-class Attention(tf.keras.layers.Layer):
+class RelPosAttention(tf.keras.layers.Layer):
     """Multi-head Attention block with relative position embeddings."""
 
     def __init__(
@@ -263,7 +263,7 @@ class Attention(tf.keras.layers.Layer):
         return x
 
 
-class Block(tf.keras.layers.Layer):
+class ImageEncoderBlock(tf.keras.layers.Layer):
     """
     Transformer blocks with support for window attention and residual propagation.
     """
@@ -316,7 +316,7 @@ class Block(tf.keras.layers.Layer):
         norm_layer = norm_layer_factory(norm_layer)
 
         self.norm1 = norm_layer(name="norm1")
-        self.attn = Attention(
+        self.attn = RelPosAttention(
             fixed_input_size=self.fixed_input_size,
             embed_dim=self.embed_dim,
             nb_heads=self.nb_heads,
@@ -438,7 +438,7 @@ class ImageEncoder(tf.keras.Model):
         self.pos_embed = None
 
         self.blocks = [
-            Block(
+            ImageEncoderBlock(
                 fixed_input_size=self.fixed_input_size,
                 embed_dim=self.embed_dim,
                 nb_heads=self.nb_heads,
