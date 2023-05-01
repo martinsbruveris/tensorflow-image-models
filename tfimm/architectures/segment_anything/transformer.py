@@ -38,7 +38,7 @@ class TwoWayTransformer(tf.keras.Model):
             )
             for j in range(self.nb_blocks)
         ]
-        self.final_attn_token_to_image = Attention(
+        self.final_attn_token_to_image = DownsampleAttention(
             embed_dim=self.embed_dim,
             nb_heads=self.nb_heads,
             downsample_rate=self.attention_downsample_rate,
@@ -131,12 +131,12 @@ class TwoWayAttentionBlock(tf.keras.layers.Layer):
 
         norm_layer = norm_layer_factory("layer_norm")
 
-        self.self_attn = Attention(
+        self.self_attn = DownsampleAttention(
             embed_dim=embed_dim, nb_heads=nb_heads, downsample_rate=1, name="self_attn"
         )
         self.norm1 = norm_layer(name="norm1")
 
-        self.cross_attn_token_to_image = Attention(
+        self.cross_attn_token_to_image = DownsampleAttention(
             embed_dim=embed_dim,
             nb_heads=nb_heads,
             downsample_rate=attention_downsample_rate,
@@ -153,7 +153,7 @@ class TwoWayAttentionBlock(tf.keras.layers.Layer):
         )
         self.norm3 = norm_layer(name="norm3")
 
-        self.cross_attn_image_to_token = Attention(
+        self.cross_attn_image_to_token = DownsampleAttention(
             embed_dim=embed_dim,
             nb_heads=nb_heads,
             downsample_rate=attention_downsample_rate,
@@ -194,7 +194,7 @@ class TwoWayAttentionBlock(tf.keras.layers.Layer):
         return q, k
 
 
-class Attention(tf.keras.layers.Layer):
+class DownsampleAttention(tf.keras.layers.Layer):
     """
     An attention layer that allows for downscaling the size of the embedding after
     projection to queries, keys, and values.
@@ -221,7 +221,7 @@ class Attention(tf.keras.layers.Layer):
         )
 
     def _separate_heads(self, x: tf.Tensor):
-        b, m, c = tf.shape(x)  # (B, M, C)
+        b, m, c = tf.shape(x)[0], tf.shape(x)[1], tf.shape(x)[2]  # (B, M, C)
         x = tf.reshape(x, (b, m, self.nb_heads, c // self.nb_heads))  # (B, M, Hd, C/Hd)
         x = tf.transpose(x, (0, 2, 1, 3))  # (B, Hd, M, C/Hd)
         return x

@@ -1,3 +1,4 @@
+import tempfile
 from typing import Tuple, cast
 
 import numpy as np
@@ -43,7 +44,7 @@ from tfimm.architectures.segment_anything.torch.modeling.transformer import (
     TwoWayTransformer as PTTwoWayTransformer,
 )
 from tfimm.architectures.segment_anything.transformer import (
-    Attention as TFAttention,
+    DownsampleAttention as TFAttention,
     TwoWayAttentionBlock as TFTwoWayAttentionBlock,
     TwoWayTransformer as TFTwoWayTransformer,
 )
@@ -468,3 +469,23 @@ def test_predictor(fixed_input_size):
     masks, scores, logits = predictor(points=[[10, 10]], multimask_output=False)
 
     assert masks.shape == (1, *img.shape[:2])
+
+
+# This test takes longer, because the model is quite complex.
+@pytest.mark.timeout(120)
+def test_save_load_model():
+    """Tests ability to use keras save() and load() functions."""
+    model = create_model("sam_vit_test_model")
+    with tempfile.TemporaryDirectory() as tmpdir:
+        model.save(tmpdir)
+        loaded_model = tf.keras.models.load_model(tmpdir, compile=False)
+
+    assert type(model) is type(loaded_model)
+
+    inputs = model.dummy_inputs
+    m_1, s_1, l_1 = model(inputs)
+    m_2, s_2, l_2 = loaded_model(inputs)
+
+    assert np.sum(m_1.numpy() != m_2.numpy()) == 0
+    assert (np.max(np.abs(s_1.numpy() - s_2.numpy()))) < 1e-6
+    assert (np.max(np.abs(l_1.numpy() - l_2.numpy()))) < 1e-6
