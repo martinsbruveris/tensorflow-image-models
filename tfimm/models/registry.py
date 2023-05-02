@@ -60,6 +60,11 @@ def register_model(fn):
 
 
 def _natural_key(string_):
+    """
+    Converts string to list of strings and numbers, i.e.,
+        "abc123xyz" -> ["abc", 123, "xyz"]
+    to obtain a more natural sort order: "resnet34" comes before "resnet101".
+    """
     return [int(s) if s.isdigit() else s for s in re.split(r"(\d+)", string_.lower())]
 
 
@@ -69,7 +74,8 @@ def list_models(
     pretrained: Union[bool, str] = False,
     exclude_filters: Union[str, List[str]] = "",
 ):
-    """Returns list of available model names, sorted alphabetically.
+    """
+    Returns list of available model names, sorted alphabetically.
 
     Args:
         name_filter: Wildcard filter string that works with fnmatch
@@ -117,28 +123,30 @@ def list_models(
 
 
 def is_model(model_name):
-    """Check if a model name exists"""
+    """Check if a model name exists."""
     return model_name in _model_class
 
 
 def model_class(model_name):
-    """Fetch a model entrypoint for specified model name"""
+    """Fetch a model entrypoint for specified model name."""
     return _model_class[model_name]
 
 
 def model_config(model_name):
-    """Fetch a model config for specified model name"""
+    """Fetch a model config for specified model name."""
     return _model_config[model_name]
 
 
 def list_modules():
-    """Return list of module names that contain models / model entrypoints"""
+    """Return list of module names that contain models / model entrypoints."""
     modules = _module_to_models.keys()
     return list(sorted(modules))
 
 
 def is_model_in_modules(model_name, module_names):
-    """Check if a model exists within a subset of modules
+    """
+    Check if a model exists within a subset of modules
+
     Args:
         model_name (str) - name of model to check
         module_names (tuple, list, set) - names of modules to search in
