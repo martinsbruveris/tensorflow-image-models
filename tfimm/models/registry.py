@@ -22,15 +22,23 @@ __all__ = [
     "register_model",
 ]
 
-# Dictionaries giving for each model name (including tag) the model class and config.
-# These dictionaries contain each set of weights only once, i.e., they don't contain
-# entries for aliases or model names without tags (if that model has a default tag).
+# Dictionaries for model class and configs for the model base names (without tags).
+# These are used to register model tags
+_model_base_class = {}
+_model_base_config = {}
+_model_base_module = {}
+
+# Dictionaries giving for each model name the model class and config.
 _model_class = {}
 _model_config = {}
+# Model metadata contains a free-form dictionary of additional information about the
+# model, such as licence, inference parameters, etc. This only exists for tagged models.
+_model_metadata = {}
 # Dictionary mapping model name to name including the default tag.
 _model_default_tags = {}
 # Dictionary mapping deprecated model names to new name in the model_name.tag format.
 _model_deprecations = {}
+
 # Dict of sets to check membership of model in module
 _module_to_models = defaultdict(set)
 _model_has_pretrained = set()  # Model names that have pretrained weight url present
@@ -42,29 +50,6 @@ def _split_model_name(full_name: str, no_tag: str = "") -> Tuple[str, str]:
     return model_name, tag
 
 
-def _update_cfg_url(url: str, model_name: str, model_tag: str) -> str:
-    """
-    Update URL in model config based on provided tag. Currently, it replaces the tag
-    for [timm] models, or adds a tag if the [timm] model doesn't already contain a tag,
-    i.e.,
-        [timm]pytorch_model_name.old_tag -> [timm]pytorch_model_name.model_tag
-        [timm]pytorch_model_name -> [timm]pytorch_model_name.model_tag
-
-    If the [timm] model doesn't provide a name, we use the provided name, i.e.,
-        [timm] -> [timm]model_name.model_tag
-
-    This function should not be called without a model_tag.
-    """
-    if url.startswith("[timm]"):
-        # Url can be "[timm]timm_model_name" or "[timm]" in which case we default
-        # to model_name.
-        timm_full_name = url[len("[timm]") :] or model_name
-        timm_model_name, _ = _split_model_name(timm_full_name)
-        return f"[timm]{timm_model_name}.{model_tag}"
-    else:
-        return url  # We don't change any other URLs.
-
-
 def register_model(fn=None, *, default_tag: str = ""):
     """
     Decorator for model creation functions. It is used as follows
@@ -73,12 +58,18 @@ def register_model(fn=None, *, default_tag: str = ""):
 
         @register_model
         def resnet18():
-            cfg = ResNetConfig(name="resnet18", ...)
+            cfg = ResNetConfig(name="resnet18.in21k", url="[timm]", ...)
             return ResNet, cfg
 
-    Note that the decorated function must have the same name as defined in the config.
+    This will register two models: "resnet18" without pretrained weights (url set to "")
+    and "resnet18.in21k" with url="[timm]".
 
-    If ``default_tag`` is provided, we register the model ``model_name.default_tag``.
+    Note that the decorated function must have the same name as defined in the config
+    (without tag).
+
+    If the decorator contains the ``default_tag`` parameter, we associate the default
+    tag with the model base name (here, "resnet18"). The user needs to call
+    ``register_model_tag`` separately to add URL information, etc.
 
     Args:
         fn: Model creation function.
@@ -110,24 +101,65 @@ def register_model(fn=None, *, default_tag: str = ""):
     else:
         mod.__all__ = [model_name]
 
-    # Add entries to registry dict/sets
-    if default_tag != "":
-        full_name = f"{model_name}.{default_tag}"
-        cfg = dataclasses.replace(
-            cfg, name=full_name, url=_update_cfg_url(cfg.url, model_name, default_tag)
-        )
-        _model_default_tags[model_name] = full_name
-    else:
-        full_name = cfg.name
-        cfg = deepcopy(cfg)
+    # Register model without tag to enable later tag registrations.
+    _model_base_class[model_name] = cls
+    _model_base_config[model_name] = dataclasses.replace(cfg, name=model_name, url="")
+    _model_base_module[model_name] = module_name
 
+    # Register model with full name, including tag if present
+    _model_class[cfg.name] = cls
+    _model_config[cfg.name] = deepcopy(cfg)
+    _model_metadata[cfg.name] = {}
+    _module_to_models[module_name].add(cfg.name)
+    if cfg.url:  # If URL is non-null, we assume it points to pretrained weights
+        _model_has_pretrained.add(cfg.name)
+
+    if default_tag != "":
+        _model_default_tags[model_name] = f"{model_name}.{default_tag}"
+
+    return fn
+
+
+def register_model_tag(model_name: str, url: str, cfg=None, metadata=None):
+    """
+    Adds a model tag to the registry. We assume that the model itself has already been
+    registered.
+
+    Args:
+        model_name: Full model name, including tag, e.g., "resnet18.in21k".
+        url: URL with model weights
+        cfg: Dictionary with updates to model config, e.g., changes to `nb_classes`.
+        metadata: Dictionary with free-form metadata.
+    """
+    full_name = model_name
+    model_name, model_tag = _split_model_name(full_name)
+    if model_tag == "":
+        raise ValueError(f"Cannot register tag: {full_name} does not contain tag.")
+
+    cfg_updates = cfg or {}
+    metadata = metadata or {}
+
+    # Retrieve model config
+    cls = _model_base_class[model_name]
+    cfg = _model_base_config[model_name]
+    module = _model_base_module[model_name]
+
+    # Apply changes to config
+    cfg = dataclasses.replace(cfg, name=full_name, url=url, **cfg_updates)
+
+    # Push changes to registry
     _model_class[full_name] = cls
     _model_config[full_name] = cfg
-    _module_to_models[module_name].add(full_name)
+    _model_metadata[full_name] = metadata
+    _module_to_models[module].add(full_name)
+
     if cfg.url:  # If URL is non-null, we assume it points to pretrained weights
         _model_has_pretrained.add(full_name)
 
-    return fn
+
+def register_deprecation(old_name: str, new_name: str):
+    """Adds a depractation mapping from ``old_name`` to ``new_name``."""
+    _model_deprecations[old_name] = new_name
 
 
 def _natural_key(string_):
@@ -193,19 +225,55 @@ def list_models(
     return list(sorted(models, key=_natural_key))
 
 
-def is_model(model_name):
-    """Check if a model name exists."""
-    return model_name in _model_class
+def resolve_model_name(model_name: str) -> str:
+    """
+    Given a model name, we resolve deprecation mappings and add a default tag if
+    present so the returned model name can be looked up in the registry dicts.
+    """
+    # First check for deprecations
+    if model_name in _model_deprecations:
+        return _model_deprecations[model_name]
+
+    # Then check if a tag is already present
+    full_name = model_name
+    model_name, model_tag = _split_model_name(full_name)
+    if model_tag != "":
+        return full_name
+
+    # Without a tag, we first look for a default tag
+    if model_name in _model_default_tags:
+        return _model_default_tags[model_name]
+
+    # Otherwise return model name without tag.
+    return model_name
 
 
-def model_class(model_name):
-    """Fetch a model entrypoint for specified model name."""
-    return _model_class[model_name]
+def is_model(model_name: str) -> bool:
+    """
+    Check if a model of a given name exists in the registry.
+    """
+    return resolve_model_name(model_name) in _model_class
 
 
-def model_config(model_name):
-    """Fetch a model config for specified model name."""
-    return _model_config[model_name]
+def is_deprecated(model_name: str) -> bool:
+    """
+    Check if a given model name is deprecated in favour of the new model.tag format.
+    """
+    return model_name in _model_deprecations
+
+
+def model_class(model_name: str):
+    """
+    Fetch a model class for specified model name.
+    """
+    return _model_class[resolve_model_name(model_name)]
+
+
+def model_config(model_name: str):
+    """
+    Fetch a model config for specified model name.
+    """
+    return _model_config[resolve_model_name(model_name)]
 
 
 def list_modules():
@@ -226,6 +294,7 @@ def is_model_in_modules(model_name, module_names):
     return any(model_name in _module_to_models[n] for n in module_names)
 
 
+# TODO: Rename to `is_pretrained`
 def is_model_pretrained(model_name):
     return model_name in _model_has_pretrained
 
