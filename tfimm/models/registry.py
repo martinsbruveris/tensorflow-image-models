@@ -1,18 +1,16 @@
 """
-Model Registry
-
-Based on timm/models/registry.py  by Ross Wightman
-
-Copyright 2020 Ross Wightman
-Copyright 2021 Martins Bruveris
+Loading models in ``tfimm`` is based on the model registry.
 """
-
+# Copyright 2020 Ross Wightman
+# Copyright 2021 Martins Bruveris
+import dataclasses
 import fnmatch
 import re
 import sys
 from collections import defaultdict
 from copy import deepcopy
-from typing import List, Union
+from functools import partial
+from typing import List, Tuple, Union
 
 __all__ = [
     "list_models",
@@ -24,19 +22,82 @@ __all__ = [
     "register_model",
 ]
 
+# Dictionaries giving for each model name (including tag) the model class and config.
+# These dictionaries contain each set of weights only once, i.e., they don't contain
+# entries for aliases or model names without tags (if that model has a default tag).
 _model_class = {}
 _model_config = {}
+# Dictionary mapping model name to name including the default tag.
+_model_default_tags = {}
+# Dictionary mapping deprecated model names to new name in the model_name.tag format.
+_model_deprecations = {}
 # Dict of sets to check membership of model in module
 _module_to_models = defaultdict(set)
 _model_has_pretrained = set()  # Model names that have pretrained weight url present
 
 
-def register_model(fn):
+def _split_model_name(full_name: str, no_tag: str = "") -> Tuple[str, str]:
+    model_name, *tag_list = full_name.split(".", 1)
+    tag = tag_list[0] if tag_list else no_tag
+    return model_name, tag
+
+
+def _update_cfg_url(url: str, model_name: str, model_tag: str) -> str:
+    """
+    Update URL in model config based on provided tag. Currently, it replaces the tag
+    for [timm] models, or adds a tag if the [timm] model doesn't already contain a tag,
+    i.e.,
+        [timm]pytorch_model_name.old_tag -> [timm]pytorch_model_name.model_tag
+        [timm]pytorch_model_name -> [timm]pytorch_model_name.model_tag
+
+    If the [timm] model doesn't provide a name, we use the provided name, i.e.,
+        [timm] -> [timm]model_name.model_tag
+
+    This function should not be called without a model_tag.
+    """
+    if url.startswith("[timm]"):
+        # Url can be "[timm]timm_model_name" or "[timm]" in which case we default
+        # to model_name.
+        timm_full_name = url[len("[timm]") :] or model_name
+        timm_model_name, _ = _split_model_name(timm_full_name)
+        return f"[timm]{timm_model_name}.{model_tag}"
+    else:
+        return url  # We don't change any other URLs.
+
+
+def register_model(fn=None, *, default_tag: str = ""):
+    """
+    Decorator for model creation functions. It is used as follows
+
+    .. code-block:: python
+
+        @register_model
+        def resnet18():
+            cfg = ResNetConfig(name="resnet18", ...)
+            return ResNet, cfg
+
+    Note that the decorated function must have the same name as defined in the config.
+
+    If ``default_tag`` is provided, we register the model ``model_name.default_tag``.
+
+    Args:
+        fn: Model creation function.
+        default_tag: Default tag to associate with the model.
+    """
+    # Called with arguments, we return a function that accepts `fn`.
+    if fn is None:
+        return partial(register_model, default_tag=default_tag)
+
     # Get model class and model config
     cls, cfg = fn()
-    model_name = cfg.name
+    model_name, model_tag = _split_model_name(cfg.name)
     if fn.__name__ != model_name:
         raise ValueError(f"Model name({model_name}) != function name ({fn.__name__}).")
+    if model_tag != "" and default_tag != "":
+        raise ValueError(
+            f"Cannot provide default tag {default_tag}, "
+            f"if model name contains tag {model_tag}."
+        )
 
     # Lookup module, where model is defined
     mod = sys.modules[fn.__module__]
@@ -50,11 +111,21 @@ def register_model(fn):
         mod.__all__ = [model_name]
 
     # Add entries to registry dict/sets
-    _model_class[model_name] = cls
-    _model_config[model_name] = deepcopy(cfg)
-    _module_to_models[module_name].add(model_name)
+    if default_tag != "":
+        full_name = f"{model_name}.{default_tag}"
+        cfg = dataclasses.replace(
+            cfg, name=full_name, url=_update_cfg_url(cfg.url, model_name, default_tag)
+        )
+        _model_default_tags[model_name] = full_name
+    else:
+        full_name = cfg.name
+        cfg = deepcopy(cfg)
+
+    _model_class[full_name] = cls
+    _model_config[full_name] = cfg
+    _module_to_models[module_name].add(full_name)
     if cfg.url:  # If URL is non-null, we assume it points to pretrained weights
-        _model_has_pretrained.add(model_name)
+        _model_has_pretrained.add(full_name)
 
     return fn
 
