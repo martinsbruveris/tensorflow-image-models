@@ -4,8 +4,15 @@ We provide an implementation and pretrained weights for the ConvNeXt models.
 Paper: A ConvNet for the 2020s.
 `[arXiv:2201.03545] <https://arxiv.org/abs/2201.03545>`_.
 
+Paper: ConvNeXt-V2 - Co-designing and Scaling ConvNets with Masked Autoencoders -
+`[arXiv:2301.00808] <https://arxiv.org/abs/2301.00808>`_.
+
 Original pytorch code and weights from
-`Facebook Research <https://github.com/facebookresearch/ConvNeXt>`_.
+
+  * ConvNeXt: `Facebook Research <https://github.com/facebookresearch/ConvNeXt>`_
+  * ConvNeXt-V2: `Facebook Research <https://github.com/facebookresearch/ConvNeXt-V2>`_
+  * Models named ``atto``, ``femto``, ``pico``, ``nano`` and with suffixes ``_ols``
+    (overlapping stem) and ``_hnf`` (head norm first) are timm originals.
 
 This code has been ported from the
 `timm <https://github.com/rwightman/pytorch-image-models>`_ implementation.
@@ -43,21 +50,23 @@ The following models are available.
   * ``convnext_large_in22k``
   * ``convnext_xlarge_in22k``
 """
-# Copyright (c) Meta Platforms, Inc. and affiliates.
-# All rights reserved.
-# This source code is licensed under the MIT license
-# Modifications and additions for timm by / Copyright 2022, Ross Wightman
-# Copyright 2022 Marting Bruveris
+# Copyright 2022 Martins Bruveris
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import tensorflow as tf
 
-from tfimm.layers import MLP, ConvMLP, DropPath, norm_layer_factory
-from tfimm.models import ModelConfig, keras_serializable, register_model
-from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from tfimm.layers import MLP, DropPath, GlobalResponseNormMLP, norm_layer_factory
+from tfimm.models import (
+    ModelConfig,
+    keras_serializable,
+    register_deprecation,
+    register_model,
+    register_model_tag,
+)
+from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, make_divisible
 
 # Model registry will add each entrypoint fn to this
 __all__ = ["ConvNeXtConfig", "ConvNeXt"]
@@ -75,6 +84,7 @@ class ConvNeXtConfig(ModelConfig):
         in_channels: Number of input image channels.
         input_size: Input image size (height, width)
 
+        stem_type: Stem type. Can be one of "patch", "overlap" or "overlap_tiered".
         patch_size: Patchifying the image is implemented via a convolutional layer with
             kernel size and stride equal to ``patch_size``.
         embed_dim: Feature dimensions at each stage.
@@ -85,6 +95,10 @@ class ConvNeXtConfig(ModelConfig):
             option (2) also requires permuting channels, which is not needed in
             TensorFlow. We offer both implementations here, because some ``timm`` models
             use (1) while others use (2).
+        use_grn: Use Global Response Norm (ConvNeXt-V2) in MLP.
+        head_norm_first: If True, then we use norm -> global pool -> fc ordering in the
+            head, like most other nets. Otherwise, pool -> norm -> fc, the default
+            ConvNeXt ordering (pretrained FB weights).
 
         drop_rate: Dropout rate.
         drop_path_rate: Dropout rate for stochastic depth.
@@ -93,7 +107,8 @@ class ConvNeXtConfig(ModelConfig):
             values.
         act_layer: Activation function. See :func:`~act_layer_factory` for possible
             values.
-        init_scale: Inital value for layer scale weights.
+        init_scale: Inital value for layer scale weights. If None, layer scale is not
+            used.
 
         crop_pct: Crop percentage for ImageNet evaluation.
         interpolation: Interpolation method for ImageNet evaluation.
@@ -111,18 +126,21 @@ class ConvNeXtConfig(ModelConfig):
     nb_classes: int = 1000
     in_channels: int = 3
     input_size: Tuple[int, int] = (224, 224)
+    stem_type: str = "patch"
     patch_size: int = 4
     embed_dim: Tuple = (96, 192, 384, 768)
     nb_blocks: Tuple = (3, 3, 9, 3)
     mlp_ratio: float = 4.0
     conv_mlp_block: bool = False
+    use_grn: bool = False
+    head_norm_first: bool = False
     # Regularization
     drop_rate: float = 0.0
     drop_path_rate: float = 0.1
     # Other parameters
     norm_layer: str = "layer_norm_eps_1e-6"
     act_layer: str = "gelu"
-    init_scale: float = 1e-6
+    init_scale: Optional[float] = 1e-6
     # Parameters for inference
     crop_pct: float = 0.875
     interpolation: str = "bicubic"
@@ -167,6 +185,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         embed_dim: int,
         mlp_ratio: float,
         conv_mlp_block: bool,
+        use_grn: bool,
         drop_rate: float,
         drop_path_rate: float,
         norm_layer: str,
@@ -184,7 +203,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         self.act_layer = act_layer
         self.init_scale = init_scale
 
-        mlp_layer = ConvMLP if conv_mlp_block else MLP
+        mlp_layer = GlobalResponseNormMLP if use_grn else MLP
         norm_layer = norm_layer_factory(norm_layer)
         kernel_initializer, bias_initializer = _weight_initializers()
 
@@ -201,6 +220,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
             embed_dim=embed_dim,
             drop_rate=drop_rate,
             act_layer=act_layer,
+            use_conv=conv_mlp_block,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="mlp",
@@ -209,12 +229,14 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         self.drop_path = DropPath(drop_prob=drop_path_rate)
 
     def build(self, input_shape):
-        self.gamma = self.add_weight(
-            shape=(self.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.init_scale),
-            trainable=True,
-            name="gamma",
-        )
+        if self.init_scale is not None:
+            self.gamma = self.add_weight(
+                shape=(self.embed_dim,),
+                initializer=tf.keras.initializers.Constant(value=self.init_scale),
+                trainable=True,
+                name="gamma",
+            )
+        super().build(input_shape)
 
     def call(self, x, training=False):
         shortcut = x
@@ -222,7 +244,8 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         x = self.conv_dw(x)
         x = self.norm(x, training=training)
         x = self.mlp(x, training=training)
-        x = x * self.gamma
+        if self.gamma is not None:
+            x = x * self.gamma
         x = self.drop_path(x, training=training)
         x = x + shortcut
         return x
@@ -241,6 +264,7 @@ class ConvNeXtStage(tf.keras.layers.Layer):
         nb_blocks: int,
         mlp_ratio: float,
         conv_mlp_block: bool,
+        use_grn: bool,
         drop_rate: float,
         drop_path_rate: np.ndarray,
         norm_layer: str,
@@ -273,6 +297,7 @@ class ConvNeXtStage(tf.keras.layers.Layer):
                 embed_dim=embed_dim,
                 mlp_ratio=mlp_ratio,
                 conv_mlp_block=conv_mlp_block,
+                use_grn=use_grn,
                 drop_rate=drop_rate,
                 drop_path_rate=drop_path_rate[idx],
                 norm_layer=self.norm_layer,
@@ -316,15 +341,44 @@ class ConvNeXt(tf.keras.Model):
         norm_layer = norm_layer_factory(cfg.norm_layer)
         kernel_initializer, bias_initializer = _weight_initializers()
 
-        self.stem_conv = tf.keras.layers.Conv2D(
-            filters=cfg.embed_dim[0],
-            kernel_size=cfg.patch_size,
-            strides=cfg.patch_size,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            name="stem/0",
-        )
-        self.stem_norm = norm_layer(name="stem/1")
+        self.stem = []
+        if cfg.stem_type == "patch":
+            stem_conv = tf.keras.layers.Conv2D(
+                filters=cfg.embed_dim[0],
+                kernel_size=cfg.patch_size,
+                strides=cfg.patch_size,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="stem/0",
+            )
+            stem_norm = norm_layer(name="stem/1")
+            self.stem = [stem_conv, stem_norm]
+        else:
+            mid_channels = (
+                make_divisible(cfg.embed_dim[0] // 2, divisor=8)
+                if "tiered" in cfg.stem_type
+                else cfg.embed_dim[0]
+            )
+            stem_pad1 = tf.keras.layers.ZeroPadding2D(padding=1, name="stem/0p")
+            stem_conv1 = tf.keras.layers.Conv2D(
+                filters=mid_channels,
+                kernel_size=3,
+                strides=2,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="stem/0",
+            )
+            stem_pad2 = tf.keras.layers.ZeroPadding2D(padding=1, name="stem/1p")
+            stem_conv2 = tf.keras.layers.Conv2D(
+                filters=cfg.embed_dim[0],
+                kernel_size=3,
+                strides=2,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="stem/1",
+            )
+            stem_norm = norm_layer(name="stem/2")
+            self.stem = [stem_pad1, stem_conv1, stem_pad2, stem_conv2, stem_norm]
 
         # Stochastic depth
         dpr = np.linspace(0.0, cfg.drop_path_rate, sum(cfg.nb_blocks))
@@ -340,6 +394,7 @@ class ConvNeXt(tf.keras.Model):
                     nb_blocks=cfg.nb_blocks[j],
                     mlp_ratio=cfg.mlp_ratio,
                     conv_mlp_block=cfg.conv_mlp_block,
+                    use_grn=cfg.use_grn,
                     drop_rate=cfg.drop_rate,
                     drop_path_rate=dpr[j],
                     norm_layer=cfg.norm_layer,
@@ -350,7 +405,12 @@ class ConvNeXt(tf.keras.Model):
             )
 
         self.pool = tf.keras.layers.GlobalAveragePooling2D()
-        self.norm = norm_layer(name="head/norm")
+        self.norm = norm_layer(
+            # For reasons the layer has a different name in timm depending on the order.
+            name="norm_pre"
+            if cfg.head_norm_first
+            else "head/norm"
+        )
         self.flatten = tf.keras.layers.Flatten()
         self.drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
         self.fc = (
@@ -394,8 +454,8 @@ class ConvNeXt(tf.keras.Model):
             If ``return_features=False``, we return only ``y``.
         """
         features = OrderedDict()
-        x = self.stem_conv(x)
-        x = self.stem_norm(x, training=training)
+        for stem_layer in self.stem:
+            x = stem_layer(x, training=training)
         features["stem"] = x
 
         for stage_idx, stage in enumerate(self.stages):
@@ -430,8 +490,12 @@ class ConvNeXt(tf.keras.Model):
         if return_features:
             x, features = x
 
-        x = self.pool(x)
-        x = self.norm(x, training=training)
+        if self.cfg.head_norm_first:
+            x = self.norm(x, training=training)
+            x = self.pool(x)
+        else:
+            x = self.pool(x)
+            x = self.norm(x, training=training)
         x = self.flatten(x)
         features["features"] = x
         x = self.drop(x, training=training)
@@ -440,18 +504,131 @@ class ConvNeXt(tf.keras.Model):
         return (x, features) if return_features else x
 
 
-@register_model
+@register_model(default_tag="d2_in1k")
+def convnext_atto():
+    # Note: Still tweaking depths in timm, will vary between 3-4M param, currently 3.7M.
+    cfg = ConvNeXtConfig(
+        name="convnext_atto",
+        embed_dim=(40, 80, 160, 320),
+        nb_blocks=(2, 2, 6, 2),
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="a2_in1k")
+def convnext_atto_ols():
+    # Timm femto variant with overlapping 3x3 conv stem, wider than non-ols femto
+    # above, current param count 3.7M.
+    cfg = ConvNeXtConfig(
+        name="convnext_atto_ols",
+        embed_dim=(40, 80, 160, 320),
+        nb_blocks=(2, 2, 6, 2),
+        conv_mlp_block=True,
+        stem_type="overlap_tiered",
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="d1_in1k")
+def convnext_femto():
+    # Timm femto variant
+    cfg = ConvNeXtConfig(
+        name="convnext_femto",
+        embed_dim=(48, 96, 192, 384),
+        nb_blocks=(2, 2, 6, 2),
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="d1_in1k")
+def convnext_femto_ols():
+    # Timm femto variant
+    cfg = ConvNeXtConfig(
+        name="convnext_femto_ols",
+        embed_dim=(48, 96, 192, 384),
+        nb_blocks=(2, 2, 6, 2),
+        conv_mlp_block=True,
+        stem_type="overlap_tiered",
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="d1_in1k")
+def convnext_pico():
+    # Timm pico variant
+    cfg = ConvNeXtConfig(
+        name="convnext_pico",
+        embed_dim=(64, 128, 256, 512),
+        nb_blocks=(2, 2, 6, 2),
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="d1_in1k")
+def convnext_pico_ols():
+    # Timm pico variant with overalpping 3x3 conv stem
+    cfg = ConvNeXtConfig(
+        name="convnext_pico_ols",
+        embed_dim=(64, 128, 256, 512),
+        nb_blocks=(2, 2, 6, 2),
+        conv_mlp_block=True,
+        stem_type="overlap_tiered",
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="in12k_ft_in1k")
+def convnext_nano():
+    # Timm nano variant with standard stem and head.
+    cfg = ConvNeXtConfig(
+        name="convnext_nano",
+        embed_dim=(80, 160, 320, 640),
+        nb_blocks=(2, 2, 8, 2),
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="d1h_in1k")
+def convnext_nano_ols():
+    # Timm nano variant with overlapping 3x3 conv stem.
+    cfg = ConvNeXtConfig(
+        name="convnext_nano_ols",
+        embed_dim=(80, 160, 320, 640),
+        nb_blocks=(2, 2, 8, 2),
+        conv_mlp_block=True,
+        stem_type="overlap",
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="in12k_ft_in1k")
 def convnext_tiny():
     cfg = ConvNeXtConfig(
         name="convnext_tiny",
-        url="[timm]",
         embed_dim=(96, 192, 384, 768),
         nb_blocks=(3, 3, 9, 3),
     )
     return ConvNeXt, cfg
 
 
-@register_model
+@register_model(default_tag="a2h_in1k")
+def convnext_tiny_hnf():
+    # Timm experimental variant with norm before pooling in head (head norm first)
+    cfg = ConvNeXtConfig(
+        name="convnext_tiny_hnf",
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 9, 3),
+        conv_mlp_block=True,
+        head_norm_first=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="in12k_ft_in1k")
 def convnext_small():
     cfg = ConvNeXtConfig(
         name="convnext_small",
@@ -462,7 +639,7 @@ def convnext_small():
     return ConvNeXt, cfg
 
 
-@register_model
+@register_model(default_tag="fb_in22k_ft_in1k")
 def convnext_base():
     cfg = ConvNeXtConfig(
         name="convnext_base",
@@ -473,7 +650,7 @@ def convnext_base():
     return ConvNeXt, cfg
 
 
-@register_model
+@register_model(default_tag="fb_in22k_ft_in1k")
 def convnext_large():
     cfg = ConvNeXtConfig(
         name="convnext_large",
@@ -484,54 +661,10 @@ def convnext_large():
     return ConvNeXt, cfg
 
 
-@register_model
-def convnext_tiny_in22ft1k():
+@register_model(default_tag="fb_in22k_ft_in1k")
+def convnext_xlarge():
     cfg = ConvNeXtConfig(
-        name="convnext_tiny_in22ft1k",
-        url="[timm]",
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 9, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_small_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_small_in22ft1k",
-        url="[timm]",
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_base_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_base_in22ft1k",
-        url="[timm]",
-        embed_dim=(128, 256, 512, 1024),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_large_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_large_in22ft1k",
-        url="[timm]",
-        embed_dim=(192, 384, 768, 1536),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_xlarge_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_xlarge_in22ft1k",
+        name="convnext_xlarge",
         url="[timm]",
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),
@@ -657,3 +790,174 @@ def convnext_xlarge_in22k():
         nb_blocks=(3, 3, 27, 3),
     )
     return ConvNeXt, cfg
+
+
+@register_model(default_tag="convnextv2_atto.fcmae_ft_in1k")
+def convnextv2_atto():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_atto",
+        embed_dim=(40, 80, 160, 320),
+        nb_blocks=(2, 2, 6, 2),
+        use_grn=True,
+        init_scale=None,
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+def _meta(**kwargs):
+    """Default metadata for ConvNeXt models."""
+    return {
+        "crop_pct": 0.875,
+        "interpolation": "bicubic",
+        "mean": IMAGENET_DEFAULT_MEAN,
+        "std": IMAGENET_DEFAULT_STD,
+        **kwargs,
+    }
+
+
+def _metav2(**kwargs):
+    """Default metadata for ConvNeXt-V2 models."""
+    return {
+        "crop_pct": 0.875,
+        "interpolation": "bicubic",
+        "mean": IMAGENET_DEFAULT_MEAN,
+        "std": IMAGENET_DEFAULT_STD,
+        "license": "cc-by-nc-4.0",
+        "paper_ids": "arXiv:2301.00808",
+        "paper_name": "ConvNeXt-V2: Co-designing and Scaling ConvNets with Masked Autoencoders",  # noqa: E501
+        "origin_url": "https://github.com/facebookresearch/ConvNeXt-V2",
+        **kwargs,
+    }
+
+
+# timm specific variants
+register_model_tag(
+    model_name="convnext_tiny.in12k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_small.in12k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+
+register_model_tag(
+    model_name="convnext_atto.d2_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288)),
+)
+register_model_tag(
+    model_name="convnext_atto_ols.a2_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288)),
+)
+register_model_tag(
+    model_name="convnext_femto.d1_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288)),
+)
+register_model_tag(
+    model_name="convnext_femto_ols.d1_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288)),
+)
+register_model_tag(
+    model_name="convnext_pico.d1_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288)),
+)
+register_model_tag(
+    model_name="convnext_pico_ols.d1_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_nano.in12k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_nano.d1h_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_nano_ols.d1h_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_tiny_hnf.a2h_in1k",
+    url="[timm]",
+    metadata=_meta(crop_pct=0.95, test_input_size=(288, 288), test_crop_pct=1.0),
+)
+
+register_model_tag(
+    model_name="convnext_tiny.in12k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(crop_pct=1.0, test_input_size=(384, 384), crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnext_small.in12k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(crop_pct=1.0, test_input_size=(384, 384), crop_mode="squash"),
+)
+
+register_model_tag(
+    model_name="convnext_nano.in12k",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta(crop_pct=0.95),
+)
+register_model_tag(
+    model_name="convnext_tiny.in12k",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta(crop_pct=0.95),
+)
+register_model_tag(
+    model_name="convnext_small.in12k",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta(crop_pct=0.95),
+)
+
+register_model_tag(
+    model_name="convnext_tiny.fb_in22k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_small.fb_in22k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_base.fb_in22k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_large.fb_in22k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_xlarge.fb_in22k_ft_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+
+register_model_tag(
+    model_name="convnextv2_atto.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=0.95),
+)
+
+register_deprecation("convnext_tiny_in22ft1k", "convnext_tiny.fb_in22k_ft_in1k")
+register_deprecation("convnext_small_in22ft1k", "convnext_small.fb_in22k_ft_in1k")
+register_deprecation("convnext_base_in22ft1k", "convnext_base.fb_in22k_ft_in1k")
+register_deprecation("convnext_large_in22ft1k", "convnext_large.fb_in22k_ft_in1k")
+register_deprecation("convnext_xlarge_in22ft1k", "convnext_xlarge.fb_in22k_ft_in1k")
