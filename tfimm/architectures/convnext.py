@@ -66,7 +66,13 @@ from tfimm.models import (
     register_model,
     register_model_tag,
 )
-from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD, make_divisible
+from tfimm.utils import (
+    IMAGENET_DEFAULT_MEAN,
+    IMAGENET_DEFAULT_STD,
+    OPENAI_CLIP_MEAN,
+    OPENAI_CLIP_STD,
+    make_divisible,
+)
 
 # Model registry will add each entrypoint fn to this
 __all__ = ["ConvNeXtConfig", "ConvNeXt"]
@@ -99,6 +105,8 @@ class ConvNeXtConfig(ModelConfig):
         head_norm_first: If True, then we use norm -> global pool -> fc ordering in the
             head, like most other nets. Otherwise, pool -> norm -> fc, the default
             ConvNeXt ordering (pretrained FB weights).
+        head_hidden_size: Size of MLP hidden layer in head if not None and
+            ``head_norm_first=False``.
 
         drop_rate: Dropout rate.
         drop_path_rate: Dropout rate for stochastic depth.
@@ -134,6 +142,7 @@ class ConvNeXtConfig(ModelConfig):
     conv_mlp_block: bool = False
     use_grn: bool = False
     head_norm_first: bool = False
+    head_hidden_size: Optional[int] = None
     # Regularization
     drop_rate: float = 0.0
     drop_path_rate: float = 0.1
@@ -413,6 +422,12 @@ class ConvNeXt(tf.keras.Model):
         )
         self.flatten = tf.keras.layers.Flatten()
         self.drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
+        if cfg.head_hidden_size is not None:
+            self.pre_logits = tf.keras.layers.Dense(
+                units=cfg.head_hidden_size, activation="gelu", name="head/pre_logits/fc"
+            )
+        else:
+            self.pre_logits = None
         self.fc = (
             tf.keras.layers.Dense(units=cfg.nb_classes, name="head/fc")
             if cfg.nb_classes > 0
@@ -497,6 +512,8 @@ class ConvNeXt(tf.keras.Model):
             x = self.pool(x)
             x = self.norm(x, training=training)
         x = self.flatten(x)
+        if self.cfg.head_hidden_size:
+            x = self.pre_logits(x)
         features["features"] = x
         x = self.drop(x, training=training)
         x = self.fc(x)
@@ -632,7 +649,6 @@ def convnext_tiny_hnf():
 def convnext_small():
     cfg = ConvNeXtConfig(
         name="convnext_small",
-        url="[timm]",
         embed_dim=(96, 192, 384, 768),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -643,7 +659,6 @@ def convnext_small():
 def convnext_base():
     cfg = ConvNeXtConfig(
         name="convnext_base",
-        url="[timm]",
         embed_dim=(128, 256, 512, 1024),
         nb_blocks=(3, 3, 27, 3),
     )
@@ -654,9 +669,19 @@ def convnext_base():
 def convnext_large():
     cfg = ConvNeXtConfig(
         name="convnext_large",
-        url="[timm]",
         embed_dim=(192, 384, 768, 1536),
         nb_blocks=(3, 3, 27, 3),
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="clip_laion2b_soup_ft_in12k_in1k_320")
+def convnext_large_mlp():
+    cfg = ConvNeXtConfig(
+        name="convnext_large_mlp",
+        embed_dim=(192, 384, 768, 1536),
+        nb_blocks=(3, 3, 27, 3),
+        head_hidden_size=1536,
     )
     return ConvNeXt, cfg
 
@@ -665,134 +690,24 @@ def convnext_large():
 def convnext_xlarge():
     cfg = ConvNeXtConfig(
         name="convnext_xlarge",
-        url="[timm]",
         embed_dim=(256, 512, 1024, 2048),
         nb_blocks=(3, 3, 27, 3),
     )
     return ConvNeXt, cfg
 
 
-@register_model
-def convnext_tiny_384_in22ft1k():
+@register_model(default_tag="")
+def convnext_xxlarge():
     cfg = ConvNeXtConfig(
-        name="convnext_tiny_384_in22ft1k",
-        url="[timm]",
-        input_size=(384, 384),
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 9, 3),
+        name="convnext_xxlarge",
+        embed_dim=(384, 768, 1536, 3072),
+        nb_blocks=(3, 4, 30, 3),
+        norm_layer="layer_norm",  # eps=1e-5 for default layer norm
     )
     return ConvNeXt, cfg
 
 
-@register_model
-def convnext_small_384_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_small_384_in22ft1k",
-        url="[timm]",
-        input_size=(384, 384),
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_base_384_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_base_384_in22ft1k",
-        url="[timm]",
-        input_size=(384, 384),
-        embed_dim=(128, 256, 512, 1024),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_large_384_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_large_384_in22ft1k",
-        url="[timm]",
-        input_size=(384, 384),
-        embed_dim=(192, 384, 768, 1536),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_xlarge_384_in22ft1k():
-    cfg = ConvNeXtConfig(
-        name="convnext_xlarge_384_in22ft1k",
-        url="[timm]",
-        input_size=(384, 384),
-        embed_dim=(256, 512, 1024, 2048),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_tiny_in22k():
-    cfg = ConvNeXtConfig(
-        name="convnext_tiny_in22k",
-        url="[timm]",
-        nb_classes=21841,
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 9, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_small_in22k():
-    cfg = ConvNeXtConfig(
-        name="convnext_small_in22k",
-        url="[timm]",
-        nb_classes=21841,
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_base_in22k():
-    cfg = ConvNeXtConfig(
-        name="convnext_base_in22k",
-        url="[timm]",
-        nb_classes=21841,
-        embed_dim=(128, 256, 512, 1024),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_large_in22k():
-    cfg = ConvNeXtConfig(
-        name="convnext_large_in22k",
-        url="[timm]",
-        nb_classes=21841,
-        embed_dim=(192, 384, 768, 1536),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model
-def convnext_xlarge_in22k():
-    cfg = ConvNeXtConfig(
-        name="convnext_xlarge_in22k",
-        url="[timm]",
-        nb_classes=21841,
-        embed_dim=(256, 512, 1024, 2048),
-        nb_blocks=(3, 3, 27, 3),
-    )
-    return ConvNeXt, cfg
-
-
-@register_model(default_tag="convnextv2_atto.fcmae_ft_in1k")
+@register_model(default_tag="fcmae_ft_in1k")
 def convnextv2_atto():
     cfg = ConvNeXtConfig(
         name="convnextv2_atto",
@@ -801,6 +716,105 @@ def convnextv2_atto():
         use_grn=True,
         init_scale=None,
         conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in1k")
+def convnextv2_femto():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_femto",
+        embed_dim=(48, 96, 192, 384),
+        nb_blocks=(2, 2, 6, 2),
+        use_grn=True,
+        init_scale=None,
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in1k")
+def convnextv2_pico():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_pico",
+        embed_dim=(64, 128, 256, 512),
+        nb_blocks=(2, 2, 6, 2),
+        use_grn=True,
+        init_scale=None,
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in22k_in1k")
+def convnextv2_nano():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_nano",
+        embed_dim=(80, 160, 320, 640),
+        nb_blocks=(2, 2, 8, 2),
+        use_grn=True,
+        init_scale=None,
+        conv_mlp_block=True,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in22k_in1k")
+def convnextv2_tiny():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_tiny",
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 9, 3),
+        use_grn=True,
+        init_scale=None,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="")
+def convnextv2_small():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_small",
+        embed_dim=(96, 192, 384, 768),
+        nb_blocks=(3, 3, 27, 3),
+        use_grn=True,
+        init_scale=None,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in22k_in1k")
+def convnextv2_base():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_base",
+        embed_dim=(128, 256, 512, 1024),
+        nb_blocks=(3, 3, 27, 3),
+        use_grn=True,
+        init_scale=None,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in22k_in1k")
+def convnextv2_large():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_large",
+        embed_dim=(192, 384, 768, 1536),
+        nb_blocks=(3, 3, 27, 3),
+        use_grn=True,
+        init_scale=None,
+    )
+    return ConvNeXt, cfg
+
+
+@register_model(default_tag="fcmae_ft_in22k_in1k_384")
+def convnextv2_huge():
+    cfg = ConvNeXtConfig(
+        name="convnextv2_huge",
+        embed_dim=(352, 704, 1408, 2816),
+        nb_blocks=(3, 3, 27, 3),
+        use_grn=True,
+        init_scale=None,
     )
     return ConvNeXt, cfg
 
@@ -951,9 +965,317 @@ register_model_tag(
 )
 
 register_model_tag(
+    model_name="convnext_tiny.fb_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_small.fb_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_base.fb_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnext_large.fb_in1k",
+    url="[timm]",
+    metadata=_meta(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+
+register_model_tag(
+    model_name="convnext_tiny.fb_in22k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(test_input_size=(384, 384), test_crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnext_small.fb_in22k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(test_input_size=(384, 384), test_crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnext_base.fb_in22k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(test_input_size=(384, 384), test_crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnext_large.fb_in22k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(test_input_size=(384, 384), test_crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnext_xlarge.fb_in22k_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(test_input_size=(384, 384), test_crop_pct=1.0, crop_mode="squash"),
+)
+
+register_model_tag(
+    model_name="convnext_tiny.fb_in22k",
+    url="[timm]",
+    cfg=dict(nb_classes=21841),
+    metadata=_meta(),
+)
+register_model_tag(
+    model_name="convnext_small.fb_in22k",
+    url="[timm]",
+    cfg=dict(nb_classes=21841),
+    metadata=_meta(),
+)
+register_model_tag(
+    model_name="convnext_base.fb_in22k",
+    url="[timm]",
+    cfg=dict(nb_classes=21841),
+    metadata=_meta(),
+)
+register_model_tag(
+    model_name="convnext_large.fb_in22k",
+    url="[timm]",
+    cfg=dict(nb_classes=21841),
+    metadata=_meta(),
+)
+register_model_tag(
+    model_name="convnext_xlarge.fb_in22k",
+    url="[timm]",
+    cfg=dict(nb_classes=21841),
+    metadata=_meta(),
+)
+
+register_model_tag(
+    model_name="convnextv2_nano.fcmae_ft_in22k_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_tiny.fcmae_ft_in22k_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_base.fcmae_ft_in22k_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_large.fcmae_ft_in22k_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+
+register_model_tag(
+    model_name="convnextv2_nano.fcmae_ft_in22k_in1k_384",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(384, 384), crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnextv2_tiny.fcmae_ft_in22k_in1k_384",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(384, 384), crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnextv2_base.fcmae_ft_in22k_in1k_384",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(384, 384), crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnextv2_large.fcmae_ft_in22k_in1k_384",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(384, 384), crop_pct=1.0, crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnextv2_huge.fcmae_ft_in22k_in1k_384",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(384, 384), crop_pct=1.0, crop_mode="squash"),
+)
+
+register_model_tag(
+    model_name="convnextv2_huge.fcmae_ft_in22k_in1k_512",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(512, 512), crop_pct=1.0, crop_mode="squash"),
+)
+
+register_model_tag(
     model_name="convnextv2_atto.fcmae_ft_in1k",
     url="[timm]",
     metadata=_metav2(test_input_size=(288, 288), test_crop_pct=0.95),
+)
+register_model_tag(
+    model_name="convnextv2_femto.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=0.95),
+)
+register_model_tag(
+    model_name="convnextv2_pico.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=0.95),
+)
+register_model_tag(
+    model_name="convnextv2_nano.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_tiny.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_base.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_large.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+register_model_tag(
+    model_name="convnextv2_huge.fcmae_ft_in1k",
+    url="[timm]",
+    metadata=_metav2(test_input_size=(288, 288), test_crop_pct=1.0),
+)
+
+register_model_tag(
+    model_name="convnextv2_atto.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_femto.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_pico.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_nano.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_tiny.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_base.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_large.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+register_model_tag(
+    model_name="convnextv2_huge.fcmae",
+    url="[timm]",
+    cfg=dict(nb_classes=0),
+    metadata=_metav2(),
+)
+
+# CLIP weights, fine-tuned on in1k or in12k + in1k
+register_model_tag(
+    model_name="convnext_base.clip_laion2b_augreg_ft_in12k_in1k",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN, std=OPENAI_CLIP_STD, input_size=(256, 256), crop_pct=1.0
+    ),
+)
+register_model_tag(
+    model_name="convnext_base.clip_laion2b_augreg_ft_in12k_in1k_384",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(384, 384),
+        crop_pct=1.0,
+        crop_mode="squash",
+    ),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_soup_ft_in12k_in1k_320",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(320, 320),
+        crop_pct=1.0,
+    ),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_soup_ft_in12k_in1k_384",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(384, 384),
+        crop_pct=1.0,
+        crop_mode="squash",
+    ),
+)
+
+register_model_tag(
+    model_name="convnext_base.clip_laion2b_augreg_ft_in1k",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(256, 256),
+        crop_pct=1.0,
+    ),
+)
+register_model_tag(
+    model_name="convnext_base.clip_laiona_augreg_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(384, 384),
+        crop_pct=1.0,
+    ),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_augreg_ft_in1k",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(256, 256),
+        crop_pct=1.0,
+    ),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_augreg_ft_in1k_384",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(384, 384),
+        crop_pct=1.0,
+        crop_mode="squash",
+    ),
+)
+register_model_tag(
+    model_name="convnext_xxlarge.clip_laion2b_soup_ft_in1k",
+    url="[timm]",
+    metadata=_meta(
+        mean=OPENAI_CLIP_MEAN,
+        std=OPENAI_CLIP_STD,
+        input_size=(256, 256),
+        crop_pct=1.0,
+    ),
 )
 
 register_deprecation("convnext_tiny_in22ft1k", "convnext_tiny.fb_in22k_ft_in1k")
@@ -961,3 +1283,17 @@ register_deprecation("convnext_small_in22ft1k", "convnext_small.fb_in22k_ft_in1k
 register_deprecation("convnext_base_in22ft1k", "convnext_base.fb_in22k_ft_in1k")
 register_deprecation("convnext_large_in22ft1k", "convnext_large.fb_in22k_ft_in1k")
 register_deprecation("convnext_xlarge_in22ft1k", "convnext_xlarge.fb_in22k_ft_in1k")
+
+# fmt: off
+register_deprecation("convnext_tiny_384_in22ft1k", "convnext_tiny.fb_in22k_ft_in1k_384")
+register_deprecation("convnext_small_384_in22ft1k", "convnext_small.fb_in22k_ft_in1k_384")  # noqa: E501
+register_deprecation("convnext_base_384_in22ft1k", "convnext_base.fb_in22k_ft_in1k_384")
+register_deprecation("convnext_large_384_in22ft1k", "convnext_large.fb_in22k_ft_in1k_384")  # noqa: E501
+register_deprecation("convnext_xlarge_384_in22ft1k", "convnext_xlarge.fb_in22k_ft_in1k_384")  # noqa: E501
+# fmt: on
+
+register_deprecation("convnext_tiny_in22k", "convnext_tiny.fb_in22k")
+register_deprecation("convnext_small_in22k", "convnext_small.fb_in22k")
+register_deprecation("convnext_base_in22k", "convnext_base.fb_in22k")
+register_deprecation("convnext_large_in22k", "convnext_large.fb_in22k")
+register_deprecation("convnext_xlarge_in22k", "convnext_xlarge.fb_in22k")
