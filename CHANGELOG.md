@@ -1,6 +1,11 @@
 # Change Log
 
-## v0.2.12 - 20230-04-17
+## v0.2.13 - 2023-05-03
+
+- Adding VGG models.
+- Fixing bugs in SAM model inference.
+
+## v0.2.12 - 2023-04-17
 
 - Fixing small bugs in SAM.
 
