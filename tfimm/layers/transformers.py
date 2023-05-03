@@ -174,52 +174,12 @@ class PatchEmbeddings(tf.keras.layers.Layer):
 
 
 class MLP(tf.keras.layers.Layer):
-    """MLP as used in Vision Transformer, MLP-Mixer and related networks"""
-
-    def __init__(
-        self,
-        hidden_dim: int,
-        embed_dim: int,
-        drop_rate: float,
-        act_layer: str,
-        kernel_initializer: str = "glorot_uniform",
-        bias_initializer: str = "zeros",
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        act_layer = act_layer_factory(act_layer)
-
-        self.fc1 = tf.keras.layers.Dense(
-            units=hidden_dim,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            name="fc1",
-        )
-        self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
-        self.fc2 = tf.keras.layers.Dense(
-            units=embed_dim,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            name="fc2",
-        )
-        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
-
-    def call(self, x, training=False):
-        x = self.fc1(x)
-        x = self.act(x)
-        x = self.drop1(x, training=training)
-        x = self.fc2(x)
-        x = self.drop2(x, training=training)
-        return x
-
-
-class ConvMLP(tf.keras.layers.Layer):
     """
-    ConvMLP is the same block as MLP, but it uses 1x1 convolutions instead of fully
-    connected layers.
+    MLP as used in Vision Transformer, MLP-Mixer and related networks.
 
-    Used in ``ConvNeXt`` models.
+    Args:
+        use_conv: If True, it uses 1x1 convolutions instead of fully connected layers.
+            Used in ``ConvNeXt`` models.
     """
 
     def __init__(
@@ -228,6 +188,7 @@ class ConvMLP(tf.keras.layers.Layer):
         embed_dim: int,
         drop_rate: float,
         act_layer: str,
+        use_conv: bool = False,
         kernel_initializer: str = "glorot_uniform",
         bias_initializer: str = "zeros",
         **kwargs,
@@ -235,22 +196,38 @@ class ConvMLP(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         act_layer = act_layer_factory(act_layer)
 
-        self.fc1 = tf.keras.layers.Conv2D(
-            filters=hidden_dim,
-            kernel_size=1,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            name="fc1",
-        )
+        if use_conv:
+            self.fc1 = tf.keras.layers.Conv2D(
+                filters=hidden_dim,
+                kernel_size=1,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc1",
+            )
+        else:
+            self.fc1 = tf.keras.layers.Dense(
+                units=hidden_dim,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc1",
+            )
         self.act = act_layer()
         self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
-        self.fc2 = tf.keras.layers.Conv2D(
-            filters=embed_dim,
-            kernel_size=1,
-            kernel_initializer=kernel_initializer,
-            bias_initializer=bias_initializer,
-            name="fc2",
-        )
+        if use_conv:
+            self.fc2 = tf.keras.layers.Conv2D(
+                filters=embed_dim,
+                kernel_size=1,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc2",
+            )
+        else:
+            self.fc2 = tf.keras.layers.Dense(
+                units=embed_dim,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc2",
+            )
         self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):

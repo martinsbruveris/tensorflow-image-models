@@ -7,7 +7,6 @@ from .factory import act_layer_factory, norm_layer_factory  # noqa: F401
 from .initializers import FanoutInitializer  # noqa: F401
 from .transformers import (  # noqa:F401
     MLP,
-    ConvMLP,
     GatedMLP,
     GluMLP,
     PatchEmbeddings,
