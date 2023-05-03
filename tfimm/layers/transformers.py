@@ -389,3 +389,73 @@ class GatedMLP(tf.keras.layers.Layer):
         x = self.fc2(x)
         x = self.drop2(x, training=training)
         return x
+
+
+class GlobalResponseNormMLP(tf.keras.layers.Layer):
+    """
+    MLP with global response norm as used in ConvNeXt-V2. Supports both dense layers
+    and 1x1 convolutions.
+
+    Args:
+        use_conv: If True, it uses 1x1 convolutions instead of fully connected layers.
+            Used in ``ConvNeXt`` models.
+    """
+
+    def __init__(
+        self,
+        hidden_dim: int,
+        embed_dim: int,
+        drop_rate: float,
+        act_layer: str,
+        use_conv: bool = False,
+        kernel_initializer: str = "glorot_uniform",
+        bias_initializer: str = "zeros",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        act_layer = act_layer_factory(act_layer)
+        norm_layer = norm_layer_factory("global_response_norm")
+
+        if use_conv:
+            self.fc1 = tf.keras.layers.Conv2D(
+                filters=hidden_dim,
+                kernel_size=1,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc1",
+            )
+        else:
+            self.fc1 = tf.keras.layers.Dense(
+                units=hidden_dim,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc1",
+            )
+        self.act = act_layer()
+        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.grn = norm_layer(name="grn")
+        if use_conv:
+            self.fc2 = tf.keras.layers.Conv2D(
+                filters=embed_dim,
+                kernel_size=1,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc2",
+            )
+        else:
+            self.fc2 = tf.keras.layers.Dense(
+                units=embed_dim,
+                kernel_initializer=kernel_initializer,
+                bias_initializer=bias_initializer,
+                name="fc2",
+            )
+        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+
+    def call(self, x, training=False):
+        x = self.fc1(x)
+        x = self.act(x)
+        x = self.drop1(x, training=training)
+        x = self.grn(x, training=training)
+        x = self.fc2(x)
+        x = self.drop2(x, training=training)
+        return x

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from tfimm.layers.norm import Affine, GroupNormalization
+from tfimm.layers.norm import Affine, GlobalResponseNorm, GroupNormalization
 
 
 def act_layer_factory(act_layer: str):
@@ -55,6 +55,9 @@ def norm_layer_factory(norm_layer: str):
         bn_class = GroupNormalization
         bn_args = {"nb_groups": 1}
         return lambda **kwargs: bn_class(**bn_args, **kwargs)
+
+    elif norm_layer == "global_response_norm":
+        return GlobalResponseNorm
 
     else:
         raise ValueError(f"Unknown normalization layer: {norm_layer}")

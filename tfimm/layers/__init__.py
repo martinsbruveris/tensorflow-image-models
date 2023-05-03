@@ -8,6 +8,7 @@ from .initializers import FanoutInitializer  # noqa: F401
 from .transformers import (  # noqa:F401
     MLP,
     GatedMLP,
+    GlobalResponseNormMLP,
     GluMLP,
     PatchEmbeddings,
     interpolate_pos_embeddings,

@@ -28,6 +28,7 @@ class Affine(tf.keras.layers.Layer):
             trainable=True,
             name="beta",
         )
+        super().build(input_shape)
 
     def call(self, x):
         x = self.alpha * x + self.beta
@@ -163,3 +164,51 @@ class GroupNormalization(tf.keras.layers.Layer):
         return group_normalize(
             x, self._gamma, self._beta, self._nb_groups, self._group_size, self._eps
         )
+
+
+class GlobalResponseNorm(tf.keras.layers.Layer):
+    """
+    Global Response Normalization layer. Used in ConvNeXt-V2.
+
+    Args:
+        eps: float, a small additive constant to avoid /sqrt(0).
+        beta_init: initializer for bias, defaults to zeros.
+        gamma_init: initializer for scale, defaults to ones.
+        **kwargs: other tf.keras.layers.Layer arguments.
+    """
+
+    def __init__(
+        self,
+        eps=1e-6,
+        beta_initializer=tf.zeros_initializer(),
+        gamma_initializer=tf.ones_initializer(),
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+        self._eps = eps
+        self._beta_initializer = beta_initializer
+        self._gamma_initializer = gamma_initializer
+
+        self._beta = None
+        self._gamma = None
+
+    def build(self, input_size):
+        channels = input_size[-1]
+        assert channels is not None, "Cannot apply GRN on dynamic channels."
+        self._beta = self.add_weight(
+            name="beta",
+            shape=(channels,),
+            initializer=self._beta_initializer,
+        )
+        self._gamma = self.add_weight(
+            name="gamma",
+            shape=(channels,),
+            initializer=self._gamma_initializer,
+        )
+        super().build(input_size)
+
+    def call(self, x):
+        x_g = tf.sqrt(tf.reduce_sum(tf.square(x), axis=(-2, -3), keepdims=True))
+        x_n = x_g / (tf.reduce_mean(x_g, axis=-1, keepdims=True) + self._eps)
+        x = x + self._gamma * x_n * x + self._beta
+        return x
