@@ -845,6 +845,17 @@ def _metav2(**kwargs):
     }
 
 
+def _meta_clip(**kwargs):
+    """Default metadata for ConvNeXt models."""
+    return {
+        "crop_pct": 1.0,
+        "interpolation": "bicubic",
+        "mean": OPENAI_CLIP_MEAN,
+        "std": OPENAI_CLIP_STD,
+        **kwargs,
+    }
+
+
 # timm specific variants
 register_model_tag(
     model_name="convnext_tiny.in12k_ft_in1k",
@@ -1189,94 +1200,138 @@ register_model_tag(
 register_model_tag(
     model_name="convnext_base.clip_laion2b_augreg_ft_in12k_in1k",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN, std=OPENAI_CLIP_STD, input_size=(256, 256), crop_pct=1.0
-    ),
+    metadata=_meta_clip(input_size=(256, 256)),
 )
 register_model_tag(
     model_name="convnext_base.clip_laion2b_augreg_ft_in12k_in1k_384",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(384, 384),
-        crop_pct=1.0,
-        crop_mode="squash",
-    ),
+    metadata=_meta_clip(input_size=(384, 384), crop_mode="squash"),
 )
 register_model_tag(
     model_name="convnext_large_mlp.clip_laion2b_soup_ft_in12k_in1k_320",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(320, 320),
-        crop_pct=1.0,
-    ),
+    metadata=_meta_clip(input_size=(320, 320)),
 )
 register_model_tag(
     model_name="convnext_large_mlp.clip_laion2b_soup_ft_in12k_in1k_384",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(384, 384),
-        crop_pct=1.0,
-        crop_mode="squash",
-    ),
+    metadata=_meta_clip(input_size=(384, 384), crop_mode="squash"),
 )
 
 register_model_tag(
     model_name="convnext_base.clip_laion2b_augreg_ft_in1k",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(256, 256),
-        crop_pct=1.0,
-    ),
+    metadata=_meta_clip(input_size=(256, 256)),
 )
 register_model_tag(
     model_name="convnext_base.clip_laiona_augreg_ft_in1k_384",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(384, 384),
-        crop_pct=1.0,
-    ),
+    metadata=_meta_clip(input_size=(384, 384)),
 )
 register_model_tag(
     model_name="convnext_large_mlp.clip_laion2b_augreg_ft_in1k",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(256, 256),
-        crop_pct=1.0,
-    ),
+    metadata=_meta_clip(input_size=(256, 256)),
 )
 register_model_tag(
     model_name="convnext_large_mlp.clip_laion2b_augreg_ft_in1k_384",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(384, 384),
-        crop_pct=1.0,
-        crop_mode="squash",
-    ),
+    metadata=_meta_clip(input_size=(384, 384), crop_mode="squash"),
 )
 register_model_tag(
     model_name="convnext_xxlarge.clip_laion2b_soup_ft_in1k",
     url="[timm]",
-    metadata=_meta(
-        mean=OPENAI_CLIP_MEAN,
-        std=OPENAI_CLIP_STD,
-        input_size=(256, 256),
-        crop_pct=1.0,
-    ),
+    metadata=_meta_clip(input_size=(256, 256)),
 )
+
+register_model_tag(
+    model_name="convnext_base.clip_laion2b_augreg_ft_in12k",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_soup_ft_in12k_320",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta_clip(input_size=(320, 320)),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_augreg_ft_in12k_384",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta_clip(input_size=(384, 384), crop_mode="squash"),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_soup_ft_in12k_384",
+    url="[timm]",
+    cfg=dict(nb_classes=11821),
+    metadata=_meta_clip(input_size=(384, 384), crop_mode="squash"),
+)
+
+# CLIP original image tower weights
+register_model_tag(
+    model_name="convnext_base.clip_laion2b",
+    url="[timm]",
+    cfg=dict(nb_classes=640),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+register_model_tag(
+    model_name="convnext_base.clip_laion2b_augreg",
+    url="[timm]",
+    cfg=dict(nb_classes=640),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+register_model_tag(
+    model_name="convnext_base.clip_laiona",
+    url="[timm]",
+    cfg=dict(nb_classes=640),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+register_model_tag(
+    model_name="convnext_base.clip_laiona_320",
+    url="[timm]",
+    cfg=dict(nb_classes=640),
+    metadata=_meta_clip(input_size=(320, 320)),
+)
+register_model_tag(
+    model_name="convnext_base.clip_laiona_augreg_320",
+    url="[timm]",
+    cfg=dict(nb_classes=640),
+    metadata=_meta_clip(input_size=(320, 320)),
+)
+
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_augreg",
+    url="[timm]",
+    cfg=dict(nb_classes=768),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_ft_320",
+    url="[timm]",
+    cfg=dict(nb_classes=768),
+    metadata=_meta_clip(input_size=(320, 320)),
+)
+register_model_tag(
+    model_name="convnext_large_mlp.clip_laion2b_ft_soup_320",
+    url="[timm]",
+    cfg=dict(nb_classes=768),
+    metadata=_meta_clip(input_size=(320, 320)),
+)
+register_model_tag(
+    model_name="convnext_xxlarge.clip_laion2b_soup",
+    url="[timm]",
+    cfg=dict(nb_classes=1024),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+register_model_tag(
+    model_name="convnext_xxlarge.clip_laion2b_rewind",
+    url="[timm]",
+    cfg=dict(nb_classes=1024),
+    metadata=_meta_clip(input_size=(256, 256)),
+)
+
 
 register_deprecation("convnext_tiny_in22ft1k", "convnext_tiny.fb_in22k_ft_in1k")
 register_deprecation("convnext_small_in22ft1k", "convnext_small.fb_in22k_ft_in1k")
