@@ -21,7 +21,7 @@ that the number of available architectures will grow over time. For now, it cont
 vision transformers (ViT, DeiT, CaiT, PVT and Swin Transformers), MLP-Mixer models 
 (MLP-Mixer, ResMLP, gMLP, PoolFormer and ConvMixer), various ResNet flavours (ResNet,
 ResNeXt, ECA-ResNet, SE-ResNet), the EfficientNet family (including AdvProp, 
-NoisyStudent, Edge-TPU, V2 and Lite versions), MobileNet-V2, as well as the recent 
+NoisyStudent, Edge-TPU, V2 and Lite versions), MobileNet-V2, VGG, as well as the recent 
 ConvNeXt. `tfimm` has now expanded beyond classification and also includes Segment 
 Anything.
 
