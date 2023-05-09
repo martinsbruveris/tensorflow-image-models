@@ -6,7 +6,7 @@ class LoraDense(tf.keras.layers.Dense):
     https://github.com/keras-team/keras/blob/v2.12.0/keras/layers/core/dense.py#L33-L301
     """
 
-    lora_rank = 10
+    lora_rank = 4
     lora_alpha = 1
     scaling = lora_alpha / lora_rank
 
@@ -14,7 +14,7 @@ class LoraDense(tf.keras.layers.Dense):
         dtype = tf.as_dtype(self.dtype or tf.keras.backend.floatx())  # tf.keras
         if not (dtype.is_floating or dtype.is_complex):
             raise TypeError(
-                "A Dense layer can only be built with a floating-point "
+                "A LoraDense layer can only be built with a floating-point "
                 f"dtype. Received: dtype={dtype}"
             )
 
@@ -22,7 +22,7 @@ class LoraDense(tf.keras.layers.Dense):
         last_dim = tf.compat.dimension_value(input_shape[-1])
         if last_dim is None:
             raise ValueError(
-                "The last dimension of the inputs to a Dense layer "
+                "The last dimension of the inputs to a LoraDense layer "
                 "should be defined. Found None. "
                 f"Full input shape received: {input_shape}"
             )
@@ -41,7 +41,7 @@ class LoraDense(tf.keras.layers.Dense):
         self.kernel_lora_a = self.add_weight(
             "kernel_lora_a",
             shape=[last_dim, self.lora_rank],
-            initializer=self.kernel_initializer,  # random initialisation
+            initializer=tf.keras.initializers.RandomNormal(stddev=1/self.lora_rank),  # random initialisation
             regularizer=self.kernel_regularizer,
             constraint=self.kernel_constraint,
             dtype=self.dtype,
