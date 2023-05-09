@@ -80,6 +80,9 @@ class LoRAConvNeXt(convnext.ConvNeXt):
                 layer_config = block.mlp.fc1.get_config()
                 cfg.apply(layer_config)
                 block.mlp.fc1 = LoraDense.from_config(layer_config)
+                layer_config = block.mlp.fc2.get_config()
+                cfg.apply(layer_config)
+                block.mlp.fc2 = LoraDense.from_config(layer_config)
 
         # Note that we are doing this before the model is built, so weights have
         # not been created yet, etc.
