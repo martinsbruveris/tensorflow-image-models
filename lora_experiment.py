@@ -1,28 +1,13 @@
 import logging
-from typing import Optional, List
+from typing import Optional
 import tensorflow as tf
 from copy import deepcopy
-from tfimm.architectures import convnext
-from tfimm.layers.lora import LoraDense
+
+from tfimm.layers.lora import lora_convnext_tiny
 
 from tfimm.models.registry import is_model, model_class, model_config
 from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
 from tfimm.models.factory import transfer_weights
-
-
-class LoRAConvNeXt(convnext.ConvNeXt):
-    keys_to_ignore_on_load_missing = ["kernel_lora"]
-    def __init__(self, cfg: convnext.ConvNeXtConfig, **kwargs):
-        # We first create the original model
-        super().__init__(cfg, **kwargs)
-
-        # Then we replace all the layers we want to replace
-        for stage in self.stages:
-            for block in stage.blocks:
-                block.mlp.fc1 = LoraDense.from_config(block.mlp.fc1.get_config())
-
-        # Note that we are doing this before the model is built, so weights have
-        # been created yet, etc.
 
 
 def create_model(
@@ -63,9 +48,11 @@ def create_model(
         raise RuntimeError(f"Unknown model {model_name}.")
 
     # cls = model_class(model_name)
-    cls = LoRAConvNeXt
+    #cls = LoRAConvNeXt
     #cls = convnext.ConvNeXt
-    cfg = model_config(model_name)
+    #cfg = model_config(model_name)
+
+    cls, cfg = lora_convnext_tiny()
 
     if model_path:
         loaded_model = tf.keras.models.load_model(model_path, compile=False)
