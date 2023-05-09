@@ -127,5 +127,8 @@ def main():
     model = create_model("convnext_tiny", pretrained="timm")
     model(model.dummy_inputs)
 
+    merged_model = model.merge_weights()
+    merged_model(merged_model.dummy_inputs)
+
 if __name__ == "__main__":
     main()

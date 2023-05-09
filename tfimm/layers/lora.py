@@ -1,6 +1,7 @@
 import tensorflow as tf
 from dataclasses import dataclass
 from tfimm.architectures import convnext
+from pathlib import Path
 
 
 class LoraDense(tf.keras.layers.Dense):
@@ -9,6 +10,7 @@ class LoraDense(tf.keras.layers.Dense):
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         self.scaling = lora_alpha / lora_rank
+        self.merging = False
 
     def build(self, input_shape):
         super().build(input_shape)
@@ -70,6 +72,7 @@ class LoRAConvNeXt(convnext.ConvNeXt):
     def __init__(self, cfg: LoRAConvNeXtConfig, **kwargs):
         # We first create the original model
         super().__init__(cfg, **kwargs)
+        self.scaling = cfg.lora_alpha / cfg.lora_rank
 
         # Then we replace all the layers we want to replace
         for stage in self.stages:
@@ -80,6 +83,36 @@ class LoRAConvNeXt(convnext.ConvNeXt):
 
         # Note that we are doing this before the model is built, so weights have
         # not been created yet, etc.
+
+    def get_merged_weights(self, name_order):
+        names = [weight.name.rstrip(":0") for weight in self.weights]
+        weights = self.get_weights()
+        merged_weights = []
+        weights_dict = dict(zip(names, weights))
+
+        for name in name_order:
+            node = Path(name)
+            parent = node.parent
+            weight = weights_dict[name]
+            if node.name == "kernel" and str(parent / "kernel_lora_a") in weights_dict:
+                weight += (
+                    weights_dict[str(parent / "kernel_lora_a")]
+                    @ weights_dict[str(parent / "kernel_lora_b")]
+                    * self.scaling
+                )
+            merged_weights.append(weight)
+
+        return merged_weights
+
+    def merge_weights(self):
+        # instantiate new model of parent class
+        merged_model = self.__class__.__mro__[0](self.cfg)
+        merged_model(merged_model.dummy_inputs)
+        # get the expected ordering for the weights
+        name_order = [weight.name.rstrip(":0") for weight in merged_model.weights]
+        # transfer the weights, merging the LoRA updates
+        merged_model.set_weights(self.get_merged_weights(name_order))
+        return merged_model
 
 
 def lora_convnext_tiny():
