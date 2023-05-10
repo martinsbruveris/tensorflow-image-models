@@ -13,7 +13,7 @@ from .registry import lora_architecture, lora_base_architecture, lora_config
 
 # List of patterns to match LoRA weights, so they can be excluded from weight transfers
 # between a model and its LoRA version.
-LORA_WEIGHT_NAMES = ["lora_weight"]
+LORA_WEIGHT_NAMES = ["kernel_lora_a", "kernel_lora_b"]
 
 
 def create_model(
@@ -137,7 +137,7 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
         model._flatten_layers(recursive=True, include_self=False)
     ):
         if getattr(layer, "is_lora_layer", False) and not layer.merged:
-            layer.merge_lora_weights()
+            layer.merge_weights()
             merge_indices.add(idx)
 
     # Drum roll... Weight transfer happening here.
@@ -149,7 +149,7 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     ):
         if idx in merge_indices:
             assert getattr(layer, "is_lora_layer", False)
-            layer.unmerge_lora_weights()
+            layer.unmerge_weights()
 
     return base_model
 

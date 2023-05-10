@@ -4,6 +4,7 @@ from .factory import (  # noqa: F401
     create_model,
     set_only_lora_layers_trainable,
 )
+from .layers import LoRADense  # noqa: F401
 from .registry import (  # noqa: F401
     lora_architecture,
     lora_config,

@@ -4,8 +4,35 @@ import tensorflow as tf
 class LoRADense(tf.keras.layers.Dense):
     is_lora_layer: bool = True
 
-    def __init__(self, *args, lora_rank: int = 4, lora_alpha: float = 1, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        units,
+        activation=None,
+        use_bias=True,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activity_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        lora_rank: int = 4,
+        lora_alpha: float = 1,
+        **kwargs,
+    ):
+        super().__init__(
+            units=units,
+            activation=activation,
+            use_bias=use_bias,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            activity_regularizer=activity_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs,
+        )
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         self.scaling = lora_alpha / lora_rank
@@ -36,11 +63,12 @@ class LoRADense(tf.keras.layers.Dense):
         )
 
     def call(self, x):
-        if x.dtype.base_dtype != self._compute_dtype_object.base_dtype:
-            x = tf.cast(x, dtype=self._compute_dtype_object)
-
+        # If LoRA weights are merged, inference is the same as for the original layer.
         if self.merged:
             return super().call(x)
+
+        if x.dtype.base_dtype != self._compute_dtype_object.base_dtype:
+            x = tf.cast(x, dtype=self._compute_dtype_object)
 
         rank = x.shape.rank
         shape = x.shape.as_list()
@@ -73,13 +101,13 @@ class LoRADense(tf.keras.layers.Dense):
         config.update({"lora_rank": self.lora_rank, "lora_alpha": self.lora_alpha})
         return config
 
-    def merge_lora_weights(self):
+    def merge_weights(self):
         if self.merged:
             raise ValueError("LoRA updates have already been merged")
         self.kernel.assign_add(self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
         self.merged = True
 
-    def unmerge_lora_weights(self):
+    def unmerge_weights(self):
         if not self.merged:
             raise ValueError("LoRA updates have not been merged yet")
         self.kernel.assign_add(-self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
