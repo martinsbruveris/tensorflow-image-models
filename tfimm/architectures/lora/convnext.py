@@ -1,10 +1,10 @@
 from dataclasses import dataclass
+
+from tfimm.architectures.convnext import ConvNeXt, ConvNeXtConfig
 from tfimm.architectures.lora.layers import LoRADense
-from tfimm.architectures.convnext import ConvNeXtConfig, ConvNeXt
 from tfimm.models import keras_serializable
 
 from .registry import register_lora_architecture
-
 
 __all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
 
