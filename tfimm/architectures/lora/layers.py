@@ -2,6 +2,8 @@ import tensorflow as tf
 
 
 class LoRADense(tf.keras.layers.Dense):
+    is_lora_layer: bool = True
+
     def __init__(self, *args, lora_rank: int = 4, lora_alpha: float = 1, **kwargs):
         super().__init__(*args, **kwargs)
         self.lora_rank = lora_rank
