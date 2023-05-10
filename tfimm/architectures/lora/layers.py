@@ -51,10 +51,14 @@ class LoRADense(tf.keras.layers.Dense):
         return config
 
     def merge_lora_weights(self):
+        if self.merged:
+            raise ValueError("LoRA updates have already been merged")
         self.kernel += self.kernel_lora_a @ self.kernel_lora_b * self.scaling
         self.merged = True
 
     def unmerge_lora_weights(self):
+        if not self.merged:
+            raise ValueError("LoRA updates have not been merged yet")
         self.kernel -= self.kernel_lora_a @ self.kernel_lora_b * self.scaling
         self.merged = False
 
