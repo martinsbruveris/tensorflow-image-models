@@ -26,7 +26,7 @@ class LoRAConvNeXt(ConvNeXt):
         # We first create the original model
         super().__init__(cfg, **kwargs)
 
-        lora_cfg = {"lora_rank": self.lora_rank, "lora_alpha": self.lora_alpha}
+        lora_cfg = {"lora_rank": cfg.lora_rank, "lora_alpha": cfg.lora_alpha}
 
         # Then we replace all the layers we want to replace
         for stage in self.stages:
@@ -37,3 +37,8 @@ class LoRAConvNeXt(ConvNeXt):
                 layer_config = block.mlp.fc2.get_config()
                 layer_config.update(lora_cfg)
                 block.mlp.fc2 = LoRADense.from_config(layer_config)
+
+    def merge_lora_weights(self):
+        for layer in self._flatten_layers(recursive=True, include_self=False):
+            if hasattr(layer, "merge_lora_weights"):
+                layer.merge_lora_weights()

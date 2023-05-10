@@ -36,13 +36,29 @@ class LoRADense(tf.keras.layers.Dense):
         )
 
     def call(self, x):
+        if x.dtype.base_dtype != self._compute_dtype_object.base_dtype:
+            x = tf.cast(x, dtype=self._compute_dtype_object)
+
         if self.merged:
             x = super().call(x)
         else:
-            x1 = tf.linalg.matvec(self.kernel, x)
-            x2 = tf.linalg.matvec(self.kernel_lora_b, x)
-            x2 = tf.linalg.matvec(self.kernel_lora_a, x2)
-            x = x1 + self.scaling * x2 + self.bias
+            rank = x.shape.rank
+            if rank == 2 or rank is None:
+                x1 = tf.matmul(a=x, b=self.kernel)
+                x2 = tf.matmul(a=x, b=self.kernel_lora_a)
+                x2 = tf.matmul(a=x2, b=self.kernel_lora_b)
+            else:
+                x1 = tf.tensordot(x, self.kernel, [[rank - 1], [0]])
+                x2 = tf.tensordot(x, self.kernel_lora_a, [[rank - 1], [0]])
+                x2 = tf.tensordot(x2, self.kernel_lora_b, [[rank - 1], [0]])
+            x = x1 + self.scaling * x2
+
+            if self.use_bias:
+                x = tf.nn.bias_add(x, self.bias)
+
+            if self.activation is not None:
+                x = self.activation(x)
+
         return x
 
     def get_config(self):
@@ -53,16 +69,16 @@ class LoRADense(tf.keras.layers.Dense):
     def merge_lora_weights(self):
         if self.merged:
             raise ValueError("LoRA updates have already been merged")
-        self.kernel += self.kernel_lora_a @ self.kernel_lora_b * self.scaling
+        self.kernel.assign_add(self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
         self.merged = True
 
     def unmerge_lora_weights(self):
         if not self.merged:
             raise ValueError("LoRA updates have not been merged yet")
-        self.kernel -= self.kernel_lora_a @ self.kernel_lora_b * self.scaling
+        self.kernel.assign_add(-self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
         self.merged = False
 
     def mark_only_lora_as_trainable(self, train_bias: bool):
-        self.kernel = tf.Variable(self.kernel, trainable=False)
+        self.kernel = tf.Variable(self.kernel, trainable=False, name=self.kernel.name)
         if not train_bias:
-            self.bias = tf.Variable(self.bias, trainable=False)
+            self.bias = tf.Variable(self.bias, trainable=False, name=self.bias.name)
