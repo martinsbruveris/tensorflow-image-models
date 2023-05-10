@@ -43,6 +43,7 @@ class LoRADense(tf.keras.layers.Dense):
             x = super().call(x)
         else:
             rank = x.shape.rank
+            shape = x.shape.as_list()
             if rank == 2 or rank is None:
                 x1 = tf.matmul(a=x, b=self.kernel)
                 x2 = tf.matmul(a=x, b=self.kernel_lora_a)
@@ -51,7 +52,13 @@ class LoRADense(tf.keras.layers.Dense):
                 x1 = tf.tensordot(x, self.kernel, [[rank - 1], [0]])
                 x2 = tf.tensordot(x, self.kernel_lora_a, [[rank - 1], [0]])
                 x2 = tf.tensordot(x2, self.kernel_lora_b, [[rank - 1], [0]])
+
             x = x1 + self.scaling * x2
+
+            # Reshape the output back to the original ndim of the input.
+            if rank is not None and rank != 2 and not tf.executing_eagerly():
+                output_shape = shape[:-1] + [self.kernel.shape[-1]]
+                x.set_shape(output_shape)
 
             if self.use_bias:
                 x = tf.nn.bias_add(x, self.bias)
@@ -78,7 +85,7 @@ class LoRADense(tf.keras.layers.Dense):
         self.kernel.assign_add(-self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
         self.merged = False
 
-    def mark_only_lora_as_trainable(self, train_bias: bool):
+    def set_only_lora_weights_trainable(self, train_bias: bool):
         self.kernel = tf.Variable(self.kernel, trainable=False, name=self.kernel.name)
         if not train_bias:
             self.bias = tf.Variable(self.bias, trainable=False, name=self.bias.name)
