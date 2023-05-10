@@ -4,6 +4,7 @@ import tensorflow as tf
 
 from tfimm.architectures.convnext import ConvNeXt, ConvNeXtConfig
 from tfimm.models import keras_serializable
+
 from .registry import register_lora_architecture
 
 __all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
@@ -24,7 +25,6 @@ class LoraDense(tf.keras.layers.Dense):
             trainable=True,
         )
 
-
     def call(self, x):
         return super().call(x + self.lora_weight)
 
@@ -35,11 +35,9 @@ class LoRAConvNeXtConfig(ConvNeXtConfig):
     lora_alpha: float = 1.0
 
 
-
 @keras_serializable
 @register_lora_architecture
 class LoRAConvNeXt(ConvNeXt):
-
     cfg_class = LoRAConvNeXtConfig
 
     def __init__(self, cfg: LoRAConvNeXtConfig, **kwargs):

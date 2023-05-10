@@ -2,8 +2,13 @@ import dataclasses
 
 import tensorflow as tf
 
-from tfimm.models import create_model as create_full_model
-from tfimm.models import model_config, model_class, transfer_weights
+from tfimm.models import (
+    create_model as create_full_model,
+    model_class,
+    model_config,
+    transfer_weights,
+)
+
 from .registry import lora_architecture, lora_config
 
 
