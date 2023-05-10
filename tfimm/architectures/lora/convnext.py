@@ -13,6 +13,8 @@ class LoRADense(tf.keras.layers.Dense):
         self.lora_alpha = lora_alpha
         self.scaling = lora_alpha / lora_rank
         self.merging = False
+        self.kernel_lora_a = None
+        self.kernel_lora_b = None
 
     def build(self, input_shape):
         super().build(input_shape)
