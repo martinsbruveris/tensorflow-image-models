@@ -1,7 +1,7 @@
 import logging
 import re
 from copy import deepcopy
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
@@ -160,7 +160,11 @@ def create_preprocessing(
     return _preprocess
 
 
-def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
+def transfer_weights(
+    src_model: tf.keras.Model,
+    dst_model: tf.keras.Model,
+    weights_to_ignore: Optional[List[str]] = None,
+):
     """
     Transfers weights from ``src_model`` to ``dst_model``, with special treatment of
     first convolution and classification layers. The ``dst_model`` is modified in place.
@@ -168,7 +172,11 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     Args:
         src_model: Source model.
         dst_model: Destination model, modified in place
+        weights_to_ignore: List of patterns of weights in the destination model to skip.
     """
+    if weights_to_ignore is None:
+        weights_to_ignore = []
+
     dst_first_conv = dst_model.cfg.first_conv
 
     if hasattr(src_model.cfg, "nb_classes") and hasattr(dst_model.cfg, "nb_classes"):
@@ -186,8 +194,9 @@ def transfer_weights(src_model: tf.keras.Model, dst_model: tf.keras.Model):
     # model config
     transform_weights = getattr(src_model.cfg, "transform_weights", dict())
 
-    # Some weights should not be transferred as they are created during building
-    weights_to_ignore = getattr(dst_model, "keys_to_ignore_on_load_missing", [])
+    # Some models contain class-wide lists of weights that should not be transferred
+    # as they are created during building. Add these to the list.
+    weights_to_ignore += getattr(dst_model, "keys_to_ignore_on_load_missing", [])
 
     src_weights = {_get_weight_name(w.name): w.numpy() for w in src_model.weights}
     weight_value_tuples = []

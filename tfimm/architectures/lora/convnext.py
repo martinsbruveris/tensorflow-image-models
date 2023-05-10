@@ -40,10 +40,6 @@ class LoRAConvNeXtConfig(ConvNeXtConfig):
 @register_lora_architecture
 class LoRAConvNeXt(ConvNeXt):
 
-    # TODO (martins): I should rewrite the `transfer_weights` function to iterate over
-    #   src weights instead of dst weights. In that case we wouldn't need to add
-    #   lora_weights here.
-    keys_to_ignore_on_load_missing = ["lora_weight"]
     cfg_class = LoRAConvNeXtConfig
 
     def __init__(self, cfg: LoRAConvNeXtConfig, **kwargs):

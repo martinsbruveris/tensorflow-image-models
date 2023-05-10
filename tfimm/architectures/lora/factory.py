@@ -1,5 +1,4 @@
 import dataclasses
-from typing import Optional
 
 import tensorflow as tf
 
@@ -12,12 +11,15 @@ def create_model(
     model_name: str,
     pretrained: bool = False,
     model_path: str = "",
+    *,
+    train_bias: str = "none",
     **kwargs,
 ) -> tf.keras.Model:
     """
     Creates a LoRA model. This model will have all layers, except the LoRA layers set
     to ``trainable=False``. For LoRA layers, only the low-rank adaptation weights will
-    be trainable.
+    be trainable. The only exception are bias weights, controlled by the behaviour of
+    ``train_bias``.
 
     Args:
         model_name: Name of model to instantiate.
@@ -27,6 +29,9 @@ def create_model(
             :py:func:`tfimm.models.create_model` for details.
         model_path: Path of model weights to load after model is initialized. This takes
             over ``pretrained``.
+        train_bias: If "none" or "all", no or all bias weights are trainable
+            respectively. If "lora_only", only the bias weights of LoRA layers are set
+            to trainable.
         **kwargs: LoRA parameters, such as ``lora_rank`` and ``lora_alpha`` need to be
             passed as kwargs and will be added to the model config.
 
@@ -58,8 +63,31 @@ def create_model(
     model(model.dummy_inputs)
 
     # Transfer weights to LoRA model
-    transfer_weights(src_model=full_model, dst_model=model)
+    transfer_weights(
+        src_model=full_model, dst_model=model, weights_to_ignore=["lora_weight"]
+    )
 
-    # Set all non-LoRA layers to trainable=False
+    # Set all non-LoRA layers to non-trainable
+    mark_only_lora_as_trainable(model, train_bias=train_bias)
 
     return model
+
+
+def mark_only_lora_as_trainable(model: tf.keras.Model, train_bias: str = "none"):
+    if train_bias not in {"none", "all", "lora_only"}:
+        raise ValueError(f"Unknown value for train_bias: {train_bias}.")
+
+    # We first set everything to non-trainable
+    model.trainable = False
+
+    # Then we mark LoRA and (optionally) bias layers as trainable
+    for layer in model._flatten_layers(recursive=True, include_self=False):
+        if hasattr(layer, "mark_only_lora_as_trainable"):
+            layer.mark_only_lora_as_trainable(train_bias in {"all", "lora_only"})
+        elif train_bias in {"all"}:
+            _mark_only_bias_as_trainable(layer)
+
+
+def _mark_only_bias_as_trainable(layer: tf.keras.layers.Layer):
+    # TODO: Implement setting biases only to be trainable.
+    raise NotImplementedError("Need to implement this...")
