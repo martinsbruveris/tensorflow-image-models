@@ -1,50 +1,49 @@
 from dataclasses import dataclass
-
-import tensorflow as tf
-
-from tfimm.architectures.convnext import ConvNeXt, ConvNeXtConfig
+from tfimm.architectures.lora.layers import LoRADense
+from tfimm.architectures.convnext import ConvNeXtConfig, ConvNeXt
 from tfimm.models import keras_serializable
 
 from .registry import register_lora_architecture
 
+
 __all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
-
-
-# TODO: This is temporary...
-class LoraDense(tf.keras.layers.Dense):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.lora_weight = None
-
-    def build(self, input_shape):
-        super().build(input_shape)
-        self.lora_weight = self.add_weight(
-            name="lora_weight",
-            shape=(1,),
-            initializer=tf.keras.initializers.constant(0.0),
-            trainable=True,
-        )
-
-    def call(self, x):
-        return super().call(x + self.lora_weight)
 
 
 @dataclass
 class LoRAConvNeXtConfig(ConvNeXtConfig):
-    lora_rank: int = 2
+    lora_rank: int = 4
     lora_alpha: float = 1.0
+    # TODO: lora_dropout
 
 
 @keras_serializable
 @register_lora_architecture
 class LoRAConvNeXt(ConvNeXt):
     cfg_class = LoRAConvNeXtConfig
+    keys_to_ignore_on_load_missing = ["kernel_lora"]
 
     def __init__(self, cfg: LoRAConvNeXtConfig, **kwargs):
+        # We first create the original model
         super().__init__(cfg, **kwargs)
 
+        lora_cfg = {"lora_rank": cfg.lora_rank, "lora_alpha": cfg.lora_alpha}
+
+        # Then we replace all the layers we want to replace
         for stage in self.stages:
             for block in stage.blocks:
-                # TODO: Will need to adapt this to take into account LoRA parameters...
-                block.mlp.fc1 = LoraDense.from_config(block.mlp.fc1.get_config())
-                block.mlp.fc2 = LoraDense.from_config(block.mlp.fc2.get_config())
+                layer_config = block.mlp.fc1.get_config()
+                layer_config.update(lora_cfg)
+                block.mlp.fc1 = LoRADense.from_config(layer_config)
+                layer_config = block.mlp.fc2.get_config()
+                layer_config.update(lora_cfg)
+                block.mlp.fc2 = LoRADense.from_config(layer_config)
+
+    def merge_lora_weights(self):
+        for layer in self._flatten_layers(recursive=True, include_self=False):
+            if hasattr(layer, "merge_lora_weights"):
+                layer.merge_lora_weights()
+
+    def unmerge_lora_weights(self):
+        for layer in self._flatten_layers(recursive=True, include_self=False):
+            if hasattr(layer, "unmerge_lora_weights"):
+                layer.unmerge_lora_weights()
