@@ -42,3 +42,8 @@ class LoRAConvNeXt(ConvNeXt):
         for layer in self._flatten_layers(recursive=True, include_self=False):
             if hasattr(layer, "merge_lora_weights"):
                 layer.merge_lora_weights()
+
+    def unmerge_lora_weights(self):
+        for layer in self._flatten_layers(recursive=True, include_self=False):
+            if hasattr(layer, "unmerge_lora_weights"):
+                layer.unmerge_lora_weights()
