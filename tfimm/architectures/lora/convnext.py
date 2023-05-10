@@ -51,6 +51,11 @@ class LoRADense(tf.keras.layers.Dense):
             self.kernel_0 + self.kernel_lora_a @ self.kernel_lora_b * self.scaling
         )
 
+    def get_config(self):
+        config = super().get_config()
+        config.update({"lora_rank": self.lora_rank, "lora_alpha": self.lora_alpha})
+        return config
+
 
 @dataclass
 class LoRAConfig:
