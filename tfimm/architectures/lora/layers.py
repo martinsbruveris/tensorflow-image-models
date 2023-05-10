@@ -3,15 +3,13 @@ import tensorflow as tf
 
 class LoRADense(tf.keras.layers.Dense):
     def __init__(self, *args, lora_rank: int = 4, lora_alpha: float = 1, **kwargs):
+        super().__init__(*args, **kwargs)
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         self.scaling = lora_alpha / lora_rank
         self.merged = False
-        self.kernel = None
-        self.bias = None
         self.kernel_lora_a = None
         self.kernel_lora_b = None
-        super().__init__(*args, **kwargs)
 
     def build(self, input_shape):
         super().build(input_shape)
@@ -40,31 +38,31 @@ class LoRADense(tf.keras.layers.Dense):
             x = tf.cast(x, dtype=self._compute_dtype_object)
 
         if self.merged:
-            x = super().call(x)
+            return super().call(x)
+
+        rank = x.shape.rank
+        shape = x.shape.as_list()
+        if rank == 2 or rank is None:
+            x1 = tf.matmul(a=x, b=self.kernel)
+            x2 = tf.matmul(a=x, b=self.kernel_lora_a)
+            x2 = tf.matmul(a=x2, b=self.kernel_lora_b)
         else:
-            rank = x.shape.rank
-            shape = x.shape.as_list()
-            if rank == 2 or rank is None:
-                x1 = tf.matmul(a=x, b=self.kernel)
-                x2 = tf.matmul(a=x, b=self.kernel_lora_a)
-                x2 = tf.matmul(a=x2, b=self.kernel_lora_b)
-            else:
-                x1 = tf.tensordot(x, self.kernel, [[rank - 1], [0]])
-                x2 = tf.tensordot(x, self.kernel_lora_a, [[rank - 1], [0]])
-                x2 = tf.tensordot(x2, self.kernel_lora_b, [[rank - 1], [0]])
+            x1 = tf.tensordot(x, self.kernel, [[rank - 1], [0]])
+            x2 = tf.tensordot(x, self.kernel_lora_a, [[rank - 1], [0]])
+            x2 = tf.tensordot(x2, self.kernel_lora_b, [[rank - 1], [0]])
 
-            x = x1 + self.scaling * x2
+        x = x1 + self.scaling * x2
 
-            # Reshape the output back to the original ndim of the input.
-            if rank is not None and rank != 2 and not tf.executing_eagerly():
-                output_shape = shape[:-1] + [self.kernel.shape[-1]]
-                x.set_shape(output_shape)
+        # Reshape the output back to the original ndim of the input.
+        if rank is not None and rank != 2 and not tf.executing_eagerly():
+            output_shape = shape[:-1] + [self.kernel.shape[-1]]
+            x.set_shape(output_shape)
 
-            if self.use_bias:
-                x = tf.nn.bias_add(x, self.bias)
+        if self.use_bias:
+            x = tf.nn.bias_add(x, self.bias)
 
-            if self.activation is not None:
-                x = self.activation(x)
+        if self.activation is not None:
+            x = self.activation(x)
 
         return x
 
