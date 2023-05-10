@@ -11,6 +11,10 @@ from tfimm.models import (
 
 from .registry import lora_architecture, lora_config
 
+# List of patterns to match LoRA weights, so they can be excluded from weight transfers
+# between a model and its LoRA version.
+LORA_WEIGHT_NAMES = ["lora_weight"]
+
 
 def create_model(
     model_name: str,
@@ -61,13 +65,45 @@ def create_model(
 
     # Transfer weights to LoRA model
     transfer_weights(
-        src_model=full_model, dst_model=model, weights_to_ignore=["lora_weight"]
+        src_model=full_model, dst_model=model, weights_to_ignore=LORA_WEIGHT_NAMES
     )
 
     return model
 
 
-def mark_only_lora_as_trainable(model: tf.keras.Model, train_bias: str = "none"):
+def convert_to_lora_model(model: tf.keras.Model, **kwargs) -> tf.keras.Model:
+    """
+    Creates a LoRA version of a model.
+
+    Args:
+        model: Source model. Has to be an instance of a class that has a corresponding
+            LoRA architecture registered.
+        **kwargs: LoRA parameters, such as ``lora_rank`` and ``lora_alpha`` need to be
+            passed as kwargs and will be added to the model config.
+
+    Returns:
+        LoRA model.
+    """
+    lora_cls = lora_architecture(type(model))
+    lora_cfg_cls = lora_config(type(model))
+
+    # Build LoRA model config by combining the original model config with LoRA kwargs.
+    cfg = model.cfg
+    lora_cfg = lora_cfg_cls(**dataclasses.asdict(cfg), **kwargs)
+
+    # Instantiate LoRA model and build it
+    lora_model = lora_cls(cfg=lora_cfg)
+    lora_model(lora_model.dummy_inputs)
+
+    # Transfer weights to LoRA model
+    transfer_weights(
+        src_model=model, dst_model=lora_model, weights_to_ignore=LORA_WEIGHT_NAMES
+    )
+
+    return model
+
+
+def set_only_lora_layers_trainable(model: tf.keras.Model, train_bias: str = "none"):
     """
     Marks only LoRA layers in the model as trainable. This model will have all layers,
     except LoRA layers set to ``trainable=False``. For LoRA layers, only the low-rank
@@ -91,12 +127,12 @@ def mark_only_lora_as_trainable(model: tf.keras.Model, train_bias: str = "none")
 
     # Then we mark LoRA and (optionally) bias layers as trainable
     for layer in model._flatten_layers(recursive=True, include_self=False):
-        if hasattr(layer, "mark_only_lora_as_trainable"):
-            layer.mark_only_lora_as_trainable(train_bias in {"all", "lora_only"})
+        if hasattr(layer, "set_only_lora_weights_trainable"):
+            layer.set_only_lora_weights_trainable(train_bias in {"all", "lora_only"})
         elif train_bias in {"all"}:
-            _mark_only_bias_as_trainable(layer)
+            _set_bias_weights_trainable(layer)
 
 
-def _mark_only_bias_as_trainable(layer: tf.keras.layers.Layer):
+def _set_bias_weights_trainable(layer: tf.keras.layers.Layer):
     # TODO: Implement setting biases only to be trainable.
     raise NotImplementedError("Need to implement this...")
