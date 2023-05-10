@@ -46,9 +46,13 @@ class LoRADense(tf.keras.layers.Dense):
         self.kernel_lora_a = self.add_weight(
             "kernel_lora_a",
             shape=[last_dim, self.lora_rank],
-            initializer=self.kernel_initializer,
+            # For now, we are reusing the class default parameter. We could make this
+            # customisable. Note that we cannot simply use self.kernel_initializer here,
+            # because initializers should only be used once.
+            initializer="glorot_uniform",
             regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
+            # We don't support constraints on the low-rank updates at the moment.
+            constraint=None,
             dtype=self.dtype,
             trainable=True,
         )
@@ -57,7 +61,7 @@ class LoRADense(tf.keras.layers.Dense):
             shape=[self.lora_rank, self.units],
             initializer=tf.keras.initializers.Zeros(),
             regularizer=self.kernel_regularizer,
-            constraint=self.kernel_constraint,
+            constraint=None,
             dtype=self.dtype,
             trainable=True,
         )
@@ -115,5 +119,11 @@ class LoRADense(tf.keras.layers.Dense):
 
     def set_only_lora_weights_trainable(self, train_bias: bool):
         self.kernel = tf.Variable(self.kernel, trainable=False, name=self.kernel.name)
+        self.kernel_lora_a = tf.Variable(
+            self.kernel_lora_a, trainable=True, name=self.kernel_lora_a.name
+        )
+        self.kernel_lora_b = tf.Variable(
+            self.kernel_lora_b, trainable=True, name=self.kernel_lora_b.name
+        )
         if not train_bias:
             self.bias = tf.Variable(self.bias, trainable=False, name=self.bias.name)
