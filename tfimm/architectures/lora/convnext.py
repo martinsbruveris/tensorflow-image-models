@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from tfimm.architectures import convnext
 from pathlib import Path
 
+__all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
 
-class LoraDense(tf.keras.layers.Dense):
+
+class LoRADense(tf.keras.layers.Dense):
     def __init__(self, *args, lora_rank: int = 4, lora_alpha: float = 1, **kwargs):
         super().__init__(*args, **kwargs)
         self.lora_rank = lora_rank
@@ -49,7 +51,7 @@ class LoraDense(tf.keras.layers.Dense):
 
 
 @dataclass
-class LoraConfig:
+class LoRAConfig:
     """Shared base class for LoRA configurations."""
 
     lora_rank: int = 4
@@ -62,7 +64,7 @@ class LoraConfig:
 
 
 @dataclass
-class LoRAConvNeXtConfig(convnext.ConvNeXtConfig, LoraConfig):
+class LoRAConvNeXtConfig(convnext.ConvNeXtConfig, LoRAConfig):
     pass
 
 
@@ -79,10 +81,10 @@ class LoRAConvNeXt(convnext.ConvNeXt):
             for block in stage.blocks:
                 layer_config = block.mlp.fc1.get_config()
                 cfg.apply(layer_config)
-                block.mlp.fc1 = LoraDense.from_config(layer_config)
+                block.mlp.fc1 = LoRADense.from_config(layer_config)
                 layer_config = block.mlp.fc2.get_config()
                 cfg.apply(layer_config)
-                block.mlp.fc2 = LoraDense.from_config(layer_config)
+                block.mlp.fc2 = LoRADense.from_config(layer_config)
 
         # Note that we are doing this before the model is built, so weights have
         # not been created yet, etc.
@@ -116,13 +118,3 @@ class LoRAConvNeXt(convnext.ConvNeXt):
         # transfer the weights, merging the LoRA updates
         merged_model.set_weights(self.get_merged_weights(name_order))
         return merged_model
-
-
-def lora_convnext_tiny():
-    cfg = LoRAConvNeXtConfig(
-        name="convnext_tiny",
-        url="[timm]",
-        embed_dim=(96, 192, 384, 768),
-        nb_blocks=(3, 3, 9, 3),
-    )
-    return LoRAConvNeXt, cfg
