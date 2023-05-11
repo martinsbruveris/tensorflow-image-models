@@ -2,7 +2,7 @@
 
 This module contains TensorFLow code for LoRA layers that can be used for 
 parameter-efficient adaptation of large models. We also integrate `tfimm` models
-with LoRA. For a details on LoRA see the paper
+with LoRA. For details on LoRA see the paper
 
 **LoRA: Low-Rank Adaptation of Large Language Models**  
 *Edward J. Hu, Yelong Shen, Phillip Wallis, Zeyuan Allen-Zhu, Yuanzhi Li, Shean Wang, 
@@ -43,6 +43,16 @@ LoRA models can be converted back to regular models.
 >>> type(regular_model)
 <class 'tfimm.architectures.convnext.ConvNeXt'>
 ```
+
+## Supported layers and architectures
+
+Currently we support the following architectures
+
+- ConvNeXt
+
+And the following layers
+
+- Dense
 
 ## Under the hood
 
@@ -113,7 +123,7 @@ lora_model = convert_to_lora_model(
 
 ## Sequential and functional models
 
-The current implementations focusses on models created by subclassing, which is the case
+The current implementation focusses on models created by subclassing, which is the case
 for all `tfimm` models. In particular, the registry system works only for subclassed
 models. However, some of the functionality also works for functional models.
 
@@ -153,10 +163,12 @@ and PyTorch mean that we cannot simply replicate the PyTorch implementation.
   lora.mark_only_lora_as_trainable(model)
   ```
   In TensorFlow it is _not_ possible to change the `trainable` attribute of a variable
-  after the variable has been created. Instead, we provide the function 
-  `lora_trainable_weights`, which provides a list of weights to be used for LoRA 
-  training. For `tfimm` architectures we also override the model's `trainable_weights`
-  property, so the model can be used with Keras' built-in `model.fit()`.
+  after the variable has been created; see this
+  [issue](https://github.com/tensorflow/tensorflow/issues/47597). Instead, we provide 
+  the function `lora_trainable_weights`, which provides a list of weights to be used 
+  for LoRA training. For `tfimm` architectures we also override the model's 
+  `trainable_weights` property, so the model can be used with Keras' built-in 
+  `model.fit()`.
 - PyTorch allows easy saving and loading a partial state of the model via `state_dict`,
   ```python
   torch.save(lora.lora_state_dict(model), "ckpt_lora.pt")
