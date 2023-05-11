@@ -10,11 +10,8 @@ from tfimm.models import (
     transfer_weights,
 )
 
+from .layers import LORA_WEIGHT_NAMES
 from .registry import lora_architecture, lora_base_architecture, lora_config
-
-# List of patterns to match LoRA weights, so they can be excluded from weight transfers
-# between a model and its LoRA version.
-LORA_WEIGHT_NAMES = ["kernel_lora_a", "kernel_lora_b"]
 
 
 def create_model(
@@ -153,6 +150,18 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
             layer.unmerge_weights()
 
     return base_model
+
+
+def merge_lora_weights(model: tf.keras.Model):
+    """
+    Recursively merge weights in all LoRA layers in the given model.
+
+    Args:
+        model: Model for merging weights.
+    """
+    for layer in model._flatten_layers(recursive=True, include_self=True):
+        if getattr(layer, "is_lora_layer", False) and not layer.merged:
+            layer.merge_weights()
 
 
 def lora_trainable_weights(
