@@ -5,7 +5,7 @@ from .factory import (  # noqa: F401
     lora_non_trainable_weights,
     lora_trainable_weights,
 )
-from .layers import LoRADense  # noqa: F401
+from .layers import LoRADense, convert_to_lora_layer  # noqa: F401
 from .registry import (  # noqa: F401
     lora_architecture,
     lora_config,

@@ -122,3 +122,26 @@ class LoRADense(tf.keras.layers.Dense):
         if train_bias and self.use_bias:
             trainable_variables += [self.bias]
         return trainable_variables
+
+
+def convert_to_lora_layer(
+    layer: tf.keras.layers.Layer, **kwargs
+) -> tf.keras.layers.Layer:
+    """
+    Convenience function to convert supported layer types to their LoRA counterparts.
+
+    Args:
+        layer: Layer to be converted.
+        **kwargs: LoRA specific parameters such as ``lora_rank`` have to be passed as
+            kwargs.
+
+    Returns:
+        LoRA layer instance.
+    """
+    if type(layer) is tf.keras.layers.Dense:
+        lora_layer = LoRADense(**layer.get_config(), **kwargs)
+    else:
+        raise ValueError(
+            f"Unsupported layer type for conversion to LoRA: {type(layer)}."
+        )
+    return lora_layer
