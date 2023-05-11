@@ -1,4 +1,5 @@
 import warnings
+from functools import partial
 
 # These dictionaries contain the mappings from model class to the corresponding LoRA
 # version of the model, i.e., ConvNeXt -> LoRAConvNeXt. The keys are the model class,
@@ -12,23 +13,53 @@ _lora_model_base_class = dict()  # Inverse dict to _lora_model_class
 _lora_model_config = dict()
 
 
-def register_lora_architecture(lora_cls):
-    # We assume that the LoRA architecture is a subclass of the original model class.
-    model_cls = lora_cls.__base__
+def register_lora_architecture(lora_cls=None, *, base_cls=None):
+    """
+    Decorator to register a LoRA variant of a model architecture. It is used as follows
 
-    if model_cls in _lora_model_class:
-        existing_lora_cls = _lora_model_class[model_cls]
+    .. code-block:: python
+
+        @register_lora_architecture
+        class LoRAResNet(ResNet):
+            ...
+
+    This will associate the class ``LoRAResNet`` as the LoRA version of the class
+    ``ResNet``. If the LoRA architecture is not created via subclassing, it can be
+    specified explicitely.
+
+    .. code-block:: python
+
+        @register_lora_architecture(base_cls=ResNet)
+        class LoRAResNet(tf.keras.Model):
+            ...
+
+    Args:
+        lora_cls: LoRA model class. We assume that it has a `cfg_class` class attribute.
+        base_cls: Regular model class. If not provided we use the base class of
+            ``lora_cls``.
+    """
+    # Called with arguments, we return a function that accepts `lora_cls`.
+    if lora_cls is None:
+        return partial(register_lora_architecture, base_cls=base_cls)
+
+    if base_cls is None:
+        # If `base_cls` is not provided, we assume that the LoRA architecture is a
+        # subclass of the original model class.
+        base_cls = lora_cls.__base__
+
+    if base_cls in _lora_model_class:
+        existing_lora_cls = _lora_model_class[base_cls]
         warnings.warn(
-            f"Model class {model_cls} has already registered a LoRA version "
+            f"Model class {base_cls} has already registered a LoRA version "
             f"{existing_lora_cls}. Registering {lora_cls} will overwrite this."
         )
 
     # We assume here that LoRA models have a `cfg_class` class attribute.
     lora_cfg = lora_cls.cfg_class
 
-    _lora_model_class[model_cls] = lora_cls
-    _lora_model_base_class[lora_cls] = model_cls
-    _lora_model_config[model_cls] = lora_cfg
+    _lora_model_class[base_cls] = lora_cls
+    _lora_model_base_class[lora_cls] = base_cls
+    _lora_model_config[base_cls] = lora_cfg
 
     return lora_cls
 

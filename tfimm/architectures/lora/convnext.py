@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 
 from tfimm.architectures.convnext import ConvNeXt, ConvNeXtConfig
-from tfimm.architectures.lora.layers import LoRADense
 from tfimm.models import keras_serializable
 
+from .factory import lora_non_trainable_weights, lora_trainable_weights
+from .layers import convert_to_lora_layer
 from .registry import register_lora_architecture
 
 __all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
@@ -13,6 +14,7 @@ __all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
 class LoRAConvNeXtConfig(ConvNeXtConfig):
     lora_rank: int = 4
     lora_alpha: float = 1.0
+    lora_train_bias: str = "none"
     # TODO: lora_dropout
 
 
@@ -20,30 +22,24 @@ class LoRAConvNeXtConfig(ConvNeXtConfig):
 @register_lora_architecture
 class LoRAConvNeXt(ConvNeXt):
     cfg_class = LoRAConvNeXtConfig
-    keys_to_ignore_on_load_missing = ["kernel_lora"]
 
     def __init__(self, cfg: LoRAConvNeXtConfig, **kwargs):
         # We first create the original model
         super().__init__(cfg, **kwargs)
+        self.cfg = cfg
 
+        # Then we replace all the layers we want to replace. Here we only replace the
+        # 1x1 convolutions in MLP blocks.
         lora_cfg = {"lora_rank": cfg.lora_rank, "lora_alpha": cfg.lora_alpha}
-
-        # Then we replace all the layers we want to replace
         for stage in self.stages:
             for block in stage.blocks:
-                layer_config = block.mlp.fc1.get_config()
-                layer_config.update(lora_cfg)
-                block.mlp.fc1 = LoRADense.from_config(layer_config)
-                layer_config = block.mlp.fc2.get_config()
-                layer_config.update(lora_cfg)
-                block.mlp.fc2 = LoRADense.from_config(layer_config)
+                block.mlp.fc1 = convert_to_lora_layer(block.mlp.fc1, **lora_cfg)
+                block.mlp.fc2 = convert_to_lora_layer(block.mlp.fc2, **lora_cfg)
 
-    def merge_lora_weights(self):
-        for layer in self._flatten_layers(recursive=True, include_self=False):
-            if hasattr(layer, "merge_lora_weights"):
-                layer.merge_lora_weights()
+    @property
+    def trainable_weights(self):
+        return lora_trainable_weights(self, train_bias=self.cfg.lora_train_bias)
 
-    def unmerge_lora_weights(self):
-        for layer in self._flatten_layers(recursive=True, include_self=False):
-            if hasattr(layer, "unmerge_lora_weights"):
-                layer.unmerge_lora_weights()
+    @property
+    def non_trainable_weights(self):
+        return lora_non_trainable_weights(self, train_bias=self.cfg.lora_train_bias)
