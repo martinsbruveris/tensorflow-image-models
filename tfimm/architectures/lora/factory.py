@@ -10,11 +10,8 @@ from tfimm.models import (
     transfer_weights,
 )
 
+from .layers import LORA_WEIGHT_NAMES
 from .registry import lora_architecture, lora_base_architecture, lora_config
-
-# List of patterns to match LoRA weights, so they can be excluded from weight transfers
-# between a model and its LoRA version.
-LORA_WEIGHT_NAMES = ["kernel_lora_a", "kernel_lora_b"]
 
 
 def create_model(
