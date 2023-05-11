@@ -24,11 +24,25 @@ def test_lora_dense(input_shape):
     x = tf.random.uniform(input_shape)
     res_1 = layer(x)
 
+    assert not layer.merged
     layer.merge_weights()
     assert layer.merged
     res_2 = layer(x)
 
     tf.debugging.assert_near(res_1, res_2)
+
+
+def test_lora_registry():
+    class A:
+        ...
+
+    @lora.register_lora_architecture
+    class B(A):
+        cfg_class = None
+
+    assert lora.lora_architecture(A) is B
+    assert lora.lora_config(A) is None
+    assert lora.lora_base_architecture(B) is A
 
 
 @register_model
@@ -43,15 +57,21 @@ def convnext_test_model():
     return ConvNeXt, cfg
 
 
-def test_convert_to_lora_model():
+def test_convert_to_lora_model_and_back():
     model = create_model("convnext_test_model")
+    assert type(model) is ConvNeXt
     lora_model = lora.convert_to_lora_model(model, lora_rank=1)
+    assert type(lora_model) is lora.LoRAConvNeXt
+    regular_model = lora.convert_to_regular_model(lora_model)
+    assert type(regular_model) is ConvNeXt
 
     img = tf.random.uniform(model.dummy_inputs.shape)
     res_1 = model(img, training=False)
     res_2 = lora_model(img, training=False)
+    res_3 = regular_model(img, training=False)
 
     tf.debugging.assert_near(res_1, res_2)
+    tf.debugging.assert_near(res_1, res_3)
 
 
 def _count(var_list: List[tf.Variable]) -> int:

@@ -101,7 +101,7 @@ def convert_to_lora_model(model: tf.keras.Model, **kwargs) -> tf.keras.Model:
         src_model=model, dst_model=lora_model, weights_to_ignore=LORA_WEIGHT_NAMES
     )
 
-    return model
+    return lora_model
 
 
 def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
@@ -124,7 +124,7 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     cfg = model.cfg
     base_cfg_fields = {f.name for f in dataclasses.fields(base_cfg_cls)}
     base_cfg = base_cfg_cls(
-        **{k: v for k, v in dataclasses.asdict(cfg) if k in base_cfg_fields}
+        **{k: v for k, v in dataclasses.asdict(cfg).items() if k in base_cfg_fields}
     )
 
     # Then create the base model, build it and transfer weights to it.

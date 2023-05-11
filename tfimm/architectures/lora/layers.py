@@ -138,8 +138,9 @@ def convert_to_lora_layer(
     Returns:
         LoRA layer instance.
     """
-    if type(layer) is tf.keras.layers.Dense:
-        lora_layer = LoRADense(**layer.get_config(), **kwargs)
+    layer_lookup = {tf.keras.layers.Dense: LoRADense}
+    if type(layer) in layer_lookup:
+        lora_layer = layer_lookup[type(layer)](**layer.get_config(), **kwargs)
     else:
         raise ValueError(
             f"Unsupported layer type for conversion to LoRA: {type(layer)}."
