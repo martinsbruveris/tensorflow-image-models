@@ -33,6 +33,7 @@ def test_lora_dense(input_shape):
 
 
 def test_lora_registry():
+    # Register class using subclassing
     class A:
         ...
 
@@ -43,6 +44,18 @@ def test_lora_registry():
     assert lora.lora_architecture(A) is B
     assert lora.lora_config(A) is None
     assert lora.lora_base_architecture(B) is A
+
+    # Register class with explicit base class
+    class C:
+        ...
+
+    @lora.register_lora_architecture(base_cls=C)
+    class D:
+        cfg_class = None
+
+    assert lora.lora_architecture(C) is D
+    assert lora.lora_config(C) is None
+    assert lora.lora_base_architecture(D) is C
 
 
 @register_model
