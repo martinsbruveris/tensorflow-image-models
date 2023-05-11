@@ -131,14 +131,15 @@ models. However, some of the functionality also works for functional models.
   functional models.
 - Transferring weights works for all models, regardless of type, provided the regular
   model and LoRA variant have the same architecture with the exception of LoRA layers.
-  Use the function to tranfer weights to LoRA.
+  Use the `transfer_weights` function to tranfer weights to LoRA.
   ```python
   from tfimm.architectures import lora
   from tfimm.models import transfer_weights
   
   # Transfer weights into the LoRA model
   transfer_weights(
-      regular_model, lora_model, weights_to_ignore=lora.LORA_WEIGHT_NAMES)
+      regular_model, lora_model, weights_to_ignore=lora.LORA_WEIGHT_NAMES
+  )
   ```
 - After training, we need to manually merge weights and then transfer them back to the
   regular model.
