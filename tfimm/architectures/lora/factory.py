@@ -152,6 +152,18 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     return base_model
 
 
+def merge_lora_weights(model: tf.keras.Model):
+    """
+    Recursively merge weights in all LoRA layers in the given model.
+
+    Args:
+        model: Model for merging weights.
+    """
+    for layer in model._flatten_layers(recursive=True, include_self=True):
+        if getattr(layer, "is_lora_layer", False) and not layer.merged:
+            layer.merge_weights()
+
+
 def lora_trainable_weights(
     model: tf.keras.Model, train_bias: str = "none"
 ) -> List[tf.Variable]:
