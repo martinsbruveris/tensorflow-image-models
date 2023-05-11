@@ -117,13 +117,8 @@ class LoRADense(tf.keras.layers.Dense):
         self.kernel.assign_add(-self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
         self.merged = False
 
-    def set_only_lora_weights_trainable(self, train_bias: bool):
-        self.kernel = tf.Variable(self.kernel, trainable=False, name=self.kernel.name)
-        self.kernel_lora_a = tf.Variable(
-            self.kernel_lora_a, trainable=True, name=self.kernel_lora_a.name
-        )
-        self.kernel_lora_b = tf.Variable(
-            self.kernel_lora_b, trainable=True, name=self.kernel_lora_b.name
-        )
-        if not train_bias:
-            self.bias = tf.Variable(self.bias, trainable=False, name=self.bias.name)
+    def lora_trainable_weights(self, train_bias: bool):
+        trainable_variables = [self.kernel_lora_a, self.kernel_lora_b]
+        if train_bias and self.use_bias:
+            trainable_variables += [self.bias]
+        return trainable_variables

@@ -1,4 +1,5 @@
 import dataclasses
+from typing import List
 
 import tensorflow as tf
 
@@ -154,36 +155,92 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     return base_model
 
 
-def set_only_lora_layers_trainable(model: tf.keras.Model, train_bias: str = "none"):
+def lora_trainable_weights(
+    model: tf.keras.Model, train_bias: str = "none"
+) -> List[tf.Variable]:
     """
-    Marks only LoRA layers in the model as trainable. This model will have all layers,
-    except LoRA layers set to ``trainable=False``. For LoRA layers, only the low-rank
-    adaptation weights will be trainable. The only exception are bias weights,
-    controlled by the value of ``train_bias``.
+    Returns a list of variables to be used instead of model.trainable_weights when
+    doing LoRA training.
 
     Args:
-        model: Model to be modified.
+        model: A keras model.
         train_bias: If "none" or "all", no or all bias weights are trainable
             respectively. If "lora_only", only the bias weights of LoRA layers are set
             to trainable.
 
     Returns:
-        Nothing. The model is modified in place.
+        List of LoRA trainable weights.
     """
     if train_bias not in {"none", "all", "lora_only"}:
         raise ValueError(f"Unknown value for train_bias: {train_bias}.")
 
-    # We first set everything to non-trainable
-    model.trainable = False
-
-    # Then we mark LoRA and (optionally) bias layers as trainable
-    for layer in model._flatten_layers(recursive=True, include_self=False):
+    trainable_weights = []
+    for layer in model._flatten_layers(recursive=True, include_self=True):
         if getattr(layer, "is_lora_layer", False):
-            layer.set_only_lora_weights_trainable(train_bias in {"all", "lora_only"})
+            trainable_weights.extend(
+                layer.lora_trainable_weights(train_bias in {"all", "lora_only"})
+            )
         elif train_bias in {"all"}:
-            _set_bias_weights_trainable(layer)
+            trainable_weights.extend(_bias_variables(layer))
+
+    return trainable_weights
 
 
-def _set_bias_weights_trainable(layer: tf.keras.layers.Layer):
-    # TODO: Implement setting biases only to be trainable.
-    raise NotImplementedError("Need to implement this...")
+def lora_non_trainable_weights(
+    model: tf.keras.Model, train_bias: str = "none"
+) -> List[tf.Variable]:
+    """
+    Returns a list of non-trainable weights for the LoRA model. This function
+    complements :py:func:`lora_trainable_weights`.
+
+    Args:
+        model: A keras model.
+        train_bias: If "none" or "all", no or all bias weights are trainable
+            respectively. If "lora_only", only the bias weights of LoRA layers are set
+            to trainable.
+
+    Returns:
+        List of LoRA non-trainable weights.
+    """
+    # We start with a list of all weights and remove the trainable weights. We
+    # explicitly call `(non_)trainable_weights` from tf.keras.Model, because we expect
+    # our model to overwrite the `(non_)trainable_weights` properties with the result
+    # of this function.
+    weights = tf.keras.Model.trainable_weights.fget(
+        model
+    ) + tf.keras.Model.non_trainable_weights.fget(model)
+    trainable_weights = lora_trainable_weights(model, train_bias=train_bias)
+    trainable_ids = set(id(w) for w in trainable_weights)  # Variables are not hashable
+    non_trainable_weights = [w for w in weights if id(w) not in trainable_ids]
+    return non_trainable_weights
+
+
+def _bias_variables(layer: tf.keras.layers.Layer) -> List[tf.Variable]:
+    """Return bias variables of a given layer as a list."""
+    # There is no fundamental concept of a "bias-variable", rather the notion of bias
+    # is a convention. And so we have to proceed layer-by-layer and specify for each
+    # layer, which are the bias variables (and if they are used).
+    if (
+        type(layer)
+        in {
+            tf.keras.layers.Conv1D,
+            tf.keras.layers.Conv2D,
+            tf.keras.layers.Conv3D,
+            tf.keras.layers.Dense,
+            tf.keras.layers.DepthwiseConv1D,
+            tf.keras.layers.DepthwiseConv2D,
+        }
+        and layer.use_bias
+    ):
+        return [layer.bias]
+    elif (
+        type(layer)
+        in {
+            tf.keras.layers.BatchNormalization,
+            tf.keras.layers.LayerNormalization,
+        }
+        and layer.center
+    ):
+        return [layer.beta]
+    else:
+        return []
