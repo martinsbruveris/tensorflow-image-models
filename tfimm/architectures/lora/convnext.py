@@ -14,7 +14,7 @@ __all__ = ["LoRAConvNeXt", "LoRAConvNeXtConfig"]
 class LoRAConvNeXtConfig(ConvNeXtConfig):
     lora_rank: int = 4
     lora_alpha: float = 1.0
-    train_bias: str = "none"
+    lora_train_bias: str = "none"
     # TODO: lora_dropout
 
 
@@ -42,8 +42,8 @@ class LoRAConvNeXt(ConvNeXt):
 
     @property
     def trainable_weights(self):
-        return lora_trainable_weights(self, train_bias=self.cfg.train_bias)
+        return lora_trainable_weights(self, train_bias=self.cfg.lora_train_bias)
 
     @property
     def non_trainable_weights(self):
-        return lora_non_trainable_weights(self, train_bias=self.cfg.train_bias)
+        return lora_non_trainable_weights(self, train_bias=self.cfg.lora_train_bias)
