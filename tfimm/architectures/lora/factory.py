@@ -165,7 +165,10 @@ def merge_lora_weights(model: tf.keras.Model):
 
 
 def lora_trainable_weights(
-    model: tf.keras.Model, train_bias: str = "none", classifier: Optional[str] = None
+    model: tf.keras.Model,
+    train_bias: str = "none",
+    classifier: Optional[str] = None,
+    first_conv: Optional[str] = None,
 ) -> List[tf.Variable]:
     """
     Returns a list of variables to be used instead of model.trainable_weights when
@@ -189,8 +192,7 @@ def lora_trainable_weights(
             trainable_weights.extend(
                 layer.lora_trainable_weights(train_bias in {"all", "lora_only"})
             )
-        elif layer.name == classifier:
-            # final classification layer
+        elif layer.name in [first_conv, classifier]:
             trainable_weights.extend([layer.kernel, layer.bias])
         elif train_bias in {"all"}:
             trainable_weights.extend(_bias_variables(layer))
@@ -199,7 +201,10 @@ def lora_trainable_weights(
 
 
 def lora_non_trainable_weights(
-    model: tf.keras.Model, train_bias: str = "none", classifier: Optional[str] = None
+    model: tf.keras.Model,
+    train_bias: str = "none",
+    classifier: Optional[str] = None,
+    first_conv: Optional[str] = None,
 ) -> List[tf.Variable]:
     """
     Returns a list of non-trainable weights for the LoRA model. This function
@@ -222,7 +227,7 @@ def lora_non_trainable_weights(
         model
     ) + tf.keras.Model.non_trainable_weights.fget(model)
     trainable_weights = lora_trainable_weights(
-        model, train_bias=train_bias, classifier=classifier
+        model, train_bias=train_bias, classifier=classifier, first_conv=first_conv
     )
     trainable_ids = set(id(w) for w in trainable_weights)  # Variables are not hashable
     non_trainable_weights = [w for w in weights if id(w) not in trainable_ids]
