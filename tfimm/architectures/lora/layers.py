@@ -44,9 +44,12 @@ class LoRADense(tf.keras.layers.Dense):
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
         self.scaling = lora_alpha / lora_rank
-        self.merged = False
+
         self.kernel_lora_a = None
         self.kernel_lora_b = None
+
+        self.merged = False
+        self.full_rank_kernel = None
 
     def build(self, input_shape):
         super().build(input_shape)
@@ -115,14 +118,138 @@ class LoRADense(tf.keras.layers.Dense):
 
     def merge_weights(self):
         if self.merged:
-            raise ValueError("LoRA updates have already been merged")
-        self.kernel.assign_add(self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
+            raise ValueError("LoRA updates have already been merged.")
+        self.full_rank_kernel = self.kernel.value()
+        self.kernel.assign_add(
+            self.scaling * tf.matmul(self.kernel_lora_a, self.kernel_lora_b)
+        )
         self.merged = True
 
     def unmerge_weights(self):
         if not self.merged:
-            raise ValueError("LoRA updates have not been merged yet")
-        self.kernel.assign_add(-self.kernel_lora_a @ self.kernel_lora_b * self.scaling)
+            raise ValueError("LoRA updates have not been merged yet.")
+        self.kernel.assign(self.full_rank_kernel)
+        self.merged = False
+
+    def lora_trainable_weights(self, train_bias: bool):
+        trainable_variables = [self.kernel_lora_a, self.kernel_lora_b]
+        if train_bias and self.use_bias:
+            trainable_variables += [self.bias]
+        return trainable_variables
+
+
+class LoRAConv2D(tf.keras.layers.Conv2D):
+    is_lora_layer: bool = True
+
+    def __init__(
+        self,
+        filters,
+        kernel_size,
+        strides=(1, 1),
+        padding="valid",
+        data_format=None,
+        dilation_rate=(1, 1),
+        groups=1,
+        activation=None,
+        use_bias=True,
+        kernel_initializer="glorot_uniform",
+        bias_initializer="zeros",
+        kernel_regularizer=None,
+        bias_regularizer=None,
+        activity_regularizer=None,
+        kernel_constraint=None,
+        bias_constraint=None,
+        lora_rank: int = 4,
+        lora_alpha: float = 1,
+        **kwargs,
+    ):
+        super().__init__(
+            filters=filters,
+            kernel_size=kernel_size,
+            strides=strides,
+            padding=padding,
+            data_format=data_format,
+            dilation_rate=dilation_rate,
+            groups=groups,
+            activation=activation,
+            use_bias=use_bias,
+            kernel_initializer=kernel_initializer,
+            bias_initializer=bias_initializer,
+            kernel_regularizer=kernel_regularizer,
+            bias_regularizer=bias_regularizer,
+            activity_regularizer=activity_regularizer,
+            kernel_constraint=kernel_constraint,
+            bias_constraint=bias_constraint,
+            **kwargs,
+        )
+        self.lora_rank = lora_rank
+        self.lora_alpha = lora_alpha
+        self.scaling = lora_alpha / lora_rank
+
+        self.kernel_lora_a = None
+        self.kernel_lora_b = None
+
+        self.merged = False
+        self.full_rank_kernel = None
+
+    def build(self, input_shape):
+        super().build(input_shape)
+        kernel_height, kernel_width, in_channels, out_channels = self.kernel.shape
+        self.kernel_lora_a = self.add_weight(
+            "kernel_lora_a",
+            shape=(kernel_height, kernel_width, in_channels, self.lora_rank),
+            # For now, we are reusing the class default parameter. We could make this
+            # customisable. Note that we cannot simply use self.kernel_initializer here,
+            # because initializers should only be used once.
+            initializer="glorot_uniform",
+            regularizer=self.kernel_regularizer,
+            # We don't support constraints on the low-rank updates at the moment.
+            constraint=None,
+            dtype=self.dtype,
+            trainable=True,
+        )
+        self.kernel_lora_b = self.add_weight(
+            "kernel_lora_b",
+            shape=(kernel_height, kernel_width, self.lora_rank, out_channels),
+            initializer=tf.keras.initializers.Zeros(),
+            regularizer=self.kernel_regularizer,
+            constraint=None,
+            dtype=self.dtype,
+            trainable=True,
+        )
+
+    def call(self, x):
+        if self.merged:
+            return super().call(x)
+
+        full_kernel = self.kernel.value()  # Save the existing kernel
+
+        # Apply low-rank update to kernel
+        kernel_update = tf.matmul(self.kernel_lora_a, self.kernel_lora_b)
+        self.kernel.assign_add(self.scaling * kernel_update)
+        x = super().call(x)  # Re-use the call function of the Keras Cond2D layer
+
+        self.kernel.assign(full_kernel)  # Restore kernel again
+        return x
+
+    def get_config(self):
+        config = super().get_config()
+        config.update({"lora_rank": self.lora_rank, "lora_alpha": self.lora_alpha})
+        return config
+
+    def merge_weights(self):
+        if self.merged:
+            raise ValueError("LoRA updates have already been merged.")
+        self.full_rank_kernel = self.kernel.value()
+        self.kernel.assign_add(
+            self.scaling * tf.matmul(self.kernel_lora_a, self.kernel_lora_b)
+        )
+        self.merged = True
+
+    def unmerge_weights(self):
+        if not self.merged:
+            raise ValueError("LoRA updates have not been merged yet.")
+        self.kernel.assign(self.full_rank_kernel)
         self.merged = False
 
     def lora_trainable_weights(self, train_bias: bool):
