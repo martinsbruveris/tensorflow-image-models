@@ -9,6 +9,7 @@ between a model and its LoRA version.
 
 class LoRADense(tf.keras.layers.Dense):
     """LoRA version of the ``Dense`` layer."""
+
     is_lora_layer: bool = True
 
     def __init__(
