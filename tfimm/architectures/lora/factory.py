@@ -119,10 +119,12 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     # is a superset of the base model config. And also, that config classes are
     # dataclasses.
     cfg = model.cfg
-    base_cfg_fields = {f.name for f in dataclasses.fields(base_cfg_cls)}
-    base_cfg = base_cfg_cls(
-        **{k: v for k, v in dataclasses.asdict(cfg).items() if k in base_cfg_fields}
-    )
+    base_cfg_dict = {
+        key: value
+        for key, value in dataclasses.asdict(cfg).items()
+        if not key.startswith("lora_")
+    }
+    base_cfg = base_cfg_cls(**base_cfg_dict)
 
     # Then create the base model, build it and transfer weights to it.
     base_model = base_cls(cfg=base_cfg)

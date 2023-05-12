@@ -177,7 +177,7 @@ def transfer_weights(
     if weights_to_ignore is None:
         weights_to_ignore = []
 
-    dst_first_conv = dst_model.cfg.first_conv
+    dst_first_conv = getattr(dst_model.cfg, "first_conv", None)
 
     if hasattr(src_model.cfg, "nb_classes") and hasattr(dst_model.cfg, "nb_classes"):
         keep_classifier = src_model.cfg.nb_classes == dst_model.cfg.nb_classes
