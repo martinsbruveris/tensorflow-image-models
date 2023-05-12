@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 import tensorflow as tf
 
+import tfimm
 from tfimm.architectures import ConvNeXt, ConvNeXtConfig, lora
 from tfimm.models import create_model, register_model
 
@@ -87,6 +88,21 @@ def test_convert_to_lora_model_and_back():
     tf.debugging.assert_near(res_1, res_3)
 
 
+def test_create_model():
+    # We test that non-LoRA parameters are passed correctly to the model
+    model = lora.create_model("convnext_test_model", lora_rank=4, nb_classes=13)
+    assert model.cfg.nb_classes == 13
+    res = model(model.dummy_inputs)
+    assert res.shape[-1] == 13
+
+    # We test that we can also pass non-LoRA parameters to convert_to_lora_model
+    base_model = create_model("convnext_test_model")
+    model = lora.convert_to_lora_model(base_model, lora_rank=4, nb_classes=13)
+    assert model.cfg.nb_classes == 13
+    res = model(model.dummy_inputs)
+    assert res.shape[-1] == 13
+
+
 def _count(var_list: List[tf.Variable]) -> int:
     return np.sum([np.prod(v.get_shape()) for v in var_list]).item()
 
@@ -97,7 +113,7 @@ def test_lora_trainable_weights(use_bias):
         [
             tf.keras.layers.Dense(units=2, use_bias=use_bias, name="fc1"),
             lora.LoRADense(units=3, use_bias=use_bias, lora_rank=3, name="fc2"),
-        ]
+        ],
     )
     model.build(input_shape=(4, 5))
     # Number of parameters
@@ -120,3 +136,15 @@ def test_lora_trainable_weights(use_bias):
     assert _count(lora.lora_non_trainable_weights(model, "lora_only")) == 10 + nb_fc + 6
     assert _count(lora.lora_trainable_weights(model, "all")) == nb_fc + 9 + 6 + nb_lora
     assert _count(lora.lora_non_trainable_weights(model, "all")) == 10 + 6
+
+
+def test_lora_trainable_weights_trainable_layers():
+    # Setting `trainable_layers` does not play nicely with the layer naming in
+    # sequential and functional models, so we use a subclassed model to test it.
+    model = tfimm.create_model("convnext_test_model")
+    trainable_weights = lora.lora_trainable_weights(
+        model, train_bias="none", trainable_layers=[model.cfg.classifier]
+    )
+    trainable_weight_names = set(w.name for w in trainable_weights)
+    res = {"convnext_test_model/head/fc/kernel:0", "convnext_test_model/head/fc/bias:0"}
+    assert trainable_weight_names == res

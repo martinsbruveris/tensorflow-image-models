@@ -1,14 +1,14 @@
 import dataclasses
-from typing import List
+from typing import List, Optional
 
 import tensorflow as tf
 
 from tfimm.models import (
     create_model as create_full_model,
     model_class,
-    model_config,
     transfer_weights,
 )
+from tfimm.models.factory import _get_layer_name
 
 from .layers import LORA_WEIGHT_NAMES
 from .registry import lora_architecture, lora_base_architecture, lora_config
@@ -38,7 +38,6 @@ def create_model(
         The created model.
     """
     cls = model_class(model_name)
-    cfg = model_config(model_name)
     lora_cls = lora_architecture(cls)
     lora_cfg_cls = lora_config(cls)
 
@@ -54,8 +53,8 @@ def create_model(
         **full_model_kwargs,
     )
 
-    # Build LoRA model config by combining the original model config with LoRA kwargs.
-    lora_cfg = lora_cfg_cls(**dataclasses.asdict(cfg), **lora_kwargs)
+    # Build LoRA model config by combining the full model config with LoRA kwargs.
+    lora_cfg = lora_cfg_cls(**dataclasses.asdict(full_model.cfg), **lora_kwargs)
 
     # Instantiate LoRA model and build it
     model = lora_cls(cfg=lora_cfg)
@@ -86,8 +85,9 @@ def convert_to_lora_model(model: tf.keras.Model, **kwargs) -> tf.keras.Model:
     lora_cfg_cls = lora_config(type(model))
 
     # Build LoRA model config by combining the original model config with LoRA kwargs.
-    cfg = model.cfg
-    lora_cfg = lora_cfg_cls(**dataclasses.asdict(cfg), **kwargs)
+    cfg_dict = dataclasses.asdict(model.cfg)
+    cfg_dict.update(kwargs)
+    lora_cfg = lora_cfg_cls(**cfg_dict)
 
     # Instantiate LoRA model and build it
     lora_model = lora_cls(cfg=lora_cfg)
@@ -165,7 +165,9 @@ def merge_lora_weights(model: tf.keras.Model):
 
 
 def lora_trainable_weights(
-    model: tf.keras.Model, train_bias: str = "none"
+    model: tf.keras.Model,
+    train_bias: str = "none",
+    trainable_layers: Optional[List[str]] = None,
 ) -> List[tf.Variable]:
     """
     Returns a list of variables to be used instead of model.trainable_weights when
@@ -176,6 +178,7 @@ def lora_trainable_weights(
         train_bias: If "none" or "all", no or all bias weights are trainable
             respectively. If "lora_only", only the bias weights of LoRA layers are set
             to trainable.
+        trainable_layers: A list of layer names that should be kept trainable.
 
     Returns:
         List of LoRA trainable weights.
@@ -183,20 +186,34 @@ def lora_trainable_weights(
     if train_bias not in {"none", "all", "lora_only"}:
         raise ValueError(f"Unknown value for train_bias: {train_bias}.")
 
+    trainable_ids = set()
     trainable_weights = []
     for layer in model._flatten_layers(recursive=True, include_self=True):
         if getattr(layer, "is_lora_layer", False):
-            trainable_weights.extend(
-                layer.lora_trainable_weights(train_bias in {"all", "lora_only"})
-            )
+            weights = layer.lora_trainable_weights(train_bias in {"all", "lora_only"})
         elif train_bias in {"all"}:
-            trainable_weights.extend(_bias_variables(layer))
+            weights = _bias_variables(layer)
+        else:
+            weights = []
+        trainable_ids.union(set(id(w) for w in weights))
+        trainable_weights.extend(weights)
+
+    trainable_layers = trainable_layers or []
+    for weight in model.weights:
+        if (
+            _get_layer_name(weight.name) in trainable_layers
+            and id(weight) not in trainable_ids
+        ):
+            trainable_ids.add(id(weight))
+            trainable_weights.append(weight)
 
     return trainable_weights
 
 
 def lora_non_trainable_weights(
-    model: tf.keras.Model, train_bias: str = "none"
+    model: tf.keras.Model,
+    train_bias: str = "none",
+    trainable_layers: Optional[List[str]] = None,
 ) -> List[tf.Variable]:
     """
     Returns a list of non-trainable weights for the LoRA model. This function
@@ -207,6 +224,7 @@ def lora_non_trainable_weights(
         train_bias: If "none" or "all", no or all bias weights are trainable
             respectively. If "lora_only", only the bias weights of LoRA layers are set
             to trainable.
+        trainable_layers: A list of layer names that should be kept trainable.
 
     Returns:
         List of LoRA non-trainable weights.
@@ -218,7 +236,11 @@ def lora_non_trainable_weights(
     weights = tf.keras.Model.trainable_weights.fget(
         model
     ) + tf.keras.Model.non_trainable_weights.fget(model)
-    trainable_weights = lora_trainable_weights(model, train_bias=train_bias)
+    trainable_weights = lora_trainable_weights(
+        model,
+        train_bias=train_bias,
+        trainable_layers=trainable_layers,
+    )
     trainable_ids = set(id(w) for w in trainable_weights)  # Variables are not hashable
     non_trainable_weights = [w for w in weights if id(w) not in trainable_ids]
     return non_trainable_weights
