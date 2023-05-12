@@ -15,6 +15,7 @@ class LoRAConvNeXtConfig(ConvNeXtConfig):
     lora_rank: int = 4
     lora_alpha: float = 1.0
     lora_train_bias: str = "none"
+    lora_train_classifer: bool = True
     # TODO: lora_dropout
 
 
@@ -38,18 +39,18 @@ class LoRAConvNeXt(ConvNeXt):
 
     @property
     def trainable_weights(self):
+        classifier = [self.cfg.classifier] if self.cfg.lora_train_classifer else []
         return lora_trainable_weights(
             self,
             train_bias=self.cfg.lora_train_bias,
-            classifier=self.cfg.classifier,
-            first_conv=self.cfg.first_conv,
+            trainable_layers=classifier,
         )
 
     @property
     def non_trainable_weights(self):
+        classifier = [self.cfg.classifier] if self.cfg.lora_train_classifer else []
         return lora_non_trainable_weights(
             self,
             train_bias=self.cfg.lora_train_bias,
-            classifier=self.cfg.classifier,
-            first_conv=self.cfg.first_conv,
+            trainable_layers=classifier,
         )
