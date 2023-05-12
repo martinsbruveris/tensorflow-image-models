@@ -38,8 +38,12 @@ class LoRAConvNeXt(ConvNeXt):
 
     @property
     def trainable_weights(self):
-        return lora_trainable_weights(self, train_bias=self.cfg.lora_train_bias)
+        return lora_trainable_weights(
+            self, train_bias=self.cfg.lora_train_bias, classifier=self.cfg.classifier
+        )
 
     @property
     def non_trainable_weights(self):
-        return lora_non_trainable_weights(self, train_bias=self.cfg.lora_train_bias)
+        return lora_non_trainable_weights(
+            self, train_bias=self.cfg.lora_train_bias, classifier=self.cfg.classifier
+        )
