@@ -1,11 +1,14 @@
 import tensorflow as tf
 
-# List of patterns to match LoRA weights, so they can be excluded from weight transfers
-# between a model and its LoRA version.
 LORA_WEIGHT_NAMES = ["kernel_lora_a", "kernel_lora_b"]
+"""
+List of patterns to match LoRA weights, so they can be excluded from weight transfers
+between a model and its LoRA version.
+"""
 
 
 class LoRADense(tf.keras.layers.Dense):
+    """LoRA version of the ``Dense`` layer."""
     is_lora_layer: bool = True
 
     def __init__(
