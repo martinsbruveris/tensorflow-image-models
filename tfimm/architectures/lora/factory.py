@@ -189,11 +189,11 @@ def lora_trainable_weights(
             trainable_weights.extend(
                 layer.lora_trainable_weights(train_bias in {"all", "lora_only"})
             )
-        elif train_bias in {"all"}:
-            trainable_weights.extend(_bias_variables(layer))
         elif layer.name == classifier:
             # final classification layer
             trainable_weights.extend([layer.kernel, layer.bias])
+        elif train_bias in {"all"}:
+            trainable_weights.extend(_bias_variables(layer))
 
     return trainable_weights
 
