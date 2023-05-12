@@ -1,4 +1,5 @@
-from typing import List
+from dataclasses import dataclass
+from typing import List, Optional
 
 import numpy as np
 import pytest
@@ -148,3 +149,42 @@ def test_lora_trainable_weights_trainable_layers():
     trainable_weight_names = set(w.name for w in trainable_weights)
     res = {"convnext_test_model/head/fc/kernel:0", "convnext_test_model/head/fc/bias:0"}
     assert trainable_weight_names == res
+
+
+def test_model_self_lora_version():
+    # We want to enable a model to be already LoRA-aware, so we can use the same class
+    # as both the regular and LoRA variants.
+    @dataclass
+    class Config:
+        units: int
+        lora_rank: Optional[int] = None
+
+    class MyModel(tf.keras.Model):
+        cfg_class = Config
+
+        def __init__(self, cfg: Config, **kwargs):
+            super().__init__(**kwargs)
+            self.cfg = cfg
+
+            if cfg.lora_rank is None:
+                self.fc = tf.keras.layers.Dense(units=cfg.units, name="fc")
+            else:
+                self.fc = lora.LoRADense(
+                    units=cfg.units, lora_rank=cfg.lora_rank, name="fc"
+                )
+
+        @property
+        def dummy_inputs(self):
+            return tf.zeros((1, 3))
+
+        def call(self, x):
+            return self.fc(x)
+
+    lora.register_lora_architecture(MyModel, base_cls=MyModel)
+
+    base_model = MyModel(cfg=Config(units=3))
+    base_model(base_model.dummy_inputs)
+    lora_model = lora.convert_to_lora_model(base_model, lora_rank=2)
+    assert lora_model.cfg == Config(units=3, lora_rank=2)
+    merged_model = lora.convert_to_regular_model(lora_model)
+    assert merged_model.cfg == Config(units=3, lora_rank=None)
