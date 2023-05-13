@@ -186,6 +186,7 @@ Factory
 Layers
 ~~~~~~
 
+.. autoclass:: LoRAConv2D
 .. autoclass:: LoRADense
 .. autofunction:: convert_to_lora_layer
 

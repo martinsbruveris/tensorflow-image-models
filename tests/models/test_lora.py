@@ -34,6 +34,32 @@ def test_lora_dense(input_shape):
     tf.debugging.assert_near(res_1, res_2)
 
 
+@pytest.mark.parametrize("use_bias", [True, False])
+def test_lora_conv2d(use_bias):
+    """Creating the layer and running inference in merged and non-merged modes."""
+    layer = lora.LoRAConv2D(
+        filters=5, kernel_size=(2, 3), use_bias=use_bias, activation="swish"
+    )
+    layer.build(input_shape=(1, 10, 10, 4))
+    assert not layer.merged
+
+    # Set non-trivial weights, since bias and kernel_b are zero-initialised.
+    if use_bias:
+        layer.bias = tf.random.uniform(layer.bias.shape)
+    layer.kernel_lora_a = tf.random.uniform(layer.kernel_lora_a.shape)
+    layer.kernel_lora_b = tf.random.uniform(layer.kernel_lora_b.shape)
+
+    x = tf.random.uniform((1, 10, 10, 4))
+    res_1 = layer(x)
+
+    assert not layer.merged
+    layer.merge_weights()
+    assert layer.merged
+    res_2 = layer(x)
+
+    tf.debugging.assert_near(res_1, res_2)
+
+
 def test_lora_registry():
     # Register class using subclassing
     class A:
