@@ -44,3 +44,9 @@ Contents
    :caption: Training
 
    content/trainer
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Applications
+
+   content/lora

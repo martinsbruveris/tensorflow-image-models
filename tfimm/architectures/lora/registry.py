@@ -33,8 +33,20 @@ def register_lora_architecture(lora_cls=None, *, base_cls=None):
         class LoRAResNet(tf.keras.Model):
             ...
 
+    A model class can be its own LoRA variant, if the model can be created with regular
+    or LoRA layers depending on the config. In that case this function needs to be
+    invoked after the model has been defined.
+
+    .. code-block:: python
+
+        class FlexibleModel(tf.keras.Model):
+            ...
+
+        register_lora_architecture(FlexibleModel, base_cls=FlexibleModel)
+
     Args:
-        lora_cls: LoRA model class. We assume that it has a `cfg_class` class attribute.
+        lora_cls: LoRA model class. We assume that it has a ``cfg_class`` class
+            attribute.
         base_cls: Regular model class. If not provided we use the base class of
             ``lora_cls``.
     """
@@ -65,6 +77,7 @@ def register_lora_architecture(lora_cls=None, *, base_cls=None):
 
 
 def lora_architecture(model_cls):
+    """Returns the LoRA model class registered for a given base model class."""
     if model_cls not in _lora_model_class:
         raise ValueError(
             f"No LoRA variant has been registered for architecture {model_cls}."
@@ -73,6 +86,7 @@ def lora_architecture(model_cls):
 
 
 def lora_base_architecture(lora_cls):
+    """Returns the base class corresponding to the given registered LoRA model class."""
     if lora_cls not in _lora_model_base_class:
         raise ValueError(
             f"The class {lora_cls} is not registered as the LoRA variant of any "
@@ -82,6 +96,10 @@ def lora_base_architecture(lora_cls):
 
 
 def lora_config(model_cls):
+    """
+    Returns the config class for the LoRA model associated with the given base model
+    class.
+    """
     if model_cls not in _lora_model_class:
         raise ValueError(
             f"No LoRA variant has been registered for architecture {model_cls}."
