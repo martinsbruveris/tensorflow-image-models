@@ -26,6 +26,8 @@ class LoRADense(tf.keras.layers.Dense):
         bias_constraint=None,
         lora_rank: int = 4,
         lora_alpha: float = 1,
+        lora_initializer="glorot_uniform",
+        lora_regularizer=None,
         **kwargs,
     ):
         super().__init__(
@@ -43,6 +45,8 @@ class LoRADense(tf.keras.layers.Dense):
         )
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
+        self.lora_initializer = lora_initializer
+        self.lora_regularizer = lora_regularizer
         self.scaling = lora_alpha / lora_rank
 
         self.kernel_lora_a = None
@@ -57,11 +61,8 @@ class LoRADense(tf.keras.layers.Dense):
         self.kernel_lora_a = self.add_weight(
             "kernel_lora_a",
             shape=[last_dim, self.lora_rank],
-            # For now, we are reusing the class default parameter. We could make this
-            # customisable. Note that we cannot simply use self.kernel_initializer here,
-            # because initializers should only be used once.
-            initializer="glorot_uniform",
-            regularizer=self.kernel_regularizer,
+            initializer=self.lora_initializer,
+            regularizer=self.lora_regularizer,
             # We don't support constraints on the low-rank updates at the moment.
             constraint=None,
             dtype=self.dtype,
@@ -71,7 +72,7 @@ class LoRADense(tf.keras.layers.Dense):
             "kernel_lora_b",
             shape=[self.lora_rank, self.units],
             initializer=tf.keras.initializers.Zeros(),
-            regularizer=self.kernel_regularizer,
+            regularizer=self.lora_regularizer,
             constraint=None,
             dtype=self.dtype,
             trainable=True,
@@ -139,6 +140,8 @@ class LoRADense(tf.keras.layers.Dense):
 
 
 class LoRAConv2D(tf.keras.layers.Conv2D):
+    """LoRA version of the ``Conv2D`` layer."""
+
     is_lora_layer: bool = True
 
     def __init__(
@@ -161,6 +164,8 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
         bias_constraint=None,
         lora_rank: int = 4,
         lora_alpha: float = 1,
+        lora_initializer="glorot_uniform",
+        lora_regularizer=None,
         **kwargs,
     ):
         super().__init__(
@@ -184,6 +189,8 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
         )
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
+        self.lora_initializer = tf.keras.initializers.get(lora_initializer)
+        self.lora_regularizer = tf.keras.regularizers.get(lora_regularizer)
         self.scaling = lora_alpha / lora_rank
 
         self.kernel_lora_a = None
@@ -198,11 +205,8 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
         self.kernel_lora_a = self.add_weight(
             "kernel_lora_a",
             shape=(kernel_height, kernel_width, in_channels, self.lora_rank),
-            # For now, we are reusing the class default parameter. We could make this
-            # customisable. Note that we cannot simply use self.kernel_initializer here,
-            # because initializers should only be used once.
-            initializer="glorot_uniform",
-            regularizer=self.kernel_regularizer,
+            initializer=self.lora_initializer,
+            regularizer=self.lora_regularizer,
             # We don't support constraints on the low-rank updates at the moment.
             constraint=None,
             dtype=self.dtype,
@@ -212,7 +216,7 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
             "kernel_lora_b",
             shape=(kernel_height, kernel_width, self.lora_rank, out_channels),
             initializer=tf.keras.initializers.Zeros(),
-            regularizer=self.kernel_regularizer,
+            regularizer=self.lora_regularizer,
             constraint=None,
             dtype=self.dtype,
             trainable=True,
