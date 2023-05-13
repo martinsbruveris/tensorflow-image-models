@@ -21,16 +21,16 @@ def create_model(
     **kwargs,
 ) -> tf.keras.Model:
     """
-    Creates a LoRA model.
+    Creates a LoRA model from a ``tfimm`` model name.
 
     Args:
         model_name: Name of model to instantiate.
         pretrained: If ``True``, load pretrained weights as specified by the ``url``
             field in config. If ``url`` is ``[timm]``, the weights will be downloaded
             from ``timm`` and converted to TensorFlow. See
-            :py:func:`tfimm.models.create_model` for details.
+            :py:func:`tfimm.create_model` for details.
         model_path: Path of model weights to load after model is initialized. This takes
-            over ``pretrained``.
+            precedence over ``pretrained``.
         **kwargs: LoRA parameters, such as ``lora_rank`` and ``lora_alpha`` need to be
             passed as kwargs and will be added to the model config.
 
@@ -106,7 +106,8 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     Converts a LoRA model to a regular model.
 
     Args:
-        model: LoRA model to be converted.
+        model: LoRA model to be converted. Has be be a class that has been registered
+            as a LoRA architecture.
 
     Returns:
         The converted model.
@@ -156,7 +157,8 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
 
 def merge_lora_weights(model: tf.keras.Model):
     """
-    Recursively merge weights in all LoRA layers in the given model.
+    Recursively merge weights in all LoRA layers in the given model. The model is
+    modified in place.
 
     Args:
         model: Model for merging weights.
@@ -172,14 +174,14 @@ def lora_trainable_weights(
     trainable_layers: Optional[List[str]] = None,
 ) -> List[tf.Variable]:
     """
-    Returns a list of variables to be used instead of model.trainable_weights when
+    Returns a list of variables to be used instead of ``model.trainable_weights`` when
     doing LoRA training.
 
     Args:
         model: A keras model.
-        train_bias: If "none" or "all", no or all bias weights are trainable
-            respectively. If "lora_only", only the bias weights of LoRA layers are set
-            to trainable.
+        train_bias: If ``"none"`` or ``"all"``, no or all bias weights are trainable
+            respectively. If ``"lora_only"``, only the bias weights of LoRA layers are
+            set to trainable.
         trainable_layers: A list of layer names that should be kept trainable.
 
     Returns:
@@ -223,9 +225,9 @@ def lora_non_trainable_weights(
 
     Args:
         model: A keras model.
-        train_bias: If "none" or "all", no or all bias weights are trainable
-            respectively. If "lora_only", only the bias weights of LoRA layers are set
-            to trainable.
+        train_bias: If ``"none"`` or ``"all"``, no or all bias weights are trainable
+            respectively. If ``"lora_only"``, only the bias weights of LoRA layers are
+            set to trainable.
         trainable_layers: A list of layer names that should be kept trainable.
 
     Returns:
