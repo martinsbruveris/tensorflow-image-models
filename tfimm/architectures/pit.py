@@ -244,7 +244,7 @@ class PoolingVisionTransformer(tf.keras.Model):
                     in_channels=cfg.embed_dim[j],
                     out_channels=cfg.embed_dim[j + 1],
                     stride=2,
-                    name=f"transformers/{j}/pool",
+                    name=f"transformers/{j + 1}/pool",
                 )
 
         self.norm = norm_layer(name="norm")
