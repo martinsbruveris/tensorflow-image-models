@@ -8,8 +8,8 @@ from functools import partial
 
 import torch
 import torch.nn as nn
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from timm.models.registry import register_model
+from timm.layers import DropPath, to_2tuple, trunc_normal_
+from timm.models import register_model
 from timm.models.vision_transformer import _cfg
 
 __all__ = ["PyramidVisionTransformerV2"]
@@ -443,6 +443,7 @@ def _conv_filter(state_dict, patch_size=16):
 @register_model
 def pvt_v2_b0(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[32, 64, 160, 256],
@@ -462,6 +463,7 @@ def pvt_v2_b0(pretrained=False, **kwargs):
 @register_model
 def pvt_v2_b1(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -481,6 +483,7 @@ def pvt_v2_b1(pretrained=False, **kwargs):
 @register_model
 def pvt_v2_b2(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -500,6 +503,7 @@ def pvt_v2_b2(pretrained=False, **kwargs):
 @register_model
 def pvt_v2_b3(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -519,6 +523,7 @@ def pvt_v2_b3(pretrained=False, **kwargs):
 @register_model
 def pvt_v2_b4(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -538,6 +543,7 @@ def pvt_v2_b4(pretrained=False, **kwargs):
 @register_model
 def pvt_v2_b5(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -557,6 +563,7 @@ def pvt_v2_b5(pretrained=False, **kwargs):
 @register_model
 def pvt_v2_b2_li(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformerV2(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],

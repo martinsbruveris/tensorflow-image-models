@@ -8,8 +8,8 @@ from functools import partial
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from timm.models.registry import register_model
+from timm.layers import DropPath, to_2tuple, trunc_normal_
+from timm.models import register_model
 from timm.models.vision_transformer import _cfg
 
 __all__ = ["PyramidVisionTransformer"]
@@ -355,6 +355,7 @@ def _conv_filter(state_dict, patch_size=16):
 @register_model
 def pvt_tiny(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -374,6 +375,7 @@ def pvt_tiny(pretrained=False, **kwargs):
 @register_model
 def pvt_small(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -393,6 +395,7 @@ def pvt_small(pretrained=False, **kwargs):
 @register_model
 def pvt_medium(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -412,6 +415,7 @@ def pvt_medium(pretrained=False, **kwargs):
 @register_model
 def pvt_large(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[64, 128, 320, 512],
@@ -431,6 +435,7 @@ def pvt_large(pretrained=False, **kwargs):
 @register_model
 def pvt_huge_v2(pretrained=False, **kwargs):
     kwargs.pop("pretrained_cfg", None)
+    kwargs.pop("pretrained_cfg_overlay", None)
     model = PyramidVisionTransformer(
         patch_size=4,
         embed_dims=[128, 256, 512, 768],
