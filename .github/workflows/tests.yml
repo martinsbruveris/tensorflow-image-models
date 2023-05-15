@@ -46,7 +46,10 @@ jobs:
         poetry config virtualenvs.path ~/.virtualenvs
 
     - name: Install Dependencies
-      run: poetry install -E timm
+      run: |
+        poetry install
+        poetry run pip install torch==1.13.1 torchvision==0.14.1 --index-url https://download.pytorch.org/whl/cpu
+        poetry run pip install timm
       if: steps.cache.outputs.cache-hit != 'true'
 
     - name: Run tests

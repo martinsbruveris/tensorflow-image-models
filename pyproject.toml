@@ -34,8 +34,9 @@ markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
 tensorflow = "^2.8"
 
-pyyaml = { version = "*", optional = true }
-timm = { version = "*", optional = true, python = "<3.10" }
+# pyyaml = { version = "*", optional = true }
+#timm = { version = "*" }
+#torch = { version = "1.13.1" }
 
 # Documentation
 sphinx = { version = "*", optional = true }
@@ -52,8 +53,8 @@ pytest-xdist = "*"
 [tool.poetry.extras]
 # To compile documentation
 docs = ["sphinx", "sphinx-rtd-theme"]
-# To load pretrained models from timm; will install PyTorch
-timm = ["pyyaml", "timm"]
+## To load pretrained models from timm; will install PyTorch
+#timm = ["pyyaml", "timm"]
 
 [tool.pytest.ini_options]
 timeout = 60  # We need tests to be not too slow, because of GitHub limits
