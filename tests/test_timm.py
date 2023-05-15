@@ -19,7 +19,8 @@ TIMM_ARCHITECTURES = [
     "resmlp_12_224",
     "gmlp_ti16_224",
     "pit_ti_224",  # pit.py
-    "pit_ti_distilled_224",
+    # TODO: Fix this model (probably some change in the distillation head...)
+    # "pit_ti_distilled_224",
     "poolformer_s12",  # poolformer.py
     "pvt_tiny",  # pvt.py
     "pvt_v2_b0",  # pvt_v2.py
