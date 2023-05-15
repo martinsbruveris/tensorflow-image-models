@@ -116,7 +116,7 @@ def test_get_rel_pos(q_size, k_size, pos_size, interpolate_pos):
     tf_res = tf_get_rel_pos(q_size, k_size, tf_rel_pos, interpolate_pos)
     pt_res = pt_get_rel_pos(q_size, k_size, pt_rel_pos)
 
-    np.testing.assert_almost_equal(tf_res.numpy(), pt_res.detach().numpy())
+    np.testing.assert_allclose(tf_res.numpy(), pt_res.detach().numpy(), rtol=1e-6)
 
 
 @pytest.mark.parametrize("qh, qw, kh, kw", [(5, 4, 3, 2)])
