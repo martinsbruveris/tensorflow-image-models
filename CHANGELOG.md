@@ -1,5 +1,9 @@
 # Change Log
 
+## v0.2.14 - 2023-05-15
+
+- Added support for LoRA training.
+
 ## v0.2.13 - 2023-05-03
 
 - Adding VGG models.
