@@ -37,7 +37,7 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow as tf
 
-from tfimm.layers import ConvMLP, DropPath, PatchEmbeddings, norm_layer_factory
+from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -158,11 +158,12 @@ class PoolFormerBlock(tf.keras.layers.Layer):
             pool_size=3, strides=1, padding="same"
         )
         self.norm2 = norm_layer(name="norm2")
-        self.mlp = ConvMLP(
+        self.mlp = MLP(
             hidden_dim=int(embed_dim * mlp_ratio),
             embed_dim=embed_dim,
             drop_rate=drop_rate,
             act_layer=act_layer,
+            use_conv=True,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="mlp",

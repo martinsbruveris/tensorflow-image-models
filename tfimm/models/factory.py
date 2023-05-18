@@ -1,12 +1,19 @@
 import logging
 import re
+import warnings
 from copy import deepcopy
 from typing import Callable, List, Optional
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
-from tfimm.models.registry import is_model, model_class, model_config
+from tfimm.models.registry import (
+    is_deprecated,
+    is_model,
+    model_class,
+    model_config,
+    resolve_model_name,
+)
 from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
 
 
@@ -46,7 +53,14 @@ def create_model(
     """
     if not is_model(model_name):
         raise RuntimeError(f"Unknown model {model_name}.")
+    if is_deprecated(model_name):
+        new_name = resolve_model_name(model_name)
+        warnings.warn(
+            f"Model name {model_name} is deprecated in favour of {new_name}",
+            DeprecationWarning,
+        )
 
+    model_name = resolve_model_name(model_name)
     cls = model_class(model_name)
     cfg = model_config(model_name)
 
