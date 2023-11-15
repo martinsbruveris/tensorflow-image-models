@@ -247,6 +247,18 @@ def load_timm_weights(model: tf.keras.Model, model_name: str):
     load_pytorch_weights_in_tf2_model(model, pt_state_dict)
 
 
+def load_hf_hub_weights(model: tf.keras.Model, url: str):
+    """Loads weights from hugging face."""
+    try:
+        from timm.models._hub import load_state_dict_from_hf
+    except ImportError:
+        logging.error("To load weights from hf hub, timm needs to be installed.")
+        raise
+
+    pt_state_dict = load_state_dict_from_hf(model_id=url, filename="pytorch_model.bin")
+    load_pytorch_weights_in_tf2_model(model, pt_state_dict)
+
+
 def load_pth_url_weights(model: tf.keras.Model, url: str):
     """Loads weights from a PyTorch .pth file specified by URL."""
     try:
