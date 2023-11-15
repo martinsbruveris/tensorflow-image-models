@@ -32,7 +32,7 @@ include = [
 python = ">=3.8,<3.11"
 markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
-tensorflow = "^2.8"
+tensorflow = "^2.13"
 
 # Documentation
 sphinx = { version = "*", optional = true }
