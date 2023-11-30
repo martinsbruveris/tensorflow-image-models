@@ -75,8 +75,8 @@ def create_model(
             loaded_model(loaded_model.dummy_inputs)
             load_pth_url_weights(loaded_model, url)
 
-        elif cfg.url.startswith("[hf-pytorch]"):
-            url = cfg.url[len("[hf-pytorch]") :]
+        elif cfg.url.startswith("[hf]"):
+            url = cfg.url[len("[hf]") :]
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
             load_hf_hub_weights(loaded_model, url)

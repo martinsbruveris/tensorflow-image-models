@@ -247,6 +247,12 @@ def load_timm_weights(model: tf.keras.Model, model_name: str):
     load_pytorch_weights_in_tf2_model(model, pt_state_dict)
 
 
+def split_url_filename(url: str):
+    """Split provided url into url and file_name."""
+    parts = url.split("/")
+    return ("/").join(parts[:-1]), parts[-1]
+
+
 def load_hf_hub_weights(model: tf.keras.Model, url: str):
     """Loads weights from hugging face."""
     try:
@@ -255,7 +261,10 @@ def load_hf_hub_weights(model: tf.keras.Model, url: str):
         logging.error("To load weights from hf hub, timm needs to be installed.")
         raise
 
-    pt_state_dict = load_state_dict_from_hf(model_id=url, filename="pytorch_model.bin")
+    url, file_name = split_url_filename(url)
+    print(f"url: {url}")
+    print(f"file_name: {file_name}")
+    pt_state_dict = load_state_dict_from_hf(model_id=url, filename=file_name)
     load_pytorch_weights_in_tf2_model(model, pt_state_dict)
 
 
