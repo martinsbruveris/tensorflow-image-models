@@ -1,5 +1,9 @@
 # Change Log
 
+## Unpublished
+
+- Added support for loading pytorch models from HF hub via URL prefix `[hf-pytorch]`.
+
 ## v0.2.14 - 2023-05-15
 
 - Added support for LoRA training.

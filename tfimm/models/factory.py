@@ -7,7 +7,12 @@ import tensorflow as tf
 from tensorflow.python.keras import backend as K
 
 from tfimm.models.registry import is_model, model_class, model_config
-from tfimm.utils import cached_model_path, load_pth_url_weights, load_timm_weights
+from tfimm.utils import (
+    cached_model_path,
+    load_hf_pytorch_hub_weights,
+    load_pth_url_weights,
+    load_timm_weights,
+)
 
 
 def create_model(
@@ -69,6 +74,12 @@ def create_model(
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
             load_pth_url_weights(loaded_model, url)
+
+        elif cfg.url.startswith("[hf-pytorch]"):
+            url = cfg.url[len("[hf-pytorch]") :]
+            loaded_model = cls(cfg)
+            loaded_model(loaded_model.dummy_inputs)
+            load_hf_pytorch_hub_weights(loaded_model, url)
         else:
             raise NotImplementedError(
                 "Model not found in cache. Download of weights only implemented for "

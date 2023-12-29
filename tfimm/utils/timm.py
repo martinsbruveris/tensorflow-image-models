@@ -247,6 +247,29 @@ def load_timm_weights(model: tf.keras.Model, model_name: str):
     load_pytorch_weights_in_tf2_model(model, pt_state_dict)
 
 
+def split_url_filename(url: str):
+    """Split provided url into url and file_name."""
+    parts = url.split("/", 3)
+    repo = "/".join(parts[:2])  # HF hub URLs are of the form user/repo/filename
+    filename = "/".join(parts[2:])
+    return repo, filename
+
+
+def load_hf_pytorch_hub_weights(model: tf.keras.Model, url: str):
+    """Loads pytorch weights from HF hub."""
+    try:
+        from timm.models._hub import HF_WEIGHTS_NAME, load_state_dict_from_hf
+    except ImportError:
+        logging.error("To load weights from HF hub, timm needs to be installed.")
+        raise
+
+    repo, filename = split_url_filename(url)
+    # Only pass filename, if user provides it; otherwise use timm default
+    kwargs = {"filename": filename} if filename else {}
+    pt_state_dict = load_state_dict_from_hf(model_id=repo, **kwargs)
+    load_pytorch_weights_in_tf2_model(model, pt_state_dict)
+
+
 def load_pth_url_weights(model: tf.keras.Model, url: str):
     """Loads weights from a PyTorch .pth file specified by URL."""
     try:
