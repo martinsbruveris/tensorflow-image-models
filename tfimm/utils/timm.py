@@ -249,22 +249,24 @@ def load_timm_weights(model: tf.keras.Model, model_name: str):
 
 def split_url_filename(url: str):
     """Split provided url into url and file_name."""
-    parts = url.split("/")
-    return ("/").join(parts[:-1]), parts[-1]
+    parts = url.split("/", 3)
+    repo = "/".join(parts[:2])  # HF hub URLs are of the form user/repo/filename
+    filename = "/".join(parts[2:])
+    return repo, filename
 
 
-def load_hf_hub_weights(model: tf.keras.Model, url: str):
-    """Loads weights from hugging face."""
+def load_hf_pytorch_hub_weights(model: tf.keras.Model, url: str):
+    """Loads pytorch weights from HF hub."""
     try:
-        from timm.models._hub import load_state_dict_from_hf
+        from timm.models._hub import HF_WEIGHTS_NAME, load_state_dict_from_hf
     except ImportError:
-        logging.error("To load weights from hf hub, timm needs to be installed.")
+        logging.error("To load weights from HF hub, timm needs to be installed.")
         raise
 
-    url, file_name = split_url_filename(url)
-    print(f"url: {url}")
-    print(f"file_name: {file_name}")
-    pt_state_dict = load_state_dict_from_hf(model_id=url, filename=file_name)
+    repo, filename = split_url_filename(url)
+    # Only pass filename, if user provides it; otherwise use timm default
+    kwargs = {"filename": filename} if filename else {}
+    pt_state_dict = load_state_dict_from_hf(model_id=repo, **kwargs)
     load_pytorch_weights_in_tf2_model(model, pt_state_dict)
 
 

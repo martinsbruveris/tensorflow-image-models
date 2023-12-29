@@ -201,10 +201,12 @@ The following architectures are currently available:
   [\[github\]](https://github.com/facebookresearch/segment-anything)
     - Segment Anything [\[arXiv:2304.02643\]](https://arxiv.org/abs/2304.02643)
 
-### Using pre-trained models from the huggingface hub
-It is possible to load pre-trained model weights from the huggingface hub.
-See the [huggingface-model-weights](notebooks/huggingface-model-weights.ipynb) notebook for details.
-For this to work, it is important that the weight names and shapes on huggingface are compatible with once of the tfimm model configurations.
+### Loading pytorch models from HF hub
+
+It is possible to load pre-trained model weights from the HF hub. See the 
+[huggingface-model-weights](notebooks/huggingface-model-weights.ipynb) notebook for 
+details. For this to work, it is important that the weight names and shapes on 
+HF hub are compatible with one of the `tfimm` model configurations.
 
 ## Profiling
 

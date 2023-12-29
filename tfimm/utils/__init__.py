@@ -9,7 +9,7 @@ from .cache import (  # noqa: F401
 from .constants import *  # noqa: F401
 from .etc import make_divisible, to_2tuple  # noqa: F401
 from .timm import (  # noqa: F401
-    load_hf_hub_weights,
+    load_hf_pytorch_hub_weights,
     load_pth_url_weights,
     load_timm_weights,
 )
