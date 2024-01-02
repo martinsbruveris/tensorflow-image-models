@@ -211,6 +211,7 @@ def transfer_weights(
 
     src_weights = {_get_weight_name(w.name): w.numpy() for w in src_model.weights}
     weight_value_tuples = []
+    weights_not_found = []
     for dst_weight in dst_model.weights:
         # We store human-friendly names in the model config.
         layer_name = _get_layer_name(dst_weight.name)
@@ -243,11 +244,20 @@ def transfer_weights(
             weight_value_tuples.append((dst_weight, src_weight))
 
         else:
-            # All other weights are simply copied over
-            weight_value_tuples.append((dst_weight, src_weights[w_name]))
+            # All other weights are simply copied, if they exist in destination model
+            if w_name in src_weights:
+                weight_value_tuples.append((dst_weight, src_weights[w_name]))
+            else:
+                weights_not_found.append(dst_weight.name)
 
     # This modifies weights in place
     K.batch_set_value(weight_value_tuples)
+    # Warn user if weights were not found
+    if weights_not_found:
+        logging.warning(
+            "Not all weights of the destination model were found in the source model. "
+            + f"The following weights were not transferred: {weights_not_found}."
+        )
 
 
 def _get_layer_name(name):

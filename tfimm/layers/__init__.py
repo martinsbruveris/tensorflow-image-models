@@ -5,6 +5,10 @@ from .conv import PadConv2D, PadDepthwiseConv2D, StdConv2D  # noqa: F401
 from .drop import DropPath  # noqa: F401
 from .factory import act_layer_factory, norm_layer_factory  # noqa: F401
 from .initializers import FanoutInitializer  # noqa: F401
+from .spectral_normalization import (  # noqa:F401
+    SpectralNormalizationConv2D,
+    SpectralNormalizationDepthwiseConv2D,
+)
 from .transformers import (  # noqa:F401
     MLP,
     ConvMLP,

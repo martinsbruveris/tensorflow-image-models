@@ -55,7 +55,14 @@ from typing import List, Tuple
 import numpy as np
 import tensorflow as tf
 
-from tfimm.layers import MLP, ConvMLP, DropPath, norm_layer_factory
+from tfimm.layers import (
+    MLP,
+    ConvMLP,
+    DropPath,
+    SpectralNormalizationConv2D,
+    SpectralNormalizationDepthwiseConv2D,
+    norm_layer_factory,
+)
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 
@@ -95,6 +102,14 @@ class ConvNeXtConfig(ModelConfig):
             values.
         init_scale: Inital value for layer scale weights.
 
+        use_spec_norm: If set to `True`, then apply spectral normalization during
+            training.
+        spec_norm_nb_iterations: The number of power iteration to perform to estimate
+            weight matrix's singular value during spectral normalization.
+        spec_norm_bound: Multiplicative constant to threshold the spectral
+            normalization. Usually under normalization, the singular value will
+            converge to this value.
+
         crop_pct: Crop percentage for ImageNet evaluation.
         interpolation: Interpolation method for ImageNet evaluation.
         mean: Defines preprocessing function. If ``x`` is an image with pixel values
@@ -123,6 +138,10 @@ class ConvNeXtConfig(ModelConfig):
     norm_layer: str = "layer_norm_eps_1e-6"
     act_layer: str = "gelu"
     init_scale: float = 1e-6
+    # Spectral normalization
+    use_spec_norm: bool = False
+    spec_norm_nb_iterations: int = 1
+    spec_norm_bound: float = 0.95
     # Parameters for inference
     crop_pct: float = 0.875
     interpolation: str = "bicubic"
@@ -172,6 +191,9 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         norm_layer: str,
         act_layer: str,
         init_scale: float,
+        use_spec_norm: bool,
+        spec_norm_nb_iterations: int,
+        spec_norm_bound: float,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -183,13 +205,20 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         self.norm_layer = norm_layer
         self.act_layer = act_layer
         self.init_scale = init_scale
+        self.use_spec_norm = use_spec_norm
+        self.spec_norm_nb_iterations = spec_norm_nb_iterations
+        self.spec_norm_bound = spec_norm_bound
 
         mlp_layer = ConvMLP if conv_mlp_block else MLP
         norm_layer = norm_layer_factory(norm_layer)
         kernel_initializer, bias_initializer = _weight_initializers()
 
         self.pad = tf.keras.layers.ZeroPadding2D(padding=3)
-        self.conv_dw = tf.keras.layers.DepthwiseConv2D(
+        self.conv_dw = create_conv2d(
+            depthwise=True,
+            use_spec_norm=self.use_spec_norm,
+            spec_norm_nb_iterations=self.spec_norm_nb_iterations,
+            spec_norm_bound=self.spec_norm_bound,
             kernel_size=7,
             depthwise_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
@@ -246,6 +275,9 @@ class ConvNeXtStage(tf.keras.layers.Layer):
         norm_layer: str,
         act_layer: str,
         init_scale: float,
+        use_spec_norm: bool,
+        spec_norm_nb_iterations: int,
+        spec_norm_bound: float,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -278,6 +310,9 @@ class ConvNeXtStage(tf.keras.layers.Layer):
                 norm_layer=self.norm_layer,
                 act_layer=act_layer,
                 init_scale=init_scale,
+                use_spec_norm=use_spec_norm,
+                spec_norm_nb_iterations=spec_norm_nb_iterations,
+                spec_norm_bound=spec_norm_bound,
                 name=f"blocks/{idx}",
             )
             for idx in range(nb_blocks)
@@ -345,6 +380,9 @@ class ConvNeXt(tf.keras.Model):
                     norm_layer=cfg.norm_layer,
                     act_layer=cfg.act_layer,
                     init_scale=cfg.init_scale,
+                    use_spec_norm=cfg.use_spec_norm,
+                    spec_norm_nb_iterations=cfg.spec_norm_nb_iterations,
+                    spec_norm_bound=cfg.spec_norm_bound,
                     name=f"stages/{j}",
                 )
             )
@@ -438,6 +476,35 @@ class ConvNeXt(tf.keras.Model):
         x = self.fc(x)
         features["logits"] = x
         return (x, features) if return_features else x
+
+
+def create_conv2d(
+    *,
+    depthwise: bool = False,
+    use_spec_norm: bool,
+    spec_norm_nb_iterations: int,
+    spec_norm_bound: float,
+    **kwargs,
+):
+    if not depthwise:
+        conv = tf.keras.layers.Conv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    else:  # Depthwise convolution
+        conv = tf.keras.layers.DepthwiseConv2D(**kwargs)
+        if use_spec_norm:
+            conv = SpectralNormalizationDepthwiseConv2D(
+                conv,
+                iteration=spec_norm_nb_iterations,
+                norm_multiplier=spec_norm_bound,
+                inhere_layer_name=True,
+            )
+    return conv
 
 
 @register_model
