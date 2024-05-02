@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 import tensorflow as tf
+import tf_keras
 
 from tfimm import create_model
 from tfimm.utils.cache import get_dir, list_cached_models, set_dir, set_model_cache
@@ -41,6 +42,6 @@ def test_model_cache(cache_type):
     model_dir.cleanup()
 
 
-def check_models_equal(model_a: tf.keras.Model, model_b: tf.keras.Model):
+def check_models_equal(model_a: tf_keras.Model, model_b: tf_keras.Model):
     for var_a, var_b in zip(model_a.variables, model_b.variables):
         tf.debugging.assert_equal(var_a, var_b)

@@ -4,12 +4,13 @@ Attention layers used in CNNs
 import math
 
 import tensorflow as tf
+import tf_keras
 
 from ..utils import make_divisible
 from .factory import act_layer_factory, norm_layer_factory
 
 
-class SEModule(tf.keras.layers.Layer):
+class SEModule(tf_keras.layers.Layer):
     """
     SE Module as defined in original SE-Nets with a few additions
 
@@ -51,13 +52,13 @@ class SEModule(tf.keras.layers.Layer):
         rd_channels = self.rd_channels or make_divisible(
             channels * self.rd_ratio, self.rd_divisor, round_limit=0.0
         )
-        self.fc1 = tf.keras.layers.Conv2D(
+        self.fc1 = tf_keras.layers.Conv2D(
             filters=rd_channels,
             kernel_size=1,
             use_bias=True,
             name="fc1",
         )
-        self.fc2 = tf.keras.layers.Conv2D(
+        self.fc2 = tf_keras.layers.Conv2D(
             filters=channels,
             kernel_size=1,
             use_bias=True,
@@ -75,7 +76,7 @@ class SEModule(tf.keras.layers.Layer):
         return x
 
 
-class EcaModule(tf.keras.layers.Layer):
+class EcaModule(tf_keras.layers.Layer):
     """Constructs an ECA module.
 
     Paper: ECA-Net: Efficient Channel Attention for Deep Convolutional Neural Networks
@@ -109,8 +110,8 @@ class EcaModule(tf.keras.layers.Layer):
         kernel_size = max(t if t % 2 else t + 1, 3)
         padding = (kernel_size - 1) // 2
 
-        self.pad = tf.keras.layers.ZeroPadding1D(padding=padding)
-        self.conv = tf.keras.layers.Conv1D(
+        self.pad = tf_keras.layers.ZeroPadding1D(padding=padding)
+        self.conv = tf_keras.layers.Conv1D(
             filters=1,
             kernel_size=kernel_size,
             use_bias=False,
@@ -133,7 +134,7 @@ class EcaModule(tf.keras.layers.Layer):
 def attn_layer_factory(attn_layer: str):
     """Returns a function that creates the required attention layer."""
     if attn_layer == "":
-        return lambda **kwargs: tf.keras.layers.Activation("linear")
+        return lambda **kwargs: tf_keras.layers.Activation("linear")
     # Lightweight attention modules (channel and/or coarse spatial).
     # Typically, added to existing network architecture blocks in addition to existing
     # convolutions.

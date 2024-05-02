@@ -1,7 +1,7 @@
 import tempfile
 
 import numpy as np
-import tensorflow as tf
+import tf_keras
 
 from tfimm.models import EmbeddingModel
 from tfimm.models.factory import create_model
@@ -17,7 +17,7 @@ def test_save_load_model():
 
     with tempfile.TemporaryDirectory() as tmpdir:
         model.save(tmpdir)
-        loaded_model = tf.keras.models.load_model(tmpdir)
+        loaded_model = tf_keras.models.load_model(tmpdir)
 
     assert type(model) is type(loaded_model)
 

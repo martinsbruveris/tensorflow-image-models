@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tf_keras
 
 LORA_WEIGHT_NAMES = ["kernel_lora_a", "kernel_lora_b"]
 """
@@ -7,7 +8,7 @@ between a model and its LoRA version.
 """
 
 
-class LoRADense(tf.keras.layers.Dense):
+class LoRADense(tf_keras.layers.Dense):
     """LoRA version of the ``Dense`` layer."""
 
     is_lora_layer: bool = True
@@ -71,7 +72,7 @@ class LoRADense(tf.keras.layers.Dense):
         self.kernel_lora_b = self.add_weight(
             "kernel_lora_b",
             shape=[self.lora_rank, self.units],
-            initializer=tf.keras.initializers.Zeros(),
+            initializer=tf_keras.initializers.Zeros(),
             regularizer=self.lora_regularizer,
             constraint=None,
             dtype=self.dtype,
@@ -139,7 +140,7 @@ class LoRADense(tf.keras.layers.Dense):
         return trainable_variables
 
 
-class LoRAConv2D(tf.keras.layers.Conv2D):
+class LoRAConv2D(tf_keras.layers.Conv2D):
     """LoRA version of the ``Conv2D`` layer."""
 
     is_lora_layer: bool = True
@@ -189,8 +190,8 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
         )
         self.lora_rank = lora_rank
         self.lora_alpha = lora_alpha
-        self.lora_initializer = tf.keras.initializers.get(lora_initializer)
-        self.lora_regularizer = tf.keras.regularizers.get(lora_regularizer)
+        self.lora_initializer = tf_keras.initializers.get(lora_initializer)
+        self.lora_regularizer = tf_keras.regularizers.get(lora_regularizer)
         self.scaling = lora_alpha / lora_rank
 
         self.kernel_lora_a = None
@@ -215,7 +216,7 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
         self.kernel_lora_b = self.add_weight(
             "kernel_lora_b",
             shape=(kernel_height, kernel_width, self.lora_rank, out_channels),
-            initializer=tf.keras.initializers.Zeros(),
+            initializer=tf_keras.initializers.Zeros(),
             regularizer=self.lora_regularizer,
             constraint=None,
             dtype=self.dtype,
@@ -264,8 +265,8 @@ class LoRAConv2D(tf.keras.layers.Conv2D):
 
 
 def convert_to_lora_layer(
-    layer: tf.keras.layers.Layer, **kwargs
-) -> tf.keras.layers.Layer:
+    layer: tf_keras.layers.Layer, **kwargs
+) -> tf_keras.layers.Layer:
     """
     Convenience function to convert supported layer types to their LoRA counterparts.
 
@@ -277,7 +278,7 @@ def convert_to_lora_layer(
     Returns:
         LoRA layer instance.
     """
-    layer_lookup = {tf.keras.layers.Dense: LoRADense}
+    layer_lookup = {tf_keras.layers.Dense: LoRADense}
     if type(layer) in layer_lookup:
         lora_layer = layer_lookup[type(layer)](**layer.get_config(), **kwargs)
     else:

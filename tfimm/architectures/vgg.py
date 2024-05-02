@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import ClassifierHead, act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
@@ -83,7 +84,7 @@ class VGGConfig(ModelConfig):
     classifier: str = "head/fc"
 
 
-class ConvMlp(tf.keras.layers.Layer):
+class ConvMlp(tf_keras.layers.Layer):
     def __init__(
         self,
         out_channels: int,
@@ -103,12 +104,12 @@ class ConvMlp(tf.keras.layers.Layer):
         act_layer = act_layer_factory(self.act_layer)
 
         hidden_dim = int(out_channels * mlp_ratio)
-        self.fc1 = tf.keras.layers.Conv2D(
+        self.fc1 = tf_keras.layers.Conv2D(
             filters=hidden_dim, kernel_size=kernel_size, use_bias=True, name="fc1"
         )
         self.act1 = act_layer(name="act1")
-        self.drop = tf.keras.layers.Dropout(rate=self.drop_rate, name="drop")
-        self.fc2 = tf.keras.layers.Conv2D(
+        self.drop = tf_keras.layers.Dropout(rate=self.drop_rate, name="drop")
+        self.fc2 = tf_keras.layers.Conv2D(
             filters=out_channels, kernel_size=1, use_bias=True, name="fc2"
         )
         self.act2 = act_layer(name="act2")
@@ -123,7 +124,7 @@ class ConvMlp(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class VGG(tf.keras.Model):
+class VGG(tf_keras.Model):
     """
     Class implementing a VGG network.
 
@@ -132,7 +133,7 @@ class VGG(tf.keras.Model):
 
     Parameters:
         cfg: Configuration class for the model.
-        **kwargs: Arguments are passed to ``tf.keras.Model``.
+        **kwargs: Arguments are passed to ``tf_keras.Model``.
     """
 
     cfg_class = VGGConfig
@@ -151,14 +152,14 @@ class VGG(tf.keras.Model):
         layer_idx = 0
         for v in self.cfg.layers:
             if v == "M":
-                pool = tf.keras.layers.MaxPool2D(
+                pool = tf_keras.layers.MaxPool2D(
                     pool_size=2, strides=2, name=f"features/{idx}"
                 )
                 self.blocks.append(pool)
                 self.block_names.append(f"layer_{layer_idx}")
                 idx += 1
             else:
-                conv = tf.keras.layers.Conv2D(
+                conv = tf_keras.layers.Conv2D(
                     filters=v, kernel_size=3, padding="same", name=f"features/{idx}"
                 )
                 if cfg.norm_layer != "":
@@ -346,8 +347,24 @@ def vgg16():
         url="[timm]",
         layers=(
             # fmt: off
-            64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512,
-            'M', 512, 512, 512, 'M'
+            64,
+            64,
+            "M",
+            128,
+            128,
+            "M",
+            256,
+            256,
+            256,
+            "M",
+            512,
+            512,
+            512,
+            "M",
+            512,
+            512,
+            512,
+            "M",
             # fmt: on
         ),
     )
@@ -362,8 +379,24 @@ def vgg16_bn():
         url="[timm]",
         layers=(
             # fmt: off
-            64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M',
-            512, 512, 512, 'M', 512, 512, 512, 'M'
+            64,
+            64,
+            "M",
+            128,
+            128,
+            "M",
+            256,
+            256,
+            256,
+            "M",
+            512,
+            512,
+            512,
+            "M",
+            512,
+            512,
+            512,
+            "M",
             # fmt: on
         ),
         norm_layer="batch_norm",
@@ -379,8 +412,27 @@ def vgg19():
         url="[timm]",
         layers=(
             # fmt: off
-            64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M',
-            512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'
+            64,
+            64,
+            "M",
+            128,
+            128,
+            "M",
+            256,
+            256,
+            256,
+            256,
+            "M",
+            512,
+            512,
+            512,
+            512,
+            "M",
+            512,
+            512,
+            512,
+            512,
+            "M",
             # fmt: on
         ),
     )
@@ -395,8 +447,27 @@ def vgg19_bn():
         url="[timm]",
         layers=(
             # fmt: off
-            64, 64, 'M', 128, 128, 'M', 256, 256, 256, 256, 'M',
-            512, 512, 512, 512, 'M', 512, 512, 512, 512, 'M'
+            64,
+            64,
+            "M",
+            128,
+            128,
+            "M",
+            256,
+            256,
+            256,
+            256,
+            "M",
+            512,
+            512,
+            512,
+            512,
+            "M",
+            512,
+            512,
+            512,
+            512,
+            "M",
             # fmt: on
         ),
         norm_layer="batch_norm",

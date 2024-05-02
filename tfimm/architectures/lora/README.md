@@ -71,7 +71,7 @@ from tfimm.architectures import lora
 class ResNetConfig:
     nb_blocks = (3, 4, 6, 3)
     
-class ResNet(tf.keras.Model):
+class ResNet(tf_keras.Model):
     cfg_class: ResNetConfig
 
     def __init__(self, cfg, **kwargs):

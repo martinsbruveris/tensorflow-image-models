@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     MLP,
@@ -119,7 +120,7 @@ class ViTConfig(ModelConfig):
         return {"pos_embed": ViT.transform_pos_embed}
 
 
-class ViTMultiHeadAttention(tf.keras.layers.Layer):
+class ViTMultiHeadAttention(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -139,12 +140,12 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
         head_dim = embed_dim // nb_heads
         self.scale = head_dim**-0.5
 
-        self.qkv = tf.keras.layers.Dense(
+        self.qkv = tf_keras.layers.Dense(
             units=3 * embed_dim, use_bias=qkv_bias, name="qkv"
         )
-        self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
-        self.proj_drop = tf.keras.layers.Dropout(rate=drop_rate)
+        self.attn_drop = tf_keras.layers.Dropout(rate=attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(units=embed_dim, name="proj")
+        self.proj_drop = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False, return_features=False):
         features = OrderedDict()
@@ -171,7 +172,7 @@ class ViTMultiHeadAttention(tf.keras.layers.Layer):
         return (x, features) if return_features else x
 
 
-class ViTBlock(tf.keras.layers.Layer):
+class ViTBlock(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -235,7 +236,7 @@ class ViTBlock(tf.keras.layers.Layer):
         return (x, features) if return_features else x
 
 
-class HybridEmbeddings(tf.keras.layers.Layer):
+class HybridEmbeddings(tf_keras.layers.Layer):
     """
     CNN feature map embedding
 
@@ -277,7 +278,7 @@ class HybridEmbeddings(tf.keras.layers.Layer):
             )
             self.backbone = ResNetV2(backbone_cfg, name="backbone")
 
-        self.projection = tf.keras.layers.Conv2D(
+        self.projection = tf_keras.layers.Conv2D(
             filters=embed_dim,
             kernel_size=patch_size,
             strides=patch_size,
@@ -296,7 +297,7 @@ class HybridEmbeddings(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class ViT(tf.keras.Model):
+class ViT(tf_keras.Model):
     cfg_class = ViTConfig
 
     def __init__(self, cfg: ViTConfig, *args, **kwargs):
@@ -328,7 +329,7 @@ class ViT(tf.keras.Model):
         self.cls_token = None
         self.dist_token = None
         self.pos_embed = None
-        self.pos_drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
+        self.pos_drop = tf_keras.layers.Dropout(rate=cfg.drop_rate)
 
         self.blocks = [
             ViTBlock(
@@ -354,7 +355,7 @@ class ViT(tf.keras.Model):
                     "Cannot combine distillation token and a representation layer."
                 )
             self.nb_features = cfg.representation_size
-            self.pre_logits = tf.keras.layers.Dense(
+            self.pre_logits = tf_keras.layers.Dense(
                 units=cfg.representation_size, activation="tanh", name="pre_logits/fc"
             )
         else:
@@ -362,15 +363,15 @@ class ViT(tf.keras.Model):
 
         # Classifier head(s)
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
         if cfg.distilled:
             self.head_dist = (
-                tf.keras.layers.Dense(units=cfg.nb_classes, name="head_dist")
+                tf_keras.layers.Dense(units=cfg.nb_classes, name="head_dist")
                 if cfg.nb_classes > 0
-                else tf.keras.layers.Activation("linear")  # Identity layer
+                else tf_keras.layers.Activation("linear")  # Identity layer
             )
         else:
             self.head_dist = None

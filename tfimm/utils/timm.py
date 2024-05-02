@@ -20,7 +20,7 @@ import re
 from enum import Enum
 
 import numpy
-import tensorflow as tf
+import tf_keras
 from tensorflow.python.keras import backend as K
 
 logger = logging.getLogger(__name__)
@@ -229,7 +229,7 @@ def load_pytorch_weights_in_tf2_model(
         )
 
 
-def load_timm_weights(model: tf.keras.Model, model_name: str):
+def load_timm_weights(model: tf_keras.Model, model_name: str):
     """Loads weights from timm in TF model."""
     try:
         import timm
@@ -255,7 +255,7 @@ def split_url_filename(url: str):
     return repo, filename
 
 
-def load_hf_pytorch_hub_weights(model: tf.keras.Model, url: str):
+def load_hf_pytorch_hub_weights(model: tf_keras.Model, url: str):
     """Loads pytorch weights from HF hub."""
     try:
         from timm.models._hub import HF_WEIGHTS_NAME, load_state_dict_from_hf
@@ -270,7 +270,7 @@ def load_hf_pytorch_hub_weights(model: tf.keras.Model, url: str):
     load_pytorch_weights_in_tf2_model(model, pt_state_dict)
 
 
-def load_pth_url_weights(model: tf.keras.Model, url: str):
+def load_pth_url_weights(model: tf_keras.Model, url: str):
     """Loads weights from a PyTorch .pth file specified by URL."""
     try:
         from torch.hub import load_state_dict_from_url

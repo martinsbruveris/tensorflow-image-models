@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.models import (
     EmbeddingModel,
@@ -75,7 +76,7 @@ class SavedModelConfig:
     # Path to where the model is saved.
     path: str
     # Preprocessing function will return a tensor of this dtype. If not provided we
-    # default to using `tf.keras.backend.floatx()`.
+    # default to using `tf_keras.backend.floatx()`.
     dtype: str = ""
     # Preprocessing will subtract the mean and divide by the standard deviation, i.e.,
     # `img = (img - mean) / std`. With the default values preprocessing remains the
@@ -100,11 +101,11 @@ class SavedModel:
         model_path = str(self.cfg.path)
         # First we try loading the model as a `keras.Model`
         try:
-            model = tf.keras.models.load_model(model_path)
+            model = tf_keras.models.load_model(model_path)
         except ValueError:
             # If that doesn't work we try the saved model format.
             model = tf.saved_model.load(model_path)
-        dtype = self.cfg.dtype or tf.keras.backend.floatx()
+        dtype = self.cfg.dtype or tf_keras.backend.floatx()
 
         def _preprocess(img: tf.Tensor) -> tf.Tensor:
             img = tf.cast(img, dtype=dtype)

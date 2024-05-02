@@ -1,15 +1,16 @@
 from typing import Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 
 
-class MaskDecoder(tf.keras.Model):
+class MaskDecoder(tf_keras.Model):
     def __init__(
         self,
         *,
-        transformer: tf.keras.Model,
+        transformer: tf_keras.Model,
         embed_dim: int,
         nb_multimask_outputs: int,
         act_layer: str,
@@ -64,13 +65,13 @@ class MaskDecoder(tf.keras.Model):
     def build(self, input_shape):
         self.iou_token = self.add_weight(
             shape=(1, self.embed_dim),
-            initializer=tf.keras.initializers.RandomNormal(),
+            initializer=tf_keras.initializers.RandomNormal(),
             trainable=True,
             name="iou_token/weight",
         )
         self.mask_tokens = self.add_weight(
             shape=(self.nb_mask_tokens, self.embed_dim),
-            initializer=tf.keras.initializers.RandomNormal(),
+            initializer=tf_keras.initializers.RandomNormal(),
             trainable=True,
             name="mask_tokens/weight",
         )
@@ -167,7 +168,7 @@ class MaskDecoder(tf.keras.Model):
         return masks, iou_pred
 
 
-class OutputUpscaling(tf.keras.Model):
+class OutputUpscaling(tf_keras.Model):
     def __init__(
         self,
         embed_dim: int,
@@ -181,7 +182,7 @@ class OutputUpscaling(tf.keras.Model):
         norm_layer = norm_layer_factory("layer_norm_eps_1e-6")
         act_layer = act_layer_factory(self.act_layer)
 
-        self.conv1 = tf.keras.layers.Conv2DTranspose(
+        self.conv1 = tf_keras.layers.Conv2DTranspose(
             filters=self.embed_dim // 4,
             kernel_size=2,
             strides=2,
@@ -190,7 +191,7 @@ class OutputUpscaling(tf.keras.Model):
         )
         self.norm1 = norm_layer(name="1")
         self.act1 = act_layer(name="2")
-        self.conv2 = tf.keras.layers.Conv2DTranspose(
+        self.conv2 = tf_keras.layers.Conv2DTranspose(
             filters=self.embed_dim // 8,
             kernel_size=2,
             strides=2,
@@ -209,7 +210,7 @@ class OutputUpscaling(tf.keras.Model):
         return x
 
 
-class MLP(tf.keras.Model):
+class MLP(tf_keras.Model):
     def __init__(
         self,
         hidden_dim: int,
@@ -226,7 +227,7 @@ class MLP(tf.keras.Model):
 
         filters = [hidden_dim] * (nb_layers - 1) + [output_dim]
         self.blocks = [
-            tf.keras.layers.Dense(units=f, use_bias=True, name=f"layers/{j}")
+            tf_keras.layers.Dense(units=f, use_bias=True, name=f"layers/{j}")
             for j, f in enumerate(filters)
         ]
 

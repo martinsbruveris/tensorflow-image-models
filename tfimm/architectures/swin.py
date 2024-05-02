@@ -16,6 +16,7 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import MLP, DropPath, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
@@ -108,7 +109,7 @@ def window_reverse(windows, window_size, h, w, c):
     return x
 
 
-class WindowAttention(tf.keras.layers.Layer):
+class WindowAttention(tf_keras.layers.Layer):
     def __init__(
         self,
         cfg: SwinTransformerConfig,
@@ -121,12 +122,12 @@ class WindowAttention(tf.keras.layers.Layer):
         self.embed_dim = embed_dim
         self.nb_heads = nb_heads
 
-        self.qkv = tf.keras.layers.Dense(
+        self.qkv = tf_keras.layers.Dense(
             embed_dim * 3, use_bias=cfg.qkv_bias, name="qkv"
         )
-        self.attn_drop = tf.keras.layers.Dropout(cfg.attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(embed_dim, name="proj")
-        self.proj_drop = tf.keras.layers.Dropout(cfg.drop_rate)
+        self.attn_drop = tf_keras.layers.Dropout(cfg.attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(embed_dim, name="proj")
+        self.proj_drop = tf_keras.layers.Dropout(cfg.drop_rate)
 
     def build(self, input_shape):
         window_size = self.cfg.window_size
@@ -198,7 +199,7 @@ class WindowAttention(tf.keras.layers.Layer):
         return x
 
 
-class SwinTransformerBlock(tf.keras.layers.Layer):
+class SwinTransformerBlock(tf_keras.layers.Layer):
     def __init__(
         self,
         cfg: SwinTransformerConfig,
@@ -327,7 +328,7 @@ class SwinTransformerBlock(tf.keras.layers.Layer):
         return x
 
 
-class PatchMerging(tf.keras.layers.Layer):
+class PatchMerging(tf_keras.layers.Layer):
     def __init__(
         self,
         cfg: SwinTransformerConfig,
@@ -340,7 +341,7 @@ class PatchMerging(tf.keras.layers.Layer):
         self.input_size = input_size
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
 
-        self.reduction = tf.keras.layers.Dense(
+        self.reduction = tf_keras.layers.Dense(
             units=2 * embed_dim, use_bias=False, name="reduction"
         )
         self.norm = self.norm_layer(name="norm")
@@ -362,7 +363,7 @@ class PatchMerging(tf.keras.layers.Layer):
         return x
 
 
-class SwinTransformerStage(tf.keras.layers.Layer):
+class SwinTransformerStage(tf_keras.layers.Layer):
     def __init__(
         self,
         cfg: SwinTransformerConfig,
@@ -394,7 +395,7 @@ class SwinTransformerStage(tf.keras.layers.Layer):
                 cfg=cfg, input_size=input_size, embed_dim=embed_dim, name="downsample"
             )
         else:
-            self.downsample = tf.keras.layers.Activation("linear")
+            self.downsample = tf_keras.layers.Activation("linear")
 
     def call(self, x, training=False, return_features=False):
         features = {}
@@ -408,7 +409,7 @@ class SwinTransformerStage(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class SwinTransformer(tf.keras.Model):
+class SwinTransformer(tf_keras.Model):
     cfg_class = SwinTransformerConfig
 
     def __init__(self, cfg: SwinTransformerConfig, *args, **kwargs):
@@ -424,7 +425,7 @@ class SwinTransformer(tf.keras.Model):
             norm_layer=cfg.norm_layer,
             name="patch_embed",
         )
-        self.drop = tf.keras.layers.Dropout(cfg.drop_rate)
+        self.drop = tf_keras.layers.Dropout(cfg.drop_rate)
 
         # Stochastic depth
         dpr = np.linspace(0.0, cfg.drop_path_rate, sum(cfg.nb_blocks))
@@ -453,11 +454,11 @@ class SwinTransformer(tf.keras.Model):
                 )
             )
         self.norm = self.norm_layer(name="norm")
-        self.pool = tf.keras.layers.GlobalAveragePooling1D()
+        self.pool = tf_keras.layers.GlobalAveragePooling1D()
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     @property

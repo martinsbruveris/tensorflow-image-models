@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import tensorflow as tf
+import tf_keras
 
 from ..interface import ProblemBase
 from ..registry import cfg_serializable, get_class
@@ -39,7 +40,7 @@ class DistillationProblem(ProblemBase):
 
         # Setting global state before building model
         if cfg.mixed_precision:
-            tf.keras.mixed_precision.set_global_policy("mixed_float16")
+            tf_keras.mixed_precision.set_global_policy("mixed_float16")
 
         # Building the model
         student, preprocess_student = get_class(cfg.student_class)(cfg=cfg.student)()
@@ -50,9 +51,9 @@ class DistillationProblem(ProblemBase):
         self.preprocess_teacher = preprocess_teacher
 
         # Training metrics
-        self.avg_l2_loss = tf.keras.metrics.Mean(dtype=tf.float32)
-        self.avg_reg_loss = tf.keras.metrics.Mean(dtype=tf.float32)
-        self.avg_loss = tf.keras.metrics.Mean(dtype=tf.float32)
+        self.avg_l2_loss = tf_keras.metrics.Mean(dtype=tf.float32)
+        self.avg_reg_loss = tf_keras.metrics.Mean(dtype=tf.float32)
+        self.avg_loss = tf_keras.metrics.Mean(dtype=tf.float32)
 
         # Optimizer
         self.optimizer = get_class(cfg.optimizer_class)(
@@ -159,8 +160,8 @@ class DistillationProblem(ProblemBase):
 
         # We need to set policy to float32 for saving, otherwise we save models that
         # perform inference with float16, which is extremely slow on CPUs
-        old_policy = tf.keras.mixed_precision.global_policy()
-        tf.keras.mixed_precision.set_global_policy("float32")
+        old_policy = tf_keras.mixed_precision.global_policy()
+        tf_keras.mixed_precision.set_global_policy("float32")
         # After changing the policy, we need to create a new model using the policy
         model_factory = get_class(self.cfg.student_class)(cfg=self.cfg.student)
         save_model, _ = model_factory()
@@ -181,4 +182,4 @@ class DistillationProblem(ProblemBase):
                 logging.info("Unexpected error when copying model from tmpdir.")
 
         # Restore original float policy
-        tf.keras.mixed_precision.set_global_policy(old_policy)
+        tf_keras.mixed_precision.set_global_policy(old_policy)

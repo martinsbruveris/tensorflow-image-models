@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     DropPath,
@@ -186,7 +187,7 @@ class BlockArgs:
             return self.filters // self.group_size
 
 
-class SqueezeExcite(tf.keras.layers.Layer):
+class SqueezeExcite(tf_keras.layers.Layer):
     """
     Squeeze-and-Excitation layer with specific features for the EfficientNet family.
 
@@ -223,14 +224,14 @@ class SqueezeExcite(tf.keras.layers.Layer):
     def build(self, input_shape):
         channels = input_shape[-1]
         rd_channels = self.rd_channels or round(channels * self.rd_ratio)
-        self.conv_reduce = tf.keras.layers.Conv2D(
+        self.conv_reduce = tf_keras.layers.Conv2D(
             filters=rd_channels,
             kernel_size=1,
             use_bias=True,
             kernel_initializer=FanoutInitializer(),
             name="conv_reduce",
         )
-        self.conv_expand = tf.keras.layers.Conv2D(
+        self.conv_expand = tf_keras.layers.Conv2D(
             filters=channels,
             kernel_size=1,
             use_bias=True,
@@ -248,7 +249,7 @@ class SqueezeExcite(tf.keras.layers.Layer):
         return x
 
 
-class ConvBnAct(tf.keras.layers.Layer):
+class ConvBnAct(tf_keras.layers.Layer):
     """Conv + Norm Layer + Activation with optional skip connection."""
 
     def __init__(self, cfg: BlockArgs, **kwargs):
@@ -293,7 +294,7 @@ class ConvBnAct(tf.keras.layers.Layer):
         return x
 
 
-class DepthwiseSeparableConv(tf.keras.layers.Layer):
+class DepthwiseSeparableConv(tf_keras.layers.Layer):
     """
     Depthwise separable block. Used for DS convolutions in MobileNet-V1 and in the place
     of IR blocks that have no expansion convolution. This is an alternative to an IR
@@ -362,7 +363,7 @@ class DepthwiseSeparableConv(tf.keras.layers.Layer):
         return x
 
 
-class InvertedResidual(tf.keras.layers.Layer):
+class InvertedResidual(tf_keras.layers.Layer):
     """
     Inverted residual block with optional SE.
 
@@ -453,7 +454,7 @@ class InvertedResidual(tf.keras.layers.Layer):
         return x
 
 
-class EdgeResidual(tf.keras.layers.Layer):
+class EdgeResidual(tf_keras.layers.Layer):
     """
     Residual block with expansion convolution followed by pointwise-linear w/ stride
 

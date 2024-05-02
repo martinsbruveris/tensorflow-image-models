@@ -8,6 +8,7 @@ from pathlib import Path
 import click
 import pandas as pd
 import tensorflow as tf
+import tf_keras
 
 import tfimm
 from tfimm.utils import to_2tuple
@@ -62,7 +63,7 @@ def main(
     for model_name in model_names:
         print(f"Model: {model_name}. ", end="")
         try:
-            tf.keras.backend.clear_session()
+            tf_keras.backend.clear_session()
             input_size = to_2tuple(input_size) if input_size is not None else input_size
             model = tfimm.create_model(
                 model_name, input_size=input_size, nb_classes=nb_classes

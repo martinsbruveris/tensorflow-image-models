@@ -5,6 +5,7 @@ from typing import Callable, List, Optional
 
 import tensorflow as tf
 from tensorflow.python.keras import backend as K
+import tf_keras
 
 from tfimm.models.registry import is_model, model_class, model_config
 from tfimm.utils import (
@@ -23,7 +24,7 @@ def create_model(
     in_channels: Optional[int] = None,
     nb_classes: Optional[int] = None,
     **kwargs,
-) -> tf.keras.Model:
+) -> tf_keras.Model:
     """
     Creates a model.
 
@@ -56,12 +57,12 @@ def create_model(
     cfg = model_config(model_name)
 
     if model_path:
-        loaded_model = tf.keras.models.load_model(model_path, compile=False)
+        loaded_model = tf_keras.models.load_model(model_path, compile=False)
     elif pretrained:
         # First try loading model from cache
         model_path = cached_model_path(model_name)
         if model_path:
-            loaded_model = tf.keras.models.load_model(model_path)
+            loaded_model = tf_keras.models.load_model(model_path)
         elif cfg.url.startswith("[timm]"):
             loaded_model = cls(cfg)
             loaded_model(loaded_model.dummy_inputs)
@@ -148,7 +149,7 @@ def create_preprocessing(
         raise ValueError(f"Unknown model: {model_name}.")
 
     cfg = model_config(model_name)
-    dtype = dtype or tf.keras.backend.floatx()
+    dtype = dtype or tf_keras.backend.floatx()
 
     def _adapt_vector(v, n):
         """Adapts vector v to length n by repeating as necessary."""
@@ -172,8 +173,8 @@ def create_preprocessing(
 
 
 def transfer_weights(
-    src_model: tf.keras.Model,
-    dst_model: tf.keras.Model,
+    src_model: tf_keras.Model,
+    dst_model: tf_keras.Model,
     weights_to_ignore: Optional[List[str]] = None,
 ):
     """

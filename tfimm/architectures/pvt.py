@@ -14,6 +14,7 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     MLP,
@@ -108,7 +109,7 @@ class PyramidVisionTransformerConfig(ModelConfig):
         }
 
 
-class SpatialReductionAttention(tf.keras.layers.Layer):
+class SpatialReductionAttention(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -133,16 +134,16 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         self.norm_layer = norm_layer_factory(norm_layer)
         self.act_layer = act_layer_factory(act_layer)
 
-        self.q = tf.keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="q")
-        self.kv = tf.keras.layers.Dense(
+        self.q = tf_keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="q")
+        self.kv = tf_keras.layers.Dense(
             units=2 * embed_dim, use_bias=qkv_bias, name="kv"
         )
-        self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
-        self.proj_drop = tf.keras.layers.Dropout(rate=proj_drop_rate)
+        self.attn_drop = tf_keras.layers.Dropout(rate=attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(units=embed_dim, name="proj")
+        self.proj_drop = tf_keras.layers.Dropout(rate=proj_drop_rate)
 
         if sr_ratio > 1:
-            self.sr = tf.keras.layers.Conv2D(
+            self.sr = tf_keras.layers.Conv2D(
                 filters=embed_dim,
                 kernel_size=sr_ratio,
                 strides=sr_ratio,
@@ -188,7 +189,7 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         return x
 
 
-class Block(tf.keras.layers.Layer):
+class Block(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -248,7 +249,7 @@ class Block(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class PyramidVisionTransformer(tf.keras.Model):
+class PyramidVisionTransformer(tf_keras.Model):
     cfg_class = PyramidVisionTransformerConfig
 
     def __init__(self, cfg: PyramidVisionTransformerConfig, **kwargs):
@@ -294,7 +295,7 @@ class PyramidVisionTransformer(tf.keras.Model):
                     name=f"pos_embed{j+1}",
                 )
             )
-            self.pos_drop.append(tf.keras.layers.Dropout(rate=self.cfg.drop_rate))
+            self.pos_drop.append(tf_keras.layers.Dropout(rate=self.cfg.drop_rate))
             for k in range(self.cfg.nb_blocks[j]):
                 self.blocks.append(
                     Block(
@@ -320,9 +321,9 @@ class PyramidVisionTransformer(tf.keras.Model):
             name="cls_token",
         )
         self.head = (
-            tf.keras.layers.Dense(units=self.cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=self.cfg.nb_classes, name="head")
             if self.cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     @property

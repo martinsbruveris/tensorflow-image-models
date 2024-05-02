@@ -54,6 +54,7 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import MLP, ConvMLP, DropPath, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
@@ -136,14 +137,14 @@ class ConvNeXtConfig(ModelConfig):
 
 def _weight_initializers(seed=42):
     """Function returns initilializers to be used in the model."""
-    kernel_initializer = tf.keras.initializers.TruncatedNormal(
+    kernel_initializer = tf_keras.initializers.TruncatedNormal(
         mean=0.0, stddev=0.02, seed=seed
     )
-    bias_initializer = tf.keras.initializers.Zeros()
+    bias_initializer = tf_keras.initializers.Zeros()
     return kernel_initializer, bias_initializer
 
 
-class ConvNeXtBlock(tf.keras.layers.Layer):
+class ConvNeXtBlock(tf_keras.layers.Layer):
     """
     ConvNeXt Block
 
@@ -188,8 +189,8 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         norm_layer = norm_layer_factory(norm_layer)
         kernel_initializer, bias_initializer = _weight_initializers()
 
-        self.pad = tf.keras.layers.ZeroPadding2D(padding=3)
-        self.conv_dw = tf.keras.layers.DepthwiseConv2D(
+        self.pad = tf_keras.layers.ZeroPadding2D(padding=3)
+        self.conv_dw = tf_keras.layers.DepthwiseConv2D(
             kernel_size=7,
             depthwise_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
@@ -211,7 +212,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.gamma = self.add_weight(
             shape=(self.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.init_scale),
             trainable=True,
             name="gamma",
         )
@@ -228,7 +229,7 @@ class ConvNeXtBlock(tf.keras.layers.Layer):
         return x
 
 
-class ConvNeXtStage(tf.keras.layers.Layer):
+class ConvNeXtStage(tf_keras.layers.Layer):
     """
     One stage of a ConvNeXt network: (optional) downsample layer, followed by a
     sequence of ``ConvNeXtBlox``s.
@@ -256,7 +257,7 @@ class ConvNeXtStage(tf.keras.layers.Layer):
 
         if stride > 1:
             self.downsample_norm = norm_layer(name="downsample/0")
-            self.downsample_conv = tf.keras.layers.Conv2D(
+            self.downsample_conv = tf_keras.layers.Conv2D(
                 filters=embed_dim,
                 kernel_size=stride,
                 strides=stride,
@@ -296,7 +297,7 @@ class ConvNeXtStage(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class ConvNeXt(tf.keras.Model):
+class ConvNeXt(tf_keras.Model):
     """
     Class implementing a ConvNeXt network.
 
@@ -304,7 +305,7 @@ class ConvNeXt(tf.keras.Model):
 
     Parameters:
         cfg: Configuration class for the model.
-        **kwargs: Arguments are passed to ``tf.keras.Model``.
+        **kwargs: Arguments are passed to ``tf_keras.Model``.
     """
 
     cfg_class = ConvNeXtConfig
@@ -316,7 +317,7 @@ class ConvNeXt(tf.keras.Model):
         norm_layer = norm_layer_factory(cfg.norm_layer)
         kernel_initializer, bias_initializer = _weight_initializers()
 
-        self.stem_conv = tf.keras.layers.Conv2D(
+        self.stem_conv = tf_keras.layers.Conv2D(
             filters=cfg.embed_dim[0],
             kernel_size=cfg.patch_size,
             strides=cfg.patch_size,
@@ -349,14 +350,14 @@ class ConvNeXt(tf.keras.Model):
                 )
             )
 
-        self.pool = tf.keras.layers.GlobalAveragePooling2D()
+        self.pool = tf_keras.layers.GlobalAveragePooling2D()
         self.norm = norm_layer(name="head/norm")
-        self.flatten = tf.keras.layers.Flatten()
-        self.drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
+        self.flatten = tf_keras.layers.Flatten()
+        self.drop = tf_keras.layers.Dropout(rate=cfg.drop_rate)
         self.fc = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head/fc")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head/fc")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     @property

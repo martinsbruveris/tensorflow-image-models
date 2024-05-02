@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
@@ -38,13 +39,13 @@ class ConvMixerConfig(ModelConfig):
     classifier: str = "head"
 
 
-class Block(tf.keras.layers.Layer):
+class Block(tf_keras.layers.Layer):
     def __init__(self, cfg: ConvMixerConfig, *args, **kwargs):
         super().__init__(*args, **kwargs)
         act_layer = act_layer_factory(cfg.act_layer)
         norm_layer = norm_layer_factory(cfg.norm_layer)
 
-        self.conv1 = tf.keras.layers.DepthwiseConv2D(
+        self.conv1 = tf_keras.layers.DepthwiseConv2D(
             kernel_size=cfg.kernel_size,
             padding="same",
             name="0/fn/0",
@@ -52,7 +53,7 @@ class Block(tf.keras.layers.Layer):
         self.act1 = act_layer()
         self.bn1 = norm_layer(name="0/fn/2")
 
-        self.conv2 = tf.keras.layers.Conv2D(
+        self.conv2 = tf_keras.layers.Conv2D(
             filters=cfg.embed_dim,
             kernel_size=1,
             name="1",
@@ -74,7 +75,7 @@ class Block(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class ConvMixer(tf.keras.Model):
+class ConvMixer(tf_keras.Model):
     cfg_class = ConvMixerConfig
 
     def __init__(self, cfg: ConvMixerConfig, *args, **kwargs):
@@ -85,7 +86,7 @@ class ConvMixer(tf.keras.Model):
         self.norm_layer = norm_layer_factory(cfg.norm_layer)
         self.cfg = cfg
 
-        conv1 = tf.keras.layers.Conv2D(
+        conv1 = tf_keras.layers.Conv2D(
             filters=cfg.embed_dim,
             kernel_size=cfg.patch_size,
             strides=cfg.patch_size,
@@ -93,16 +94,16 @@ class ConvMixer(tf.keras.Model):
         )
         act1 = self.act_layer()
         bn1 = self.norm_layer(name=f"{self.name}/stem/2")
-        self.stem = tf.keras.Sequential([conv1, act1, bn1])
+        self.stem = tf_keras.Sequential([conv1, act1, bn1])
 
         self.blocks = [Block(cfg, name=f"blocks/{j}") for j in range(cfg.depth)]
-        self.pool = tf.keras.layers.GlobalAveragePooling2D()
-        self.flatten = tf.keras.layers.Flatten()
+        self.pool = tf_keras.layers.GlobalAveragePooling2D()
+        self.flatten = tf_keras.layers.Flatten()
 
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")
+            else tf_keras.layers.Activation("linear")
         )
 
     @property

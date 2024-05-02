@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     MLP,
@@ -94,7 +95,7 @@ class CaiTConfig(ModelConfig):
         return {"pos_embed": CaiT.transform_pos_embed}
 
 
-class ClassAttention(tf.keras.layers.Layer):
+class ClassAttention(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -108,12 +109,12 @@ class ClassAttention(tf.keras.layers.Layer):
         self.nb_heads = nb_heads
         self.scale = (embed_dim // nb_heads) ** -0.5
 
-        self.q = tf.keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="q")
-        self.k = tf.keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="k")
-        self.v = tf.keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="v")
-        self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
-        self.proj_drop = tf.keras.layers.Dropout(rate=proj_drop_rate)
+        self.q = tf_keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="q")
+        self.k = tf_keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="k")
+        self.v = tf_keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="v")
+        self.attn_drop = tf_keras.layers.Dropout(rate=attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(units=embed_dim, name="proj")
+        self.proj_drop = tf_keras.layers.Dropout(rate=proj_drop_rate)
 
     def call(self, x, training=False):
         # B (batch size), N (sequence length), D (embedding dimension),
@@ -146,7 +147,7 @@ class ClassAttention(tf.keras.layers.Layer):
         return x
 
 
-class LayerScaleBlockClassAttention(tf.keras.layers.Layer):
+class LayerScaleBlockClassAttention(tf_keras.layers.Layer):
     def __init__(self, cfg: CaiTConfig, drop_path_rate: float, **kwargs):
         super().__init__(**kwargs)
         self.cfg = cfg
@@ -174,13 +175,13 @@ class LayerScaleBlockClassAttention(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.gamma_1 = self.add_weight(
             shape=(self.cfg.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.cfg.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.cfg.init_scale),
             trainable=True,
             name="gamma_1",
         )
         self.gamma_2 = self.add_weight(
             shape=(self.cfg.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.cfg.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.cfg.init_scale),
             trainable=True,
             name="gamma_2",
         )
@@ -204,7 +205,7 @@ class LayerScaleBlockClassAttention(tf.keras.layers.Layer):
         return x
 
 
-class TalkingHeadAttention(tf.keras.layers.Layer):
+class TalkingHeadAttention(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -218,16 +219,16 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         self.nb_heads = nb_heads
         self.scale = (embed_dim // nb_heads) ** -0.5
 
-        self.qkv = tf.keras.layers.Dense(
+        self.qkv = tf_keras.layers.Dense(
             units=3 * embed_dim,
             use_bias=qkv_bias,
             name="qkv",
         )
-        self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
-        self.proj_l = tf.keras.layers.Dense(units=nb_heads, name="proj_l")
-        self.proj_w = tf.keras.layers.Dense(units=nb_heads, name="proj_w")
-        self.proj_drop = tf.keras.layers.Dropout(rate=proj_drop_rate)
+        self.attn_drop = tf_keras.layers.Dropout(rate=attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(units=embed_dim, name="proj")
+        self.proj_l = tf_keras.layers.Dense(units=nb_heads, name="proj_l")
+        self.proj_w = tf_keras.layers.Dense(units=nb_heads, name="proj_w")
+        self.proj_drop = tf_keras.layers.Dropout(rate=proj_drop_rate)
 
     def call(self, x, training=False):
         # B (batch size), N (sequence length), D (embedding dimension),
@@ -258,7 +259,7 @@ class TalkingHeadAttention(tf.keras.layers.Layer):
         return x
 
 
-class LayerScaleBlock(tf.keras.layers.Layer):
+class LayerScaleBlock(tf_keras.layers.Layer):
     def __init__(self, cfg: CaiTConfig, drop_path_rate: float, **kwargs):
         super().__init__(**kwargs)
         self.cfg = cfg
@@ -286,13 +287,13 @@ class LayerScaleBlock(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.gamma_1 = self.add_weight(
             shape=(self.cfg.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.cfg.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.cfg.init_scale),
             trainable=True,
             name="gamma_1",
         )
         self.gamma_2 = self.add_weight(
             shape=(self.cfg.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.cfg.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.cfg.init_scale),
             trainable=True,
             name="gamma_2",
         )
@@ -315,7 +316,7 @@ class LayerScaleBlock(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class CaiT(tf.keras.Model):
+class CaiT(tf_keras.Model):
     cfg_class = CaiTConfig
 
     def __init__(self, cfg: CaiTConfig, *args, **kwargs):
@@ -332,7 +333,7 @@ class CaiT(tf.keras.Model):
             norm_layer="",
             name="patch_embed",
         )
-        self.pos_drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
+        self.pos_drop = tf_keras.layers.Dropout(rate=cfg.drop_rate)
 
         dpr = [cfg.drop_path_rate for _ in range(cfg.nb_blocks)]
         self.blocks = [
@@ -347,9 +348,9 @@ class CaiT(tf.keras.Model):
         ]
         self.norm = norm_layer(name="norm")
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     def build(self, input_shape):

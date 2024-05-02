@@ -28,6 +28,7 @@ from dataclasses import dataclass
 from typing import List, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     MLP,
@@ -80,7 +81,7 @@ class MLPMixerConfig(ModelConfig):
         )
 
 
-class MixerBlock(tf.keras.layers.Layer):
+class MixerBlock(tf_keras.layers.Layer):
     """
     Residual Block w/ token mixing and channel MLPs
     Based on: "MLP-Mixer: An all-MLP Architecture for Vision"
@@ -130,7 +131,7 @@ class MixerBlock(tf.keras.layers.Layer):
         return x
 
 
-class ResBlock(tf.keras.layers.Layer):
+class ResBlock(tf_keras.layers.Layer):
     """
     Residual MLP block with LayerScale
 
@@ -144,7 +145,7 @@ class ResBlock(tf.keras.layers.Layer):
         norm_layer = norm_layer_factory(cfg.norm_layer)
         mlp_layer = MLP_LAYER_DICT[cfg.mlp_layer]
         self.norm1 = norm_layer(name="norm1")
-        self.linear_tokens = tf.keras.layers.Dense(
+        self.linear_tokens = tf_keras.layers.Dense(
             units=cfg.nb_patches,
             name="linear_tokens",
         )
@@ -161,13 +162,13 @@ class ResBlock(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.ls1 = self.add_weight(
             shape=(self.cfg.embed_dim,),
-            initializer=tf.keras.initializers.Constant(self.cfg.init_values),
+            initializer=tf_keras.initializers.Constant(self.cfg.init_values),
             trainable=True,
             name="ls1",
         )
         self.ls2 = self.add_weight(
             shape=(self.cfg.embed_dim,),
-            initializer=tf.keras.initializers.Constant(self.cfg.init_values),
+            initializer=tf_keras.initializers.Constant(self.cfg.init_values),
             trainable=True,
             name="ls2",
         )
@@ -191,7 +192,7 @@ class ResBlock(tf.keras.layers.Layer):
         return x
 
 
-class SpatialGatingBlock(tf.keras.layers.Layer):
+class SpatialGatingBlock(tf_keras.layers.Layer):
     """
     Residual Block with Spatial Gating
 
@@ -237,7 +238,7 @@ MLP_LAYER_DICT = {
 
 
 @keras_serializable
-class MLPMixer(tf.keras.Model):
+class MLPMixer(tf_keras.Model):
     cfg_class = MLPMixerConfig
 
     def __init__(self, cfg: MLPMixerConfig, *args, **kwargs):
@@ -260,9 +261,9 @@ class MLPMixer(tf.keras.Model):
         ]
         self.norm = norm_layer(name="norm")
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")
+            else tf_keras.layers.Activation("linear")
         )
 
     @property

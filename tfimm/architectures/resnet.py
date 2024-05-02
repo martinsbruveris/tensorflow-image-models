@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     BlurPool2D,
@@ -99,7 +100,7 @@ class ResNetConfig(ModelConfig):
             self.test_input_size = self.input_size
 
 
-class BasicBlock(tf.keras.layers.Layer):
+class BasicBlock(tf_keras.layers.Layer):
     expansion = 1
 
     def __init__(
@@ -126,8 +127,8 @@ class BasicBlock(tf.keras.layers.Layer):
         out_planes = nb_channels * self.expansion  # Num channels after second conv
         use_aa = cfg.aa_layer and stride == 2
 
-        self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv1 = tf.keras.layers.Conv2D(
+        self.pad1 = tf_keras.layers.ZeroPadding2D(padding=1)
+        self.conv1 = tf_keras.layers.Conv2D(
             filters=first_planes,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -139,8 +140,8 @@ class BasicBlock(tf.keras.layers.Layer):
         self.act1 = self.act_layer()
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
-        self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = tf.keras.layers.Conv2D(
+        self.pad2 = tf_keras.layers.ZeroPadding2D(padding=1)
+        self.conv2 = tf_keras.layers.Conv2D(
             filters=out_planes,
             kernel_size=3,
             use_bias=False,
@@ -189,7 +190,7 @@ class BasicBlock(tf.keras.layers.Layer):
         return x
 
 
-class Bottleneck(tf.keras.layers.Layer):
+class Bottleneck(tf_keras.layers.Layer):
     expansion = 4
 
     def __init__(
@@ -217,7 +218,7 @@ class Bottleneck(tf.keras.layers.Layer):
         out_planes = nb_channels * self.expansion
         use_aa = cfg.aa_layer and stride == 2
 
-        self.conv1 = tf.keras.layers.Conv2D(
+        self.conv1 = tf_keras.layers.Conv2D(
             filters=first_planes,
             kernel_size=1,
             use_bias=False,
@@ -226,8 +227,8 @@ class Bottleneck(tf.keras.layers.Layer):
         self.bn1 = self.norm_layer(name="bn1")
         self.act1 = self.act_layer()
 
-        self.pad2 = tf.keras.layers.ZeroPadding2D(padding=1)
-        self.conv2 = tf.keras.layers.Conv2D(
+        self.pad2 = tf_keras.layers.ZeroPadding2D(padding=1)
+        self.conv2 = tf_keras.layers.Conv2D(
             filters=width,
             kernel_size=3,
             # If we use anti-aliasing, the anti-aliasing layer takes care of strides
@@ -240,7 +241,7 @@ class Bottleneck(tf.keras.layers.Layer):
         self.act2 = self.act_layer()
         self.aa = BlurPool2D(stride=stride) if use_aa else None
 
-        self.conv3 = tf.keras.layers.Conv2D(
+        self.conv3 = tf_keras.layers.Conv2D(
             filters=out_planes,
             kernel_size=1,
             use_bias=False,
@@ -296,12 +297,12 @@ def downsample_avg(cfg: ResNetConfig, out_channels: int, stride: int, name: str)
     norm_layer = norm_layer_factory(cfg.norm_layer)
 
     if stride != 1:
-        pool = tf.keras.layers.AveragePooling2D(
+        pool = tf_keras.layers.AveragePooling2D(
             pool_size=2, strides=stride, padding="same"
         )
     else:
-        pool = tf.keras.layers.Activation("linear")
-    conv = tf.keras.layers.Conv2D(
+        pool = tf_keras.layers.Activation("linear")
+    conv = tf_keras.layers.Conv2D(
         filters=out_channels,
         kernel_size=1,
         strides=1,
@@ -309,7 +310,7 @@ def downsample_avg(cfg: ResNetConfig, out_channels: int, stride: int, name: str)
         name=name + "/downsample/1",
     )
     bn = norm_layer(name=name + "/downsample/2")
-    return tf.keras.Sequential([pool, conv, bn])
+    return tf_keras.Sequential([pool, conv, bn])
 
 
 def downsample_conv(cfg: ResNetConfig, out_channels: int, stride: int, name: str):
@@ -317,9 +318,9 @@ def downsample_conv(cfg: ResNetConfig, out_channels: int, stride: int, name: str
 
     # This layer is part of the conv layer in pytorch and so is not being tracked here
     p = (stride + cfg.down_kernel_size) // 2 - 1
-    pad = tf.keras.layers.ZeroPadding2D(padding=p)
+    pad = tf_keras.layers.ZeroPadding2D(padding=p)
 
-    conv = tf.keras.layers.Conv2D(
+    conv = tf_keras.layers.Conv2D(
         filters=out_channels,
         kernel_size=cfg.down_kernel_size,
         strides=stride,
@@ -327,7 +328,7 @@ def downsample_conv(cfg: ResNetConfig, out_channels: int, stride: int, name: str
         name=name + "/downsample/0",
     )
     bn = norm_layer(name=name + "/downsample/1")
-    return tf.keras.Sequential([pad, conv, bn])
+    return tf_keras.Sequential([pad, conv, bn])
 
 
 def make_stage(
@@ -383,7 +384,7 @@ def make_stage(
 
 
 @keras_serializable
-class ResNet(tf.keras.Model):
+class ResNet(tf_keras.Model):
     """
     ResNet / ResNeXt / SE-ResNeXt / SE-Net
 
@@ -469,8 +470,8 @@ class ResNet(tf.keras.Model):
                 stem_chns = (3 * (cfg.stem_width // 4), cfg.stem_width)
             else:
                 stem_chns = (cfg.stem_width, cfg.stem_width)
-            self.pad1 = tf.keras.layers.ZeroPadding2D(padding=1)
-            conv1_0 = tf.keras.layers.Conv2D(
+            self.pad1 = tf_keras.layers.ZeroPadding2D(padding=1)
+            conv1_0 = tf_keras.layers.Conv2D(
                 filters=stem_chns[0],
                 kernel_size=3,
                 strides=2,
@@ -479,7 +480,7 @@ class ResNet(tf.keras.Model):
             )
             bn1_0 = self.norm_layer(name=f"{self.name}/conv1/1")
             act1_0 = self.act_layer()
-            conv1_1 = tf.keras.layers.Conv2D(
+            conv1_1 = tf_keras.layers.Conv2D(
                 filters=stem_chns[1],
                 kernel_size=3,
                 padding="same",
@@ -488,22 +489,22 @@ class ResNet(tf.keras.Model):
             )
             bn1_1 = self.norm_layer(name=f"{self.name}/conv1/4")
             act1_1 = self.act_layer()
-            conv1_2 = tf.keras.layers.Conv2D(
+            conv1_2 = tf_keras.layers.Conv2D(
                 filters=in_channels,
                 kernel_size=3,
                 padding="same",
                 use_bias=False,
                 name=f"{self.name}/conv1/6",
             )
-            self.conv1 = tf.keras.Sequential(
+            self.conv1 = tf_keras.Sequential(
                 [conv1_0, bn1_0, act1_0, conv1_1, bn1_1, act1_1, conv1_2]
             )
         else:
             in_channels = 64
             # In TF "same" padding with strides != 1 is not the same as (3, 3) padding
             # in pytorch, hence the need for an explicit padding layer
-            self.pad1 = tf.keras.layers.ZeroPadding2D(padding=3)
-            self.conv1 = tf.keras.layers.Conv2D(
+            self.pad1 = tf_keras.layers.ZeroPadding2D(padding=3)
+            self.conv1 = tf_keras.layers.Conv2D(
                 filters=in_channels,
                 kernel_size=7,
                 strides=2,
@@ -517,8 +518,8 @@ class ResNet(tf.keras.Model):
         if cfg.replace_stem_pool:
             # Note that if replace_stem_pool=True, we are ignoring the aa_layer
             # None of the timm models use both.
-            pad = tf.keras.layers.ZeroPadding2D(padding=1)
-            conv = tf.keras.layers.Conv2D(
+            pad = tf_keras.layers.ZeroPadding2D(padding=1)
+            conv = tf_keras.layers.Conv2D(
                 filters=in_channels,
                 kernel_size=3,
                 strides=2,
@@ -527,17 +528,17 @@ class ResNet(tf.keras.Model):
             )
             bn = self.norm_layer(name=f"{self.name}/maxpool/1")
             act = self.act_layer()
-            self.maxpool = tf.keras.Sequential([pad, conv, bn, act])
+            self.maxpool = tf_keras.Sequential([pad, conv, bn, act])
         else:
             if cfg.aa_layer:
-                pad = tf.keras.layers.ZeroPadding2D(padding=1)
-                pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=1)
+                pad = tf_keras.layers.ZeroPadding2D(padding=1)
+                pool = tf_keras.layers.MaxPool2D(pool_size=3, strides=1)
                 aa = BlurPool2D(stride=2, name=f"{self.name}/maxpool/2")
-                self.maxpool = tf.keras.Sequential([pad, pool, aa])
+                self.maxpool = tf_keras.Sequential([pad, pool, aa])
             else:
-                pad = tf.keras.layers.ZeroPadding2D(padding=1)
-                pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=2)
-                self.maxpool = tf.keras.Sequential([pad, pool])
+                pad = tf_keras.layers.ZeroPadding2D(padding=1)
+                pool = tf_keras.layers.MaxPool2D(pool_size=3, strides=2)
+                self.maxpool = tf_keras.Sequential([pad, pool])
 
         self.blocks = []
         for idx in range(4):

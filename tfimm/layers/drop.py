@@ -5,9 +5,10 @@ Copyright 2021 Martins Bruveris
 Copyright 2020 Ross Wightman
 """
 import tensorflow as tf
+import tf_keras
 
 
-class DropPath(tf.keras.layers.Layer):
+class DropPath(tf_keras.layers.Layer):
     """
     Per sample stochastic depth when applied in main path of residual blocks
 

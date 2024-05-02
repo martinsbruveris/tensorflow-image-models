@@ -8,6 +8,7 @@ Code: https://github.com/joe-siyuan-qiao/WeightStandardization
 from typing import Tuple, Union
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.utils.etc import to_2tuple
 
@@ -28,7 +29,7 @@ def get_padding(
     return padding
 
 
-class PadConv2D(tf.keras.layers.Conv2D):
+class PadConv2D(tf_keras.layers.Conv2D):
     """
     Conv2D with support for PyTorch-style symmetric padding. Used to convert PyTorch
     models.
@@ -52,7 +53,7 @@ class PadConv2D(tf.keras.layers.Conv2D):
         activity_regularizer=None,
         kernel_constraint=None,
         bias_constraint=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             filters=filters,
@@ -71,10 +72,10 @@ class PadConv2D(tf.keras.layers.Conv2D):
             activity_regularizer=activity_regularizer,
             kernel_constraint=kernel_constraint,
             bias_constraint=bias_constraint,
-            **kwargs
+            **kwargs,
         )
         self.pad = (
-            tf.keras.layers.ZeroPadding2D(
+            tf_keras.layers.ZeroPadding2D(
                 padding=get_padding(kernel_size, strides, dilation_rate)
             )
             if padding == "symmetric"
@@ -88,7 +89,7 @@ class PadConv2D(tf.keras.layers.Conv2D):
         return x
 
 
-class PadDepthwiseConv2D(tf.keras.layers.DepthwiseConv2D):
+class PadDepthwiseConv2D(tf_keras.layers.DepthwiseConv2D):
     """
     DepthwiseConv2D with support for PyTorch-style symmetric padding. Used to convert
     PyTorch models.
@@ -112,7 +113,7 @@ class PadDepthwiseConv2D(tf.keras.layers.DepthwiseConv2D):
         activity_regularizer=None,
         depthwise_constraint=None,
         bias_constraint=None,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             kernel_size=kernel_size,
@@ -131,10 +132,10 @@ class PadDepthwiseConv2D(tf.keras.layers.DepthwiseConv2D):
             activity_regularizer=activity_regularizer,
             depthwise_constraint=depthwise_constraint,
             bias_constraint=bias_constraint,
-            **kwargs
+            **kwargs,
         )
         self.pad = (
-            tf.keras.layers.ZeroPadding2D(
+            tf_keras.layers.ZeroPadding2D(
                 padding=get_padding(kernel_size, strides, dilation_rate)
             )
             if padding == "symmetric"
@@ -148,7 +149,7 @@ class PadDepthwiseConv2D(tf.keras.layers.DepthwiseConv2D):
         return x
 
 
-class StdConv2D(tf.keras.layers.Conv2D):
+class StdConv2D(tf_keras.layers.Conv2D):
     """
     Conv2D with Weight Standardization. Used for BiT ResNet-V2 models.
 
@@ -176,7 +177,7 @@ class StdConv2D(tf.keras.layers.Conv2D):
         kernel_constraint=None,
         bias_constraint=None,
         eps=1e-8,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             filters=filters,
@@ -195,11 +196,11 @@ class StdConv2D(tf.keras.layers.Conv2D):
             activity_regularizer=activity_regularizer,
             kernel_constraint=kernel_constraint,
             bias_constraint=bias_constraint,
-            **kwargs
+            **kwargs,
         )
         self.eps = eps
         self.pad = (
-            tf.keras.layers.ZeroPadding2D(
+            tf_keras.layers.ZeroPadding2D(
                 padding=get_padding(kernel_size, strides, dilation_rate)
             )
             if padding == "symmetric"

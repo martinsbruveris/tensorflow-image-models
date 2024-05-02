@@ -80,7 +80,7 @@ img_preprocessed = preprocess(img)
 
 ### Saving and loading models
 
-All models are subclassed from `tf.keras.Model` (they are _not_ functional models).
+All models are subclassed from `tf_keras.Model` (they are _not_ functional models).
 They can still be saved and loaded using the `SavedModel` format.
 
 ```
@@ -90,7 +90,7 @@ They can still be saved and loaded using the `SavedModel` format.
 >>> type(model)
 <class 'tfimm.architectures.vit.ViT'>
 >>> model.save("/tmp/my_model")
->>> loaded_model = tf.keras.models.load_model("/tmp/my_model")
+>>> loaded_model = tf_keras.models.load_model("/tmp/my_model")
 >>> type(loaded_model)
 <class 'tfimm.architectures.vit.ViT'>
 ```
@@ -101,7 +101,7 @@ Otherwise, we obtain the following output
 
 ```
 >>> import tensorflow as tf
->>> loaded_model = tf.keras.models.load_model("/tmp/my_model")
+>>> loaded_model = tf_keras.models.load_model("/tmp/my_model")
 >>> type(loaded_model)
 <class 'keras.saving.saved_model.load.Custom>ViT'>
 ```

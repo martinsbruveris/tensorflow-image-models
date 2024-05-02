@@ -3,6 +3,7 @@ from time import time
 from typing import Optional, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.models import registry
 from tfimm.models.factory import create_model
@@ -71,9 +72,9 @@ def time_model(
     """
     assert float_policy in {"float32", "mixed_float16"}
 
-    tf.keras.backend.clear_session()  # Release GPU memory
+    tf_keras.backend.clear_session()  # Release GPU memory
     # Need to set policy before creating model
-    tf.keras.mixed_precision.set_global_policy(float_policy)
+    tf_keras.mixed_precision.set_global_policy(float_policy)
     dtype = "float32" if float_policy == "float32" else "float16"
 
     input_size = to_2tuple(input_size) if input_size is not None else input_size

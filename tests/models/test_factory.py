@@ -3,6 +3,7 @@ import tempfile
 import numpy as np
 import pytest
 import tensorflow as tf
+import tf_keras
 
 from tfimm.models.factory import create_model, create_preprocessing, transfer_weights
 
@@ -96,7 +97,7 @@ def test_save_load_model(model_name):
     model = create_model(model_name)
     with tempfile.TemporaryDirectory() as tmpdir:
         model.save(tmpdir)
-        loaded_model = tf.keras.models.load_model(tmpdir, compile=False)
+        loaded_model = tf_keras.models.load_model(tmpdir, compile=False)
 
     assert type(model) is type(loaded_model)
 
@@ -185,7 +186,7 @@ def test_model_name_keras(model_name):
     We test if model.name == model.cfg.name, i.e., the keras model name is set
     correctly.
     """
-    tf.keras.backend.clear_session()
+    tf_keras.backend.clear_session()
     model = create_model(model_name)
     assert model.name == model_name == model.cfg.name
 
@@ -195,7 +196,7 @@ def test_variable_prefix(model_name):
     """
     We test if all model variables are created under the correct prefix
     """
-    tf.keras.backend.clear_session()
+    tf_keras.backend.clear_session()
     model = create_model(model_name, name="test")
 
     for var in model.variables:
@@ -230,8 +231,8 @@ def test_mixed_precision(model_name: str):
 
     These tests are very slow on CPUs, so we skip them by default.
     """
-    tf.keras.backend.clear_session()
-    tf.keras.mixed_precision.set_global_policy("mixed_float16")
+    tf_keras.backend.clear_session()
+    tf_keras.mixed_precision.set_global_policy("mixed_float16")
     model = create_model(model_name)
     img = tf.ones((1, *model.cfg.input_size, model.cfg.in_channels), dtype="float16")
     res = model(img)

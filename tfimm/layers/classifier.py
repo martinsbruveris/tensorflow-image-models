@@ -5,10 +5,10 @@ Ported to TF from timm/models/layers/classifier.py by Ross Wightman.
 
 Copyright 2021 Martins Bruveris
 """
-import tensorflow as tf
+import tf_keras
 
 
-class ClassifierHead(tf.keras.layers.Layer):
+class ClassifierHead(tf_keras.layers.Layer):
     """Classifier head with configurable global pooling and dropout."""
 
     def __init__(
@@ -31,28 +31,28 @@ class ClassifierHead(tf.keras.layers.Layer):
         if pool_type == "":
             self.pool = None
         elif pool_type == "avg":
-            self.pool = tf.keras.layers.GlobalAveragePooling2D()
+            self.pool = tf_keras.layers.GlobalAveragePooling2D()
         elif pool_type == "max":
-            self.pool = tf.keras.layers.GlobalMaxPool2D()
+            self.pool = tf_keras.layers.GlobalMaxPool2D()
         else:
             raise NotImplementedError(f"pool_type={pool_type} not implemented.")
 
         if drop_rate > 0.0:
-            self.drop = tf.keras.layers.Dropout(rate=drop_rate)
+            self.drop = tf_keras.layers.Dropout(rate=drop_rate)
         else:
             self.drop = None
 
         if nb_classes == 0:
             self.fc = None
         elif use_conv:
-            self.fc = tf.keras.layers.Conv2D(
+            self.fc = tf_keras.layers.Conv2D(
                 filters=nb_classes,
                 kernel_size=1,
                 use_bias=True,
                 name="fc",
             )
         else:
-            self.fc = tf.keras.layers.Dense(
+            self.fc = tf_keras.layers.Dense(
                 units=nb_classes,
                 use_bias=True,
                 name="fc",
@@ -60,7 +60,7 @@ class ClassifierHead(tf.keras.layers.Layer):
         if pool_type == "":
             self.flatten = None
         else:
-            self.flatten = tf.keras.layers.Flatten()
+            self.flatten = tf_keras.layers.Flatten()
 
     def call(self, x, training=False):
         if self.pool is not None:

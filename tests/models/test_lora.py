@@ -4,6 +4,7 @@ from typing import List, Optional
 import numpy as np
 import pytest
 import tensorflow as tf
+import tf_keras
 
 import tfimm
 from tfimm.architectures import ConvNeXt, ConvNeXtConfig, lora
@@ -136,9 +137,9 @@ def _count(var_list: List[tf.Variable]) -> int:
 
 @pytest.mark.parametrize("use_bias", [True, False])
 def test_lora_trainable_weights(use_bias):
-    model = tf.keras.Sequential(
+    model = tf_keras.Sequential(
         [
-            tf.keras.layers.Dense(units=2, use_bias=use_bias, name="fc1"),
+            tf_keras.layers.Dense(units=2, use_bias=use_bias, name="fc1"),
             lora.LoRADense(units=3, use_bias=use_bias, lora_rank=3, name="fc2"),
         ],
     )
@@ -185,7 +186,7 @@ def test_model_self_lora_version():
         units: int
         lora_rank: Optional[int] = None
 
-    class MyModel(tf.keras.Model):
+    class MyModel(tf_keras.Model):
         cfg_class = Config
 
         def __init__(self, cfg: Config, **kwargs):
@@ -193,7 +194,7 @@ def test_model_self_lora_version():
             self.cfg = cfg
 
             if cfg.lora_rank is None:
-                self.fc = tf.keras.layers.Dense(units=cfg.units, name="fc")
+                self.fc = tf_keras.layers.Dense(units=cfg.units, name="fc")
             else:
                 self.fc = lora.LoRADense(
                     units=cfg.units, lora_rank=cfg.lora_rank, name="fc"

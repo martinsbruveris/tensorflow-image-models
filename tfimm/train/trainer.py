@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import tensorflow as tf
+import tf_keras
 
 try:
     import wandb
@@ -125,7 +126,7 @@ class SingleGPUTrainer:
         # Save checkpoint before starting training
         self.save_ckpt()
 
-        duration = tf.keras.metrics.Mean(dtype=tf.float32)  # Time tracker
+        duration = tf_keras.metrics.Mean(dtype=tf.float32)  # Time tracker
         first_epoch = int(self.epoch.numpy())
 
         ds_iter = iter(self.train_ds)

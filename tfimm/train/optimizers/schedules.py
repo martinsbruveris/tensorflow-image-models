@@ -2,8 +2,8 @@ from abc import ABC, abstractclassmethod
 from dataclasses import dataclass
 from typing import Any
 
-import tensorflow as tf
-from tensorflow.keras.optimizers.schedules import LearningRateSchedule
+from tf_keras.optimizers.schedules import LearningRateSchedule
+import tf_keras
 
 from ..registry import cfg_serializable
 
@@ -34,7 +34,7 @@ class LRConstFactory(BaseLRSchedule):
     def __call__(self):
         # We simulate a constant lr using a keras `LearningRateSchedule` so we can
         # wrap it using the `WarmupWrapper` below.
-        return tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+        return tf_keras.optimizers.schedules.PiecewiseConstantDecay(
             boundaries=[0], values=[self.cfg.lr, self.cfg.lr]
         )
 
@@ -60,7 +60,7 @@ class LRMultiStepsFactory(BaseLRSchedule):
         boundaries = [
             val * self.timekeeping.nb_steps_per_epoch for val in self.cfg.lr_boundaries
         ]
-        return tf.keras.optimizers.schedules.PiecewiseConstantDecay(
+        return tf_keras.optimizers.schedules.PiecewiseConstantDecay(
             boundaries=boundaries, values=self.cfg.lr_values
         )
 
@@ -80,7 +80,7 @@ class LRCosineDecayFactory(BaseLRSchedule):
         super().__init__(cfg, timekeeping)
 
     def __call__(self):
-        return tf.keras.optimizers.schedules.CosineDecay(
+        return tf_keras.optimizers.schedules.CosineDecay(
             self.cfg.lr, decay_steps=self.timekeeping.nb_steps, alpha=self.cfg.alpha
         )
 
@@ -104,7 +104,7 @@ class LRExponentialDecayFactory(BaseLRSchedule):
         super().__init__(cfg, timekeeping)
 
     def __call__(self):
-        return tf.keras.optimizers.schedules.ExponentialDecay(
+        return tf_keras.optimizers.schedules.ExponentialDecay(
             initial_learning_rate=self.cfg.lr,
             decay_steps=self.cfg.lr_decay_frequency
             * self.timekeeping.nb_steps_per_epoch,

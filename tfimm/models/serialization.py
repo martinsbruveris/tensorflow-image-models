@@ -14,8 +14,7 @@
 # limitations under the License.
 import dataclasses
 import functools
-
-import tensorflow as tf
+import tf_keras
 
 
 def keras_serializable(cls):
@@ -30,10 +29,10 @@ def keras_serializable(cls):
        time) and convert it to a config object for the actual layer initializer.
     3. Registering the class as a custom object in Keras (if the Tensorflow version
        supports this), so that it does not need to be supplied in `custom_objects` in
-       the call to `tf.keras.models.load_model`.
+       the call to `tf_keras.models.load_model`.
 
     Args:
-        cls (a `tf.keras.layers.Layer` subclass):
+        cls (a `tf_keras.layers.Layer` subclass):
             Typically the main network class in this project, in general must accept a
             `cfg` argument to its initializer.
 
@@ -84,6 +83,6 @@ def keras_serializable(cls):
     cls.from_config = from_config
 
     cls._keras_serializable = True
-    if hasattr(tf.keras.utils, "register_keras_serializable"):
-        cls = tf.keras.utils.register_keras_serializable()(cls)
+    if hasattr(tf_keras.utils, "register_keras_serializable"):
+        cls = tf_keras.utils.register_keras_serializable()(cls)
     return cls

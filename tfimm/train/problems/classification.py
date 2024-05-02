@@ -6,6 +6,7 @@ from typing import Any
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from ..interface import ProblemBase
 from ..registry import cfg_serializable, get_class
@@ -43,7 +44,7 @@ class ClassificationProblem(ProblemBase):
 
         # Setting global state before building model
         if cfg.mixed_precision:
-            tf.keras.mixed_precision.set_global_policy("mixed_float16")
+            tf_keras.mixed_precision.set_global_policy("mixed_float16")
 
         # Building the model
         model, preprocess = get_class(cfg.model_class)(cfg=cfg.model)()
@@ -51,10 +52,10 @@ class ClassificationProblem(ProblemBase):
         self.preprocess = preprocess
 
         # Training metrics
-        self.avg_ce_loss = tf.keras.metrics.Mean(dtype=tf.float32)
-        self.avg_reg_loss = tf.keras.metrics.Mean(dtype=tf.float32)
-        self.avg_loss = tf.keras.metrics.Mean(dtype=tf.float32)
-        self.avg_acc = tf.keras.metrics.Accuracy(dtype=tf.float32)
+        self.avg_ce_loss = tf_keras.metrics.Mean(dtype=tf.float32)
+        self.avg_reg_loss = tf_keras.metrics.Mean(dtype=tf.float32)
+        self.avg_loss = tf_keras.metrics.Mean(dtype=tf.float32)
+        self.avg_acc = tf_keras.metrics.Accuracy(dtype=tf.float32)
 
         # Optimizer
         self.optimizer = get_class(cfg.optimizer_class)(
@@ -205,15 +206,15 @@ class ClassificationProblem(ProblemBase):
 
         # We need to set policy to float32 for saving, otherwise we save models that
         # perform inference with float16, which is extremely slow on CPUs
-        old_policy = tf.keras.mixed_precision.global_policy()
-        tf.keras.mixed_precision.set_global_policy("float32")
+        old_policy = tf_keras.mixed_precision.global_policy()
+        tf_keras.mixed_precision.set_global_policy("float32")
         # After changing the policy, we need to create a new model using the policy
         model_factory = get_class(self.cfg.model_class)(cfg=self.cfg.model)
         save_model, save_preprocess = model_factory()
         save_model.set_weights(self.model.get_weights())
 
         # Now build the full inference model including preprocessing and logit layer
-        inputs = tf.keras.layers.Input(
+        inputs = tf_keras.layers.Input(
             shape=model_factory.tf_input_shape,
             batch_size=None,
             dtype=self.cfg.save_input_dtype,
@@ -230,8 +231,8 @@ class ClassificationProblem(ProblemBase):
         # Normalize logits to have sum=0.
         logits = logits - tf.reduce_mean(logits, axis=-1, keepdims=True)
         # So output layer has the right name
-        logits = tf.keras.layers.Activation("linear", name="logits")(logits)
-        inference_model = tf.keras.Model(inputs, logits)
+        logits = tf_keras.layers.Activation("linear", name="logits")(logits)
+        inference_model = tf_keras.Model(inputs, logits)
 
         model_dir = save_dir / "model"
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -244,4 +245,4 @@ class ClassificationProblem(ProblemBase):
             shutil.copytree(str(local_dir), str(model_dir), dirs_exist_ok=True)
 
         # Restore original float policy
-        tf.keras.mixed_precision.set_global_policy(old_policy)
+        tf_keras.mixed_precision.set_global_policy(old_policy)

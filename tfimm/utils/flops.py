@@ -1,22 +1,23 @@
 import numpy as np
 import tensorflow as tf
+import tf_keras
 from tensorflow.python.framework.convert_to_constants import (
     convert_variables_to_constants_v2_as_graph,
 )
 
 
-def get_flops(model: tf.keras.Model, input_shape: tuple) -> int:
+def get_flops(model: tf_keras.Model, input_shape: tuple) -> int:
     """
-    Calculate FLOPS for a `tf.keras.Model`. Ignore operations used in only training
+    Calculate FLOPS for a `tf_keras.Model`. Ignore operations used in only training
     mode such as Initialization. Use `tf.profiler` of tensorflow v1 api.
 
     `input_shape` should be the full input, including batch size.
     """
-    if not isinstance(model, tf.keras.Model):
-        raise KeyError("`model` argument must be `tf.keras.Model` instance.")
+    if not isinstance(model, tf_keras.Model):
+        raise KeyError("`model` argument must be `tf_keras.Model` instance.")
 
     try:
-        # Convert `tf.keras model` into frozen graph
+        # Convert `tf_keras model` into frozen graph
         inputs = tf.TensorSpec(list(input_shape), "float32")
         real_model = tf.function(model).get_concrete_function(inputs)
         frozen_func, _ = convert_variables_to_constants_v2_as_graph(real_model)
@@ -37,7 +38,7 @@ def get_flops(model: tf.keras.Model, input_shape: tuple) -> int:
     return flops
 
 
-def get_parameters(model: tf.keras.Model) -> int:
+def get_parameters(model: tf_keras.Model) -> int:
     trainable_params = np.sum([np.prod(v.get_shape()) for v in model.trainable_weights])
     non_trainable_params = np.sum(
         [np.prod(v.get_shape()) for v in model.non_trainable_weights]

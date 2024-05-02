@@ -13,6 +13,7 @@ import numpy as np
 import tensorflow as tf
 import torch
 import torchvision
+import tf_keras
 
 import tfimm
 
@@ -40,7 +41,7 @@ def test_conversion(model_name: str):
     pt_model.load_state_dict(pt_state_dict)
     pt_model.eval()
 
-    tf_model = tf.keras.models.load_model(f"models/{model_name}")
+    tf_model = tf_keras.models.load_model(f"models/{model_name}")
 
     img = np.random.rand(5, 224, 224, 3).astype("float32")
 

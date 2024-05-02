@@ -30,7 +30,7 @@ def register_lora_architecture(lora_cls=None, *, base_cls=None):
     .. code-block:: python
 
         @register_lora_architecture(base_cls=ResNet)
-        class LoRAResNet(tf.keras.Model):
+        class LoRAResNet(tf_keras.Model):
             ...
 
     A model class can be its own LoRA variant, if the model can be created with regular
@@ -39,7 +39,7 @@ def register_lora_architecture(lora_cls=None, *, base_cls=None):
 
     .. code-block:: python
 
-        class FlexibleModel(tf.keras.Model):
+        class FlexibleModel(tf_keras.Model):
             ...
 
         register_lora_architecture(FlexibleModel, base_cls=FlexibleModel)

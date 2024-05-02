@@ -2,6 +2,7 @@ from collections import OrderedDict
 from typing import Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import DropPath, PatchEmbeddings, norm_layer_factory
 
@@ -168,7 +169,7 @@ def add_decomposed_rel_pos(
     return attn
 
 
-class RelPosAttention(tf.keras.layers.Layer):
+class RelPosAttention(tf_keras.layers.Layer):
     """Multi-head Attention block with relative position embeddings."""
 
     def __init__(
@@ -203,10 +204,10 @@ class RelPosAttention(tf.keras.layers.Layer):
         self.head_dim = self.embed_dim // self.nb_heads
         self.scale = self.head_dim**-0.5
 
-        self.qkv = tf.keras.layers.Dense(embed_dim * 3, use_bias=qkv_bias, name="qkv")
-        self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(embed_dim, use_bias=True, name="proj")
-        self.proj_drop = tf.keras.layers.Dropout(rate=drop_rate)
+        self.qkv = tf_keras.layers.Dense(embed_dim * 3, use_bias=qkv_bias, name="qkv")
+        self.attn_drop = tf_keras.layers.Dropout(rate=attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(embed_dim, use_bias=True, name="proj")
+        self.proj_drop = tf_keras.layers.Dropout(rate=drop_rate)
 
         self.rel_pos_h = None
         self.rel_pos_w = None
@@ -263,7 +264,7 @@ class RelPosAttention(tf.keras.layers.Layer):
         return x
 
 
-class ImageEncoderBlock(tf.keras.layers.Layer):
+class ImageEncoderBlock(tf_keras.layers.Layer):
     """
     Transformer blocks with support for window attention and residual propagation.
     """
@@ -360,7 +361,7 @@ class ImageEncoderBlock(tf.keras.layers.Layer):
         return x
 
 
-class ImageEncoder(tf.keras.Model):
+class ImageEncoder(tf_keras.Model):
     def __init__(
         self,
         input_size: Tuple[int, int] = (1024, 1024),
@@ -461,11 +462,11 @@ class ImageEncoder(tf.keras.Model):
         # Note that this norm layer is not affected by the norm_layer parameter.
         neck_norm_layer = norm_layer_factory("layer_norm_eps_1e-6")
         self.neck = [
-            tf.keras.layers.Conv2D(
+            tf_keras.layers.Conv2D(
                 filters=self.out_channels, kernel_size=1, use_bias=False, name="neck/0"
             ),
             neck_norm_layer(name="neck/1"),
-            tf.keras.layers.Conv2D(
+            tf_keras.layers.Conv2D(
                 filters=self.out_channels,
                 kernel_size=3,
                 padding="same",

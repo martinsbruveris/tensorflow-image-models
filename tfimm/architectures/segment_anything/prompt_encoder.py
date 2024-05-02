@@ -2,11 +2,12 @@ from typing import Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import act_layer_factory, norm_layer_factory
 
 
-class PromptEncoder(tf.keras.Model):
+class PromptEncoder(tf_keras.Model):
     def __init__(
         self,
         embed_dim: int,
@@ -55,7 +56,7 @@ class PromptEncoder(tf.keras.Model):
         self.point_embeddings = [
             self.add_weight(
                 shape=(1, self.embed_dim),
-                initializer=tf.keras.initializers.RandomNormal(),
+                initializer=tf_keras.initializers.RandomNormal(),
                 trainable=True,
                 name=f"point_embeddings/{j}/weight",
             )
@@ -63,13 +64,13 @@ class PromptEncoder(tf.keras.Model):
         ]
         self.not_a_point_embed = self.add_weight(
             shape=(1, self.embed_dim),
-            initializer=tf.keras.initializers.RandomNormal(),
+            initializer=tf_keras.initializers.RandomNormal(),
             trainable=True,
             name="not_a_point_embed/weight",
         )
         self.no_mask_embed = self.add_weight(
             shape=(1, self.embed_dim),
-            initializer=tf.keras.initializers.RandomNormal(),
+            initializer=tf_keras.initializers.RandomNormal(),
             trainable=True,
             name="no_mask_embed/weight",
         )
@@ -91,7 +92,8 @@ class PromptEncoder(tf.keras.Model):
         boxes = boxes + 0.5  # Shift to center of pixel
         corners = tf.reshape(boxes, (n * m, 2, 2))  # (N*M, 2, 2)
         embeddings = self.pe_layer.embed_points(
-            corners, input_size  # (N*M, 2, embed_dim)
+            corners,
+            input_size,  # (N*M, 2, embed_dim)
         )
         embeddings += tf.stack(
             [self.point_embeddings[2], self.point_embeddings[3]], axis=1
@@ -184,7 +186,7 @@ class PromptEncoder(tf.keras.Model):
         return image_pe
 
 
-class MaskDownscaling(tf.keras.Model):
+class MaskDownscaling(tf_keras.Model):
     def __init__(
         self,
         embed_dim: int,
@@ -200,17 +202,17 @@ class MaskDownscaling(tf.keras.Model):
         norm_layer = norm_layer_factory("layer_norm_eps_1e-6")
         act_layer = act_layer_factory(self.act_layer)
 
-        self.conv1 = tf.keras.layers.Conv2D(
+        self.conv1 = tf_keras.layers.Conv2D(
             filters=self.mask_hidden_dim // 4, kernel_size=2, strides=2, name="0"
         )
         self.norm1 = norm_layer(name="1")
         self.act1 = act_layer(name="2")
-        self.conv2 = tf.keras.layers.Conv2D(
+        self.conv2 = tf_keras.layers.Conv2D(
             filters=self.mask_hidden_dim, kernel_size=2, strides=2, name="3"
         )
         self.norm2 = norm_layer(name="4")
         self.act2 = act_layer(name="5")
-        self.conv3 = tf.keras.layers.Conv2D(
+        self.conv3 = tf_keras.layers.Conv2D(
             filters=self.embed_dim, kernel_size=1, name="6"
         )
 
@@ -237,7 +239,7 @@ class MaskDownscaling(tf.keras.Model):
         return x
 
 
-class PositionalEmbeddingRandom(tf.keras.layers.Layer):
+class PositionalEmbeddingRandom(tf_keras.layers.Layer):
     """
     Positional embedding using random spatial frequencies.
     """
@@ -264,7 +266,7 @@ class PositionalEmbeddingRandom(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.positional_encoding_gaussian_matrix = self.add_weight(
             shape=(2, self.embed_dim // 2),
-            initializer=tf.keras.initializers.RandomNormal(mean=0.0, stddev=self.scale),
+            initializer=tf_keras.initializers.RandomNormal(mean=0.0, stddev=self.scale),
             trainable=False,
             name="positional_encoding_gaussian_matrix",
         )

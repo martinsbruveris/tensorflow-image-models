@@ -1,9 +1,8 @@
-import tensorflow as tf
-
+import tf_keras
 from tfimm.layers import act_layer_factory
 
 
-class MLPBlock(tf.keras.layers.Layer):
+class MLPBlock(tf_keras.layers.Layer):
     """MLP block. Only difference with tfimm version is naming of layers."""
 
     def __init__(
@@ -19,21 +18,21 @@ class MLPBlock(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         act_layer = act_layer_factory(act_layer)
 
-        self.fc1 = tf.keras.layers.Dense(
+        self.fc1 = tf_keras.layers.Dense(
             units=hidden_dim,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="lin1",
         )
         self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
-        self.fc2 = tf.keras.layers.Dense(
+        self.drop1 = tf_keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf_keras.layers.Dense(
             units=embed_dim,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="lin2",
         )
-        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.drop2 = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
         x = self.fc1(x)

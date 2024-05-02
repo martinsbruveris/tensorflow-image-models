@@ -28,6 +28,7 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     ClassifierHead,
@@ -85,7 +86,7 @@ def make_divisible(v, divisor=8):
     return new_v
 
 
-class PreActBottleneck(tf.keras.layers.Layer):
+class PreActBottleneck(tf_keras.layers.Layer):
     """
     Pre-activation (v2) bottleneck block.
 
@@ -178,7 +179,7 @@ class PreActBottleneck(tf.keras.layers.Layer):
         return x
 
 
-class Bottleneck(tf.keras.layers.Layer):
+class Bottleneck(tf_keras.layers.Layer):
     """
     Non Pre-activation bottleneck block, equiv to V1.5/V1b Bottleneck. Used for ViT.
     """
@@ -265,7 +266,7 @@ class Bottleneck(tf.keras.layers.Layer):
         return x
 
 
-class DownsampleConv(tf.keras.layers.Layer):
+class DownsampleConv(tf_keras.layers.Layer):
     def __init__(
         self,
         nb_channels,
@@ -288,7 +289,7 @@ class DownsampleConv(tf.keras.layers.Layer):
             norm_layer = norm_layer_factory(norm_layer)
             self.norm = norm_layer(name="norm")
         else:
-            self.norm = tf.keras.layers.Activation("linear")
+            self.norm = tf_keras.layers.Activation("linear")
 
     def call(self, x, training=False):
         x = self.conv(x)
@@ -296,7 +297,7 @@ class DownsampleConv(tf.keras.layers.Layer):
         return x
 
 
-class ResNetV2Stem(tf.keras.layers.Layer):
+class ResNetV2Stem(tf_keras.layers.Layer):
     def __init__(
         self,
         stem_type: str,
@@ -326,11 +327,11 @@ class ResNetV2Stem(tf.keras.layers.Layer):
 
         if stem_type == "fixed":
             # 'fixed' SAME padding approximation that is used in BiT models
-            self.pad = tf.keras.layers.ZeroPadding2D(padding=1)
-            self.pool = tf.keras.layers.MaxPool2D(pool_size=3, strides=2)
+            self.pad = tf_keras.layers.ZeroPadding2D(padding=1)
+            self.pool = tf_keras.layers.MaxPool2D(pool_size=3, strides=2)
         elif stem_type == "same":
-            self.pad = tf.keras.layers.Activation("linear")
-            self.pool = tf.keras.layers.MaxPool2D(
+            self.pad = tf_keras.layers.Activation("linear")
+            self.pool = tf_keras.layers.MaxPool2D(
                 pool_size=3, strides=2, padding="same"
             )
         else:
@@ -347,7 +348,7 @@ class ResNetV2Stem(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class ResNetV2(tf.keras.Model):
+class ResNetV2(tf_keras.Model):
     """
     Implementation of Pre-activation (v2) ResNet models.
     """

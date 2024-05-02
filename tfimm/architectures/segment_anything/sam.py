@@ -45,6 +45,7 @@ from functools import partial
 from typing import Optional, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.models import ModelConfig, keras_serializable, register_model
 from tfimm.utils import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
@@ -204,7 +205,7 @@ def transform_pos_embed(model, pos_embed, target_cfg: SegmentAnythingModelConfig
 
 
 @keras_serializable
-class SegmentAnythingModel(tf.keras.Model):
+class SegmentAnythingModel(tf_keras.Model):
     cfg_class = SegmentAnythingModelConfig
 
     def __init__(self, cfg: SegmentAnythingModelConfig, *args, **kwargs):

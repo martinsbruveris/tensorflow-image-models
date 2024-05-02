@@ -4,6 +4,7 @@ from typing import Tuple, cast
 import numpy as np
 import pytest
 import tensorflow as tf
+import tf_keras
 import torch
 
 from tfimm.architectures.segment_anything import (
@@ -478,7 +479,7 @@ def test_save_load_model():
     model = create_model("sam_vit_test_model")
     with tempfile.TemporaryDirectory() as tmpdir:
         model.save(tmpdir)
-        loaded_model = tf.keras.models.load_model(tmpdir, compile=False)
+        loaded_model = tf_keras.models.load_model(tmpdir, compile=False)
 
     assert type(model) is type(loaded_model)
 

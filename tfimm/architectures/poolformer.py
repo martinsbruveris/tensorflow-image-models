@@ -36,6 +36,7 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import ConvMLP, DropPath, PatchEmbeddings, norm_layer_factory
 from tfimm.models import ModelConfig, keras_serializable, register_model
@@ -109,14 +110,14 @@ class PoolFormerConfig(ModelConfig):
 
 def _weight_initializers(seed=42):
     """Function returns initilializers to be used in the model."""
-    kernel_initializer = tf.keras.initializers.TruncatedNormal(
+    kernel_initializer = tf_keras.initializers.TruncatedNormal(
         mean=0.0, stddev=0.02, seed=seed
     )
-    bias_initializer = tf.keras.initializers.Zeros()
+    bias_initializer = tf_keras.initializers.Zeros()
     return kernel_initializer, bias_initializer
 
 
-class PoolFormerBlock(tf.keras.layers.Layer):
+class PoolFormerBlock(tf_keras.layers.Layer):
     """
     PoolFormer block.
 
@@ -154,7 +155,7 @@ class PoolFormerBlock(tf.keras.layers.Layer):
         kernel_initializer, bias_initializer = _weight_initializers()
 
         self.norm1 = norm_layer(name="norm1")
-        self.pool = tf.keras.layers.AveragePooling2D(
+        self.pool = tf_keras.layers.AveragePooling2D(
             pool_size=3, strides=1, padding="same"
         )
         self.norm2 = norm_layer(name="norm2")
@@ -174,13 +175,13 @@ class PoolFormerBlock(tf.keras.layers.Layer):
     def build(self, input_shape):
         self.layer_scale_1 = self.add_weight(
             shape=(self.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.init_scale),
             trainable=True,
             name="layer_scale_1",
         )
         self.layer_scale_2 = self.add_weight(
             shape=(self.embed_dim,),
-            initializer=tf.keras.initializers.Constant(value=self.init_scale),
+            initializer=tf_keras.initializers.Constant(value=self.init_scale),
             trainable=True,
             name="layer_scale_2",
         )
@@ -203,7 +204,7 @@ class PoolFormerBlock(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class PoolFormer(tf.keras.Model):
+class PoolFormer(tf_keras.Model):
     """
     Class implementing a PoolFormer network.
 
@@ -212,7 +213,7 @@ class PoolFormer(tf.keras.Model):
 
     Parameters:
         cfg: Configuration class for the model.
-        **kwargs: Arguments are passed to ``tf.keras.Model``.
+        **kwargs: Arguments are passed to ``tf_keras.Model``.
     """
 
     cfg_class = PoolFormerConfig
@@ -268,11 +269,11 @@ class PoolFormer(tf.keras.Model):
 
         # Classifier head
         self.norm = norm_layer(name="norm")
-        self.pool = tf.keras.layers.GlobalAveragePooling2D()
+        self.pool = tf_keras.layers.GlobalAveragePooling2D()
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     @property

@@ -38,6 +38,7 @@ from typing import List, Tuple, Union
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.architectures.vit import ViTBlock
 from tfimm.layers import interpolate_pos_embeddings_grid, norm_layer_factory
@@ -144,7 +145,7 @@ class PoolingVisionTransformerConfig(ModelConfig):
         return {"pos_embed": PoolingVisionTransformer.transform_pos_embed}
 
 
-class ConvHeadPooling(tf.keras.layers.Layer):
+class ConvHeadPooling(tf_keras.layers.Layer):
     def __init__(
         self,
         nb_tokens: int,
@@ -159,15 +160,15 @@ class ConvHeadPooling(tf.keras.layers.Layer):
         self.out_channels = out_channels
         self.stride = stride
 
-        self.pad = tf.keras.layers.ZeroPadding2D(padding=stride // 2)
-        self.conv = tf.keras.layers.Conv2D(
+        self.pad = tf_keras.layers.ZeroPadding2D(padding=stride // 2)
+        self.conv = tf_keras.layers.Conv2D(
             filters=out_channels,
             kernel_size=stride + 1,
             strides=stride,
             groups=in_channels,
             name="conv",
         )
-        self.fc = tf.keras.layers.Dense(units=out_channels, name="fc")
+        self.fc = tf_keras.layers.Dense(units=out_channels, name="fc")
 
     def call(self, x):
         x, input_size = x
@@ -189,7 +190,7 @@ class ConvHeadPooling(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class PoolingVisionTransformer(tf.keras.Model):
+class PoolingVisionTransformer(tf_keras.Model):
     """
     Class implementing a Pooling-based Vision Transformer (PiT).
 
@@ -198,7 +199,7 @@ class PoolingVisionTransformer(tf.keras.Model):
 
     Parameters:
         cfg: Configuration class for the model.
-        **kwargs: Arguments are passed to ``tf.keras.Model``
+        **kwargs: Arguments are passed to ``tf_keras.Model``
     """
 
     cfg_class = PoolingVisionTransformerConfig
@@ -209,14 +210,14 @@ class PoolingVisionTransformer(tf.keras.Model):
         self.cfg = cfg
         norm_layer = norm_layer_factory(cfg.norm_layer)
 
-        self.patch_embed = tf.keras.layers.Conv2D(
+        self.patch_embed = tf_keras.layers.Conv2D(
             filters=cfg.embed_dim[0],
             kernel_size=cfg.patch_size,
             strides=cfg.stride,
             name="patch_embed/conv",
         )
         self.pos_embed = None
-        self.pos_drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
+        self.pos_drop = tf_keras.layers.Dropout(rate=cfg.drop_rate)
         self.cls_token = None
 
         # Stochastic depth
@@ -250,15 +251,15 @@ class PoolingVisionTransformer(tf.keras.Model):
         self.norm = norm_layer(name="norm")
 
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
         if cfg.distilled:
             self.head_dist = (
-                tf.keras.layers.Dense(units=cfg.nb_classes, name="head_dist")
+                tf_keras.layers.Dense(units=cfg.nb_classes, name="head_dist")
                 if cfg.nb_classes > 0
-                else tf.keras.layers.Activation("linear")  # Identity layer
+                else tf_keras.layers.Activation("linear")  # Identity layer
             )
         else:
             self.head_dist = None
@@ -269,13 +270,13 @@ class PoolingVisionTransformer(tf.keras.Model):
         self.pos_embed = self.add_weight(
             # We keep PT style NCHW order to make weight translation easier
             shape=(1, self.cfg.embed_dim[0], height, width),
-            initializer=tf.keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02),
+            initializer=tf_keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02),
             trainable=True,
             name="pos_embed",
         )
         self.cls_token = self.add_weight(
             shape=(1, self.cfg.nb_tokens, self.cfg.embed_dim[0]),
-            initializer=tf.keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02),
+            initializer=tf_keras.initializers.TruncatedNormal(mean=0.0, stddev=0.02),
             trainable=True,
             name="cls_token",
         )

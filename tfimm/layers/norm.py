@@ -2,9 +2,10 @@
 Various normalisation layers
 """
 import tensorflow as tf
+import tf_keras
 
 
-class Affine(tf.keras.layers.Layer):
+class Affine(tf_keras.layers.Layer):
     """
     Affine normalisation as used in ResMLP networks.
 
@@ -101,7 +102,7 @@ def group_normalize(x, gamma, beta, nb_groups=None, group_size=None, eps=1e-5):
     return tf.reshape(x, orig_shape)
 
 
-class GroupNormalization(tf.keras.layers.Layer):
+class GroupNormalization(tf_keras.layers.Layer):
     """
     A group-norm "layer" (see abs/1803.08494 go/dune-gn).
 
@@ -120,7 +121,7 @@ class GroupNormalization(tf.keras.layers.Layer):
         eps: float, a small additive constant to avoid /sqrt(0).
         beta_init: initializer for bias, defaults to zeros.
         gamma_init: initializer for scale, defaults to ones.
-        **kwargs: other tf.keras.layers.Layer arguments.
+        **kwargs: other tf_keras.layers.Layer arguments.
     """
 
     def __init__(
@@ -130,7 +131,7 @@ class GroupNormalization(tf.keras.layers.Layer):
         eps=1e-5,
         beta_initializer=tf.zeros_initializer(),
         gamma_initializer=tf.ones_initializer(),
-        **kwargs
+        **kwargs,
     ):
         super(GroupNormalization, self).__init__(**kwargs)
         if nb_groups is None and group_size is None:

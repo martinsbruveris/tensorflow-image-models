@@ -1,9 +1,10 @@
 import math
 
 import tensorflow as tf
+import tf_keras
 
 
-class FanoutInitializer(tf.keras.initializers.Initializer):
+class FanoutInitializer(tf_keras.initializers.Initializer):
     """
     Fanout initializer as used by EfficientNet models.
 

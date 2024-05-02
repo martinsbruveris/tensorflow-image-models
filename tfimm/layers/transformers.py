@@ -6,6 +6,7 @@ Copyright 2021 Martins Bruveris
 from typing import Optional, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers.factory import act_layer_factory, norm_layer_factory
 
@@ -76,7 +77,7 @@ def interpolate_pos_embeddings_grid(
     return tgt_pos_embed
 
 
-class PatchEmbeddings(tf.keras.layers.Layer):
+class PatchEmbeddings(tf_keras.layers.Layer):
     """
     Image to Patch Embedding.
 
@@ -125,10 +126,10 @@ class PatchEmbeddings(tf.keras.layers.Layer):
 
         # We only apply padding, if we use overlapping patches. For non-overlapping
         # patches we assume image size is divisible by patch size.
-        self.pad = tf.keras.layers.ZeroPadding2D(
+        self.pad = tf_keras.layers.ZeroPadding2D(
             padding=self.padding if self.stride != self.patch_size else 0
         )
-        self.projection = tf.keras.layers.Conv2D(
+        self.projection = tf_keras.layers.Conv2D(
             filters=self.embed_dim,
             kernel_size=self.patch_size,
             strides=self.stride,
@@ -173,7 +174,7 @@ class PatchEmbeddings(tf.keras.layers.Layer):
         return (x, (height, width)) if return_shape else x
 
 
-class MLP(tf.keras.layers.Layer):
+class MLP(tf_keras.layers.Layer):
     """MLP as used in Vision Transformer, MLP-Mixer and related networks"""
 
     def __init__(
@@ -189,21 +190,21 @@ class MLP(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         act_layer = act_layer_factory(act_layer)
 
-        self.fc1 = tf.keras.layers.Dense(
+        self.fc1 = tf_keras.layers.Dense(
             units=hidden_dim,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="fc1",
         )
         self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
-        self.fc2 = tf.keras.layers.Dense(
+        self.drop1 = tf_keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf_keras.layers.Dense(
             units=embed_dim,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="fc2",
         )
-        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.drop2 = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
         x = self.fc1(x)
@@ -214,7 +215,7 @@ class MLP(tf.keras.layers.Layer):
         return x
 
 
-class ConvMLP(tf.keras.layers.Layer):
+class ConvMLP(tf_keras.layers.Layer):
     """
     ConvMLP is the same block as MLP, but it uses 1x1 convolutions instead of fully
     connected layers.
@@ -235,7 +236,7 @@ class ConvMLP(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         act_layer = act_layer_factory(act_layer)
 
-        self.fc1 = tf.keras.layers.Conv2D(
+        self.fc1 = tf_keras.layers.Conv2D(
             filters=hidden_dim,
             kernel_size=1,
             kernel_initializer=kernel_initializer,
@@ -243,15 +244,15 @@ class ConvMLP(tf.keras.layers.Layer):
             name="fc1",
         )
         self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
-        self.fc2 = tf.keras.layers.Conv2D(
+        self.drop1 = tf_keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf_keras.layers.Conv2D(
             filters=embed_dim,
             kernel_size=1,
             kernel_initializer=kernel_initializer,
             bias_initializer=bias_initializer,
             name="fc2",
         )
-        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.drop2 = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
         x = self.fc1(x)
@@ -262,7 +263,7 @@ class ConvMLP(tf.keras.layers.Layer):
         return x
 
 
-class GatedBiasInitializer(tf.keras.initializers.Initializer):
+class GatedBiasInitializer(tf_keras.initializers.Initializer):
     """
     Splits tensor in half along last axis (channels). Initializes second half with
     ones.
@@ -271,11 +272,11 @@ class GatedBiasInitializer(tf.keras.initializers.Initializer):
     """
 
     def __init__(self, initializer="zeros"):
-        self.initializer = tf.keras.initializers.get(initializer)
+        self.initializer = tf_keras.initializers.get(initializer)
 
     def __call__(self, shape, dtype=None, **kwargs):
         if dtype is None:
-            dtype = tf.keras.backend.floatx()
+            dtype = tf_keras.backend.floatx()
 
         assert shape[-1] % 2 == 0
         split_shape = shape[:-1] + [
@@ -287,7 +288,7 @@ class GatedBiasInitializer(tf.keras.initializers.Initializer):
         return x
 
 
-class GatedKernelInitializer(tf.keras.initializers.Initializer):
+class GatedKernelInitializer(tf_keras.initializers.Initializer):
     """
     Splits tensor in half along last axis (channels). Initializes second half with
     normal distribution with stddev=1e-6.
@@ -296,12 +297,12 @@ class GatedKernelInitializer(tf.keras.initializers.Initializer):
     """
 
     def __init__(self, initializer="glorot_uniform"):
-        self.normal = tf.keras.initializers.RandomNormal(stddev=1e-6)
-        self.initializer = tf.keras.initializers.get(initializer)
+        self.normal = tf_keras.initializers.RandomNormal(stddev=1e-6)
+        self.initializer = tf_keras.initializers.get(initializer)
 
     def __call__(self, shape, dtype=None, **kwargs):
         if dtype is None:
-            dtype = tf.keras.backend.floatx()
+            dtype = tf_keras.backend.floatx()
 
         assert shape[-1] % 2 == 0
         split_shape = shape[:-1] + [
@@ -313,7 +314,7 @@ class GatedKernelInitializer(tf.keras.initializers.Initializer):
         return x
 
 
-class GluMLP(tf.keras.layers.Layer):
+class GluMLP(tf_keras.layers.Layer):
     """
     MLP w/ GLU style gating
     See: https://arxiv.org/abs/1612.08083, https://arxiv.org/abs/2002.05202
@@ -331,16 +332,16 @@ class GluMLP(tf.keras.layers.Layer):
         act_layer = act_layer_factory(act_layer)
         assert hidden_dim % 2 == 0
 
-        self.fc1 = tf.keras.layers.Dense(
+        self.fc1 = tf_keras.layers.Dense(
             units=hidden_dim,
             bias_initializer=GatedBiasInitializer(),
             kernel_initializer=GatedKernelInitializer(),
             name="fc1",
         )
         self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
-        self.fc2 = tf.keras.layers.Dense(units=embed_dim, name="fc2")
-        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.drop1 = tf_keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf_keras.layers.Dense(units=embed_dim, name="fc2")
+        self.drop2 = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
         x = self.fc1(x)
@@ -352,7 +353,7 @@ class GluMLP(tf.keras.layers.Layer):
         return x
 
 
-class SpatialGatingUnit(tf.keras.layers.Layer):
+class SpatialGatingUnit(tf_keras.layers.Layer):
     """
     Spatial Gating Unit
 
@@ -366,10 +367,10 @@ class SpatialGatingUnit(tf.keras.layers.Layer):
 
     def build(self, input_shape):
         seq_len = input_shape[-2]
-        self.proj = tf.keras.layers.Dense(
+        self.proj = tf_keras.layers.Dense(
             units=seq_len,
-            kernel_initializer=tf.keras.initializers.RandomNormal(stddev=1e-6),
-            bias_initializer=tf.keras.initializers.Ones(),
+            kernel_initializer=tf_keras.initializers.RandomNormal(stddev=1e-6),
+            bias_initializer=tf_keras.initializers.Ones(),
             name="proj",
         )
 
@@ -383,7 +384,7 @@ class SpatialGatingUnit(tf.keras.layers.Layer):
         return x
 
 
-class GatedMLP(tf.keras.layers.Layer):
+class GatedMLP(tf_keras.layers.Layer):
     """MLP as used in gMLP"""
 
     def __init__(
@@ -397,12 +398,12 @@ class GatedMLP(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         act_layer = act_layer_factory(act_layer)
 
-        self.fc1 = tf.keras.layers.Dense(units=hidden_dim, name="fc1")
+        self.fc1 = tf_keras.layers.Dense(units=hidden_dim, name="fc1")
         self.act = act_layer()
-        self.drop1 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.drop1 = tf_keras.layers.Dropout(rate=drop_rate)
         self.gate = SpatialGatingUnit(name="gate")
-        self.fc2 = tf.keras.layers.Dense(units=embed_dim, name="fc2")
-        self.drop2 = tf.keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf_keras.layers.Dense(units=embed_dim, name="fc2")
+        self.drop2 = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
         x = self.fc1(x)

@@ -1,8 +1,9 @@
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 
-class BlurPool2D(tf.keras.layers.Layer):
+class BlurPool2D(tf_keras.layers.Layer):
     """
     BlurPool layer as described in the paper "Making Convolutional Networks
     Shift-Invariant Again" by Zhang et al.
@@ -47,7 +48,7 @@ class BlurPool2D(tf.keras.layers.Layer):
         self.blur_kernel = self.add_weight(
             name="blur_kernel",
             shape=(self.kernel_size, self.kernel_size, channels, 1),
-            initializer=tf.keras.initializers.constant(bk),
+            initializer=tf_keras.initializers.constant(bk),
             trainable=False,
         )
 

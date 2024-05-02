@@ -12,6 +12,7 @@ from typing import List, Tuple
 
 import numpy as np
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import (
     DropPath,
@@ -74,7 +75,7 @@ class PyramidVisionTransformerV2Config(ModelConfig):
     """
 
 
-class DWConv(tf.keras.layers.Layer):
+class DWConv(tf_keras.layers.Layer):
     """
     Depthwise convolution applied on patch representations.
 
@@ -83,7 +84,7 @@ class DWConv(tf.keras.layers.Layer):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.dwconv = tf.keras.layers.DepthwiseConv2D(
+        self.dwconv = tf_keras.layers.DepthwiseConv2D(
             kernel_size=3,
             padding="same",
             name="dwconv",
@@ -99,7 +100,7 @@ class DWConv(tf.keras.layers.Layer):
         return x
 
 
-class MLP(tf.keras.layers.Layer):
+class MLP(tf_keras.layers.Layer):
     """
     MLP as used in Pyramid Vision Transformer.
 
@@ -118,14 +119,14 @@ class MLP(tf.keras.layers.Layer):
         super().__init__(**kwargs)
         act_layer = act_layer_factory(act_layer)
 
-        self.fc1 = tf.keras.layers.Dense(units=hidden_dim, name="fc1")
+        self.fc1 = tf_keras.layers.Dense(units=hidden_dim, name="fc1")
         self.relu = (
             act_layer_factory("relu")() if linear_sr else act_layer_factory("linear")()
         )
         self.dwconv = DWConv(name="dwconv")
         self.act = act_layer()
-        self.fc2 = tf.keras.layers.Dense(units=embed_dim, name="fc2")
-        self.drop = tf.keras.layers.Dropout(rate=drop_rate)
+        self.fc2 = tf_keras.layers.Dense(units=embed_dim, name="fc2")
+        self.drop = tf_keras.layers.Dropout(rate=drop_rate)
 
     def call(self, x, training=False):
         x, grid_size = x  # We need to pass information about spatial shape of input
@@ -139,7 +140,7 @@ class MLP(tf.keras.layers.Layer):
         return x
 
 
-class SpatialReductionAttention(tf.keras.layers.Layer):
+class SpatialReductionAttention(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -166,16 +167,16 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         self.norm_layer = norm_layer_factory(norm_layer)
         self.act_layer = act_layer_factory(act_layer)
 
-        self.q = tf.keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="q")
-        self.kv = tf.keras.layers.Dense(
+        self.q = tf_keras.layers.Dense(units=embed_dim, use_bias=qkv_bias, name="q")
+        self.kv = tf_keras.layers.Dense(
             units=2 * embed_dim, use_bias=qkv_bias, name="kv"
         )
-        self.attn_drop = tf.keras.layers.Dropout(rate=attn_drop_rate)
-        self.proj = tf.keras.layers.Dense(units=embed_dim, name="proj")
-        self.proj_drop = tf.keras.layers.Dropout(rate=proj_drop_rate)
+        self.attn_drop = tf_keras.layers.Dropout(rate=attn_drop_rate)
+        self.proj = tf_keras.layers.Dense(units=embed_dim, name="proj")
+        self.proj_drop = tf_keras.layers.Dropout(rate=proj_drop_rate)
 
         if not linear_sr and sr_ratio > 1:
-            self.sr = tf.keras.layers.Conv2D(
+            self.sr = tf_keras.layers.Conv2D(
                 filters=embed_dim,
                 kernel_size=sr_ratio,
                 strides=sr_ratio,
@@ -184,8 +185,8 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
             self.norm = self.norm_layer(name="norm")
         elif linear_sr:
             # This should be an AdaptiveAveragePooling2D layer instead.
-            self.pool = tf.keras.layers.AveragePooling2D(pool_size=7)
-            self.sr = tf.keras.layers.Conv2D(
+            self.pool = tf_keras.layers.AveragePooling2D(pool_size=7)
+            self.sr = tf_keras.layers.Conv2D(
                 filters=embed_dim,
                 kernel_size=1,
                 strides=1,
@@ -194,8 +195,8 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
             self.norm = self.norm_layer(name="norm")
             self.act = self.act_layer()
         else:
-            self.sr = tf.keras.layers.Activation("linear")
-            self.norm = tf.keras.layers.Activation("linear")
+            self.sr = tf_keras.layers.Activation("linear")
+            self.norm = tf_keras.layers.Activation("linear")
 
     def call(self, x, training=False):
         x, grid_size = x
@@ -235,7 +236,7 @@ class SpatialReductionAttention(tf.keras.layers.Layer):
         return x
 
 
-class Block(tf.keras.layers.Layer):
+class Block(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -298,7 +299,7 @@ class Block(tf.keras.layers.Layer):
 
 
 @keras_serializable
-class PyramidVisionTransformerV2(tf.keras.Model):
+class PyramidVisionTransformerV2(tf_keras.Model):
     cfg_class = PyramidVisionTransformerV2Config
 
     def __init__(self, cfg: PyramidVisionTransformerV2Config, **kwargs):
@@ -346,9 +347,9 @@ class PyramidVisionTransformerV2(tf.keras.Model):
             self.norms.append(norm_layer(name=f"norm{j+1}"))
 
         self.head = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="head")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="head")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     @property

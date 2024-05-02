@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import Any
 
 import tensorflow as tf
-from tensorflow.keras.optimizers.schedules import LearningRateSchedule
-
+from tf_keras.optimizers.schedules import LearningRateSchedule
+import tf_keras
 from ..registry import cfg_serializable, get_class
 
 
@@ -79,14 +79,14 @@ class OptimizerFactory:
         clipvalue = cfg.clipvalue if cfg.clipvalue != -1.0 else None
 
         if cfg.optimizer == "sgd":
-            opt = tf.keras.optimizers.SGD(
+            opt = tf_keras.optimizers.SGD(
                 learning_rate=lr,
                 momentum=cfg.betas[0],
                 clipnorm=clipnorm,
                 clipvalue=clipvalue,
             )
         elif cfg.optimizer == "adam":
-            opt = tf.keras.optimizers.Adam(
+            opt = tf_keras.optimizers.Adam(
                 learning_rate=lr,
                 beta_1=cfg.betas[0],
                 beta_2=cfg.betas[1],
@@ -95,7 +95,7 @@ class OptimizerFactory:
                 epsilon=cfg.epsilon,
             )
         elif cfg.optimizer == "rmsprop":
-            opt = tf.keras.optimizers.RMSprop(
+            opt = tf_keras.optimizers.RMSprop(
                 learning_rate=lr,
                 rho=cfg.betas[0],
                 momentum=cfg.betas[1],
@@ -104,7 +104,7 @@ class OptimizerFactory:
                 epsilon=cfg.epsilon,
             )
         elif cfg.optimizer == "adamax":
-            opt = tf.keras.optimizers.Adamax(
+            opt = tf_keras.optimizers.Adamax(
                 learning_rate=lr,
                 beta_1=cfg.betas[0],
                 beta_2=cfg.betas[1],
@@ -113,7 +113,7 @@ class OptimizerFactory:
                 epsilon=cfg.epsilon,
             )
         elif cfg.optimizer == "adadelta":
-            opt = tf.keras.optimizers.Adadelta(
+            opt = tf_keras.optimizers.Adadelta(
                 learning_rate=lr,
                 rho=cfg.rho,
                 clipnorm=clipnorm,
@@ -121,7 +121,7 @@ class OptimizerFactory:
                 epsilon=cfg.epsilon,
             )
         elif cfg.optimizer == "adagrad":
-            opt = tf.keras.optimizers.Adagrad(
+            opt = tf_keras.optimizers.Adagrad(
                 learning_rate=lr,
                 initial_accumulator_value=cfg.initial_accumulator_value,
                 clipnorm=clipnorm,
@@ -132,7 +132,7 @@ class OptimizerFactory:
             raise ValueError(f"Unknown optimizer: {cfg.optimizer}.")
 
         if self.mixed_precision:
-            opt = tf.keras.mixed_precision.LossScaleOptimizer(opt, dynamic=True)
+            opt = tf_keras.mixed_precision.LossScaleOptimizer(opt, dynamic=True)
 
         return opt
 
@@ -165,13 +165,13 @@ class WarmupWrapper(LearningRateSchedule):
     def get_config(self):
         return {
             "warmup_steps": self.warmup_steps,
-            "lr_schedule": tf.keras.optimizers.schedules.serialize(self.lr_schedule),
+            "lr_schedule": tf_keras.optimizers.schedules.serialize(self.lr_schedule),
         }
 
     @classmethod
     def from_config(cls, config):
         return WarmupWrapper(
-            lr_schedule=tf.keras.optimizers.schedules.deserialize(
+            lr_schedule=tf_keras.optimizers.schedules.deserialize(
                 config["lr_schedule"]
             ),
             warmup_steps=config["warmup_steps"],

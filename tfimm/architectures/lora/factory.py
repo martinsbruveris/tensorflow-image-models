@@ -2,6 +2,7 @@ import dataclasses
 from typing import List, Optional
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.models import (
     create_model as create_full_model,
@@ -19,7 +20,7 @@ def create_model(
     pretrained: bool = False,
     model_path: str = "",
     **kwargs,
-) -> tf.keras.Model:
+) -> tf_keras.Model:
     """
     Creates a LoRA model from a ``tfimm`` model name.
 
@@ -68,7 +69,7 @@ def create_model(
     return model
 
 
-def convert_to_lora_model(model: tf.keras.Model, **kwargs) -> tf.keras.Model:
+def convert_to_lora_model(model: tf_keras.Model, **kwargs) -> tf_keras.Model:
     """
     Creates a LoRA version of a model.
 
@@ -101,7 +102,7 @@ def convert_to_lora_model(model: tf.keras.Model, **kwargs) -> tf.keras.Model:
     return lora_model
 
 
-def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
+def convert_to_regular_model(model: tf_keras.Model) -> tf_keras.Model:
     """
     Converts a LoRA model to a regular model.
 
@@ -155,7 +156,7 @@ def convert_to_regular_model(model: tf.keras.Model) -> tf.keras.Model:
     return base_model
 
 
-def merge_lora_weights(model: tf.keras.Model):
+def merge_lora_weights(model: tf_keras.Model):
     """
     Recursively merge weights in all LoRA layers in the given model. The model is
     modified in place.
@@ -169,7 +170,7 @@ def merge_lora_weights(model: tf.keras.Model):
 
 
 def lora_trainable_weights(
-    model: tf.keras.Model,
+    model: tf_keras.Model,
     train_bias: str = "none",
     trainable_layers: Optional[List[str]] = None,
 ) -> List[tf.Variable]:
@@ -215,7 +216,7 @@ def lora_trainable_weights(
 
 
 def lora_non_trainable_weights(
-    model: tf.keras.Model,
+    model: tf_keras.Model,
     train_bias: str = "none",
     trainable_layers: Optional[List[str]] = None,
 ) -> List[tf.Variable]:
@@ -234,12 +235,12 @@ def lora_non_trainable_weights(
         List of LoRA non-trainable weights.
     """
     # We start with a list of all weights and remove the trainable weights. We
-    # explicitly call `(non_)trainable_weights` from tf.keras.Model, because we expect
+    # explicitly call `(non_)trainable_weights` from tf_keras.Model, because we expect
     # our model to overwrite the `(non_)trainable_weights` properties with the result
     # of this function.
-    weights = tf.keras.Model.trainable_weights.fget(
+    weights = tf_keras.Model.trainable_weights.fget(
         model
-    ) + tf.keras.Model.non_trainable_weights.fget(model)
+    ) + tf_keras.Model.non_trainable_weights.fget(model)
     trainable_weights = lora_trainable_weights(
         model,
         train_bias=train_bias,
@@ -250,7 +251,7 @@ def lora_non_trainable_weights(
     return non_trainable_weights
 
 
-def _bias_variables(layer: tf.keras.layers.Layer) -> List[tf.Variable]:
+def _bias_variables(layer: tf_keras.layers.Layer) -> List[tf.Variable]:
     """Return bias variables of a given layer as a list."""
     # There is no fundamental concept of a "bias-variable", rather the notion of bias
     # is a convention. And so we have to proceed layer-by-layer and specify for each
@@ -258,12 +259,12 @@ def _bias_variables(layer: tf.keras.layers.Layer) -> List[tf.Variable]:
     if (
         type(layer)
         in {
-            tf.keras.layers.Conv1D,
-            tf.keras.layers.Conv2D,
-            tf.keras.layers.Conv3D,
-            tf.keras.layers.Dense,
-            tf.keras.layers.DepthwiseConv1D,
-            tf.keras.layers.DepthwiseConv2D,
+            tf_keras.layers.Conv1D,
+            tf_keras.layers.Conv2D,
+            tf_keras.layers.Conv3D,
+            tf_keras.layers.Dense,
+            tf_keras.layers.DepthwiseConv1D,
+            tf_keras.layers.DepthwiseConv2D,
         }
         and layer.use_bias
     ):
@@ -271,8 +272,8 @@ def _bias_variables(layer: tf.keras.layers.Layer) -> List[tf.Variable]:
     elif (
         type(layer)
         in {
-            tf.keras.layers.BatchNormalization,
-            tf.keras.layers.LayerNormalization,
+            tf_keras.layers.BatchNormalization,
+            tf_keras.layers.LayerNormalization,
         }
         and layer.center
     ):

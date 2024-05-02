@@ -1,11 +1,12 @@
 import tensorflow as tf
+import tf_keras
 
 from tfimm.layers import norm_layer_factory
 
 from .common import MLPBlock
 
 
-class TwoWayTransformer(tf.keras.Model):
+class TwoWayTransformer(tf_keras.Model):
     def __init__(
         self,
         embed_dim: int,
@@ -96,7 +97,7 @@ class TwoWayTransformer(tf.keras.Model):
         return queries, keys
 
 
-class TwoWayAttentionBlock(tf.keras.layers.Layer):
+class TwoWayAttentionBlock(tf_keras.layers.Layer):
     def __init__(
         self,
         embed_dim: int,
@@ -194,7 +195,7 @@ class TwoWayAttentionBlock(tf.keras.layers.Layer):
         return q, k
 
 
-class DownsampleAttention(tf.keras.layers.Layer):
+class DownsampleAttention(tf_keras.layers.Layer):
     """
     An attention layer that allows for downscaling the size of the embedding after
     projection to queries, keys, and values.
@@ -213,10 +214,10 @@ class DownsampleAttention(tf.keras.layers.Layer):
         self.downsample_rate = downsample_rate
 
         internal_dim = self.embed_dim // self.downsample_rate
-        self.q_proj = tf.keras.layers.Dense(internal_dim, use_bias=True, name="q_proj")
-        self.k_proj = tf.keras.layers.Dense(internal_dim, use_bias=True, name="k_proj")
-        self.v_proj = tf.keras.layers.Dense(internal_dim, use_bias=True, name="v_proj")
-        self.out_proj = tf.keras.layers.Dense(
+        self.q_proj = tf_keras.layers.Dense(internal_dim, use_bias=True, name="q_proj")
+        self.k_proj = tf_keras.layers.Dense(internal_dim, use_bias=True, name="k_proj")
+        self.v_proj = tf_keras.layers.Dense(internal_dim, use_bias=True, name="v_proj")
+        self.out_proj = tf_keras.layers.Dense(
             units=self.embed_dim, use_bias=True, name="out_proj"
         )
 

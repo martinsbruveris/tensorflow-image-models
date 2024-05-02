@@ -93,6 +93,7 @@ from functools import partial
 from typing import List, Tuple
 
 import tensorflow as tf
+import tf_keras
 
 from tfimm.architectures.efficientnet_builder import (
     EfficientNetBuilder,
@@ -191,7 +192,7 @@ class EfficientNetConfig(ModelConfig):
 
 
 @keras_serializable
-class EfficientNet(tf.keras.Model):
+class EfficientNet(tf_keras.Model):
     """
     Generic EfficientNet implementation supporting depth and width scaling and flexible
     architecture definitions, including
@@ -200,7 +201,7 @@ class EfficientNet(tf.keras.Model):
 
     Parameters:
         cfg: Configuration class for the model.
-        **kwargs: Arguments are passed to ``tf.keras.Model``.
+        **kwargs: Arguments are passed to ``tf_keras.Model``.
     """
 
     cfg_class = EfficientNetConfig
@@ -253,13 +254,13 @@ class EfficientNet(tf.keras.Model):
         self.act2 = self.act_layer()
 
         # Pooling + Classifier
-        self.pool = tf.keras.layers.GlobalAveragePooling2D()
-        self.flatten = tf.keras.layers.Flatten()
-        self.drop = tf.keras.layers.Dropout(rate=cfg.drop_rate)
+        self.pool = tf_keras.layers.GlobalAveragePooling2D()
+        self.flatten = tf_keras.layers.Flatten()
+        self.drop = tf_keras.layers.Dropout(rate=cfg.drop_rate)
         self.classifier = (
-            tf.keras.layers.Dense(units=cfg.nb_classes, name="classifier")
+            tf_keras.layers.Dense(units=cfg.nb_classes, name="classifier")
             if cfg.nb_classes > 0
-            else tf.keras.layers.Activation("linear")  # Identity layer
+            else tf_keras.layers.Activation("linear")  # Identity layer
         )
 
     @property
