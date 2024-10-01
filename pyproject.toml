@@ -29,10 +29,11 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.9,<3.13"
 markdown = "^3.3.6"  # 3.3.5 has a bug with poetry
 numpy = "*"
 tensorflow = "^2.8"
+tf-keras = "*"
 
 # Documentation
 sphinx = { version = "*", optional = true }
